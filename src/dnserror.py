@@ -1,3 +1,0 @@
-
-class DNSError(Exception):
-    pass
