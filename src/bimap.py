@@ -27,9 +27,12 @@ class Bimap(object):
 
     def lookup(self,k):
         try:
-            return self.forward[k]
-        except KeyError:
-            return self.reverse[k]
+            try:
+                return self.forward[k]
+            except KeyError:
+                return self.reverse[k]
+        except:
+            return k
     
     def __getitem__(self,k):
         return self.lookup(k)
