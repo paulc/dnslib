@@ -54,7 +54,7 @@ class Buffer(object):
                     done = True
         return ".".join(label)
 
-    def encode_name(name):
+    def encode_name(self,name):
         ## TODO: Cache names
         label = name.split(".")
         for l in label:
@@ -62,6 +62,6 @@ class Buffer(object):
                 raise DNSError("Label too long: %s: " % name)
             self.pack("!B",len(l))
             self.append(l)
-            self.append("\x00")
+        self.append("\x00")
 
 

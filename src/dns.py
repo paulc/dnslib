@@ -38,7 +38,7 @@ class DNSRecord(object):
         self.rr = rr or []
 
     def reply(self,q=True):
-        return DNSRecord(DNSHeader(id=self.header.id,ra=1,rd=1),
+        return DNSRecord(DNSHeader(id=self.header.id,qr=1,ra=1,rd=1),
                          self.questions,[])
 
     def add_question(self,q):
