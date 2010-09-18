@@ -32,3 +32,4 @@ def binary(n,count=16,reverse=0):
     if reverse:
         bits.reverse()
     return "".join(bits)
+
