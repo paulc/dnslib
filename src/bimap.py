@@ -1,5 +1,5 @@
 
-class Map(object):
+class Bimap(object):
 
     """
 
@@ -7,7 +7,7 @@ class Map(object):
     reverse lookup of key through explicit 'lookup' method or 
     through __getattr__ or __getitem__.
 
-    >>> m = Map({1:'a',2:'b',3:'c'})
+    >>> m = Bimap({1:'a',2:'b',3:'c'})
     >>> m[1]
     'a'
     >>> m.lookup('a')
