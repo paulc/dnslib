@@ -1,11 +1,11 @@
 
-import struct 
+import random,struct 
 
 from bit import get_bits,set_bits
 from bimap import Bimap
 from buffer import Buffer
 
-TYPE =   Bimap({ 1:'A', 2:'NS', 3:'MD', 4:'MF', 5:'CNAME', 6:'SOA', 7:'MB', 
+QTYPE =  Bimap({ 1:'A', 2:'NS', 3:'MD', 4:'MF', 5:'CNAME', 6:'SOA', 7:'MB', 
                  8:'MG', 9:'MR', 10:'NULL', 11:'WKS', 12:'PTR', 13:'HINFO',
                  14:'MINFO', 15:'MX', 16:'TXT',252:'AXFR',253:'MAILB',
                  254:'MAILA',255:'*'})
@@ -32,25 +32,47 @@ class DNSRecord(object):
             rr.append(RR.parse(buffer))
         return cls(header,questions,rr)
 
-    def __init__(self,header=None,questions=None,rr=None):
+    def __init__(self,header=None,questions=None,rr=None,q=None,a=None):
         self.header = header or DNSHeader()
         self.questions = questions or []
         self.rr = rr or []
+        # Shortcuts to add a single Question/Answer
+        if q:
+            self.questions.append(q)
+        if a:
+            self.rr.append(a)
+        self.set_header_qa()
 
-    def reply(self,q=True):
-        return DNSRecord(DNSHeader(id=self.header.id,qr=1,ra=1,rd=1),
-                         self.questions,[])
+    def reply(self,data="",ra=1,aa=1):
+        return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
+                         q=self.q,
+                         a=RR(self.q.qname,self.q.qtype,rdata=RDMAP[QTYPE[self.q.qtype]](data)))
 
     def add_question(self,q):
         self.questions.append(q)
+        self.set_header_qa()
 
-    def add_response(self,rr):
-        self.rr.append(q)
+    def add_answer(self,rr):
+        self.rr.append(rr)
+        self.set_header_qa()
 
-    def pack(self):
-        buffer = Buffer()
+    def set_header_qa(self):
         self.header.q = len(self.questions)
         self.header.a = len(self.rr)
+
+    # Shortcut to get first question
+    def get_q(self):
+        return self.questions[0]
+    q = property(get_q)
+
+    # Shortcut to get first answer
+    def get_a(self):
+        return self.rr[0]
+    a = property(get_a)
+
+    def pack(self):
+        self.set_header_qa()
+        buffer = Buffer()
         self.header.pack(buffer)
         for q in self.questions:
             q.pack(buffer)
@@ -71,9 +93,16 @@ class DNSHeader(object):
         (id,bitmap,q,a,ns,ar) = buffer.unpack("!HHHHHH")
         return cls(id,bitmap,q,a,ns,ar)
 
-    def __init__(self,id=0,bitmap=0,q=0,a=0,ns=0,ar=0,**args):
-        self.id = id 
-        self.bitmap = bitmap
+    def __init__(self,id=None,bitmap=None,q=0,a=0,ns=0,ar=0,**args):
+        if id is None:
+            self.id = random.randint(0,65535)
+        else:
+            self.id = id 
+        if bitmap is None:
+            self.bitmap = 0
+            self.rd = 1
+        else:
+            self.bitmap = bitmap
         self.q = q
         self.a = a
         self.ns = ns
@@ -186,7 +215,7 @@ class DNSQuestion(object):
 
     def __str__(self):
         return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
-                    self.qname, TYPE[self.qtype], CLASS[self.qclass])
+                    self.qname, QTYPE[self.qtype], CLASS[self.qclass])
             
 class RR(object):
 
@@ -194,20 +223,10 @@ class RR(object):
     def parse(cls,buffer):
         rname = buffer.decode_name()
         rtype,rclass,ttl,rdlength = buffer.unpack("!HHIH")
-        type = TYPE[rtype]
-        if type == 'CNAME':
-            rdata = CNAME.parse(buffer,rdlength)
-        elif type == 'A':
-            rdata = A.parse(buffer,rdlength)
-        elif type == 'TXT':
-            rdata = TXT.parse(buffer,rdlength)
-        elif type == 'MX':
-            rdata = MX.parse(buffer,rdlength)
-        elif type == 'PTR':
-            rdata = PTR.parse(buffer,rdlength)
-        elif type == 'SOA':
-            rdata = SOA.parse(buffer,rdlength)
-        else:
+        type = QTYPE[rtype]
+        try:
+            rdata = RDMAP[type].parse(buffer,rdlength)
+        except KeyError:
             rdata = RD.parse(buffer,rdlength)
         return cls(rname,rtype,rclass,ttl,rdata)
 
@@ -220,12 +239,17 @@ class RR(object):
 
     def pack(self,buffer):
         buffer.encode_name(self.rname)
-        buffer.pack("!HHIH",self.rtype,self.rclass,self.ttl,self.get_rdlength())
+        buffer.pack("!HHI",self.rtype,self.rclass,self.ttl)
+        rdlength_ptr = buffer.offset
+        buffer.pack("!H",0)
+        start = buffer.offset
         self.rdata.pack(buffer)
+        end = buffer.offset
+        buffer.update(rdlength_ptr,"!H",end-start)
 
     def __str__(self):
         return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    self.rname, TYPE[self.rtype], CLASS[self.rclass],
+                    self.rname, QTYPE[self.rtype], CLASS[self.rclass],
                     self.ttl, self.rdata )
 
 class RD(object):
@@ -281,7 +305,7 @@ class MX(RD):
         mx = buffer.decode_name()
         return cls(mx,preference)
 
-    def __init__(self,mx="",preference="10"):
+    def __init__(self,mx="",preference=10):
         self.mx = mx
         self.preference = preference
 
@@ -305,6 +329,9 @@ class CNAME(RD):
 class PTR(CNAME):
     pass
 
+class NS(CNAME):
+    pass
+
 class SOA(RD):
         
     @classmethod
@@ -326,6 +353,9 @@ class SOA(RD):
 
     def __str__(self):
         return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
+
+RDMAP = { 'CNAME':CNAME, 'A':A, 'TXT':TXT, 'MX':MX, 
+          'PTR':PTR, 'SOA':SOA, 'NS':NS }
 
 def test_unpack(s):
     """

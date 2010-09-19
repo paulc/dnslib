@@ -60,6 +60,10 @@ class Buffer(object):
         self.offset += len(s)
         self.data += s
 
+    def update(self,ptr,fmt,*args):
+        s = struct.pack(fmt,*args)
+        self.data = self.data[:ptr] + s + self.data[ptr+len(s):]
+
     def unpack(self,fmt):
         return struct.unpack(fmt,self.get(struct.calcsize(fmt)))
 

@@ -1,0 +1,74 @@
+dnslib
+------
+
+A simple library to encode/decode DNS wire-format packets. This was originally
+written for a custom nameserver.
+
+The key classes are:
+
+    DNSRecord (contains a DNSHeader and one or more DNSQuestion/DNSRR records)
+    DNSHeader 
+    DNSQuestion
+    RR (resource records)
+    RD (resource data - superclass for TXT,A,MX,CNAME,PRT,SOA)
+
+To decode a DNS packet:
+
+>>> d = DNSRecord.parse(packet)
+>>> print d
+<DNS Header: id=0xd5ad type=RESPONSE opcode=QUERY flags=RD,RA rcode=None q=1 a=5 ns=0 ar=0>
+<DNS Question: 'www.google.com' qtype=A qclass=IN>
+<DNS RR: 'www.google.com' rtype=CNAME rclass=IN ttl=5 rdata='www.l.google.com'>
+<DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.104'>
+<DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.99'>
+<DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.103'>
+<DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.147'>
+
+To create a DNS Packet:
+
+>>> d = DNSRecord(q=DNSQuestion("google.com"))
+>>> print d
+<DNS Header: id=0xdca9 type=QUERY opcode=QUERY flags=RD rcode=None q=1 a=0 ns=0 ar=0>
+<DNS Question: 'google.com' qtype=A qclass=IN>
+>>> d.pack()
+...
+
+>>> d = DNSRecord(q=DNSQuestion("google.com",QTYPE.MX))
+>>> print d
+<DNS Header: id=0xdca9 type=QUERY opcode=QUERY flags=RD rcode=None q=1 a=0 ns=0 ar=0>
+<DNS Question: 'google.com' qtype=MX qclass=IN>
+>>> d.pack()
+...
+
+>>> d = DNSRecord(DNSHeader(aa=1,ra=1),
+...               q=DNSQuestion("abc.com"),
+...               a=RR("abc.com",rdata=A("1.2.3.4")))
+>>> print d
+<DNS Header: id=0xeee5 type=QUERY opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+<DNS Question: 'abc.com' qtype=A qclass=IN>
+<DNS RR: 'abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
+>>> d.pack()
+...
+
+To create a skeleton reply to a DNS query:
+
+>>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.CNAME)) 
+>>> a = q.reply(data="xxx.abc.com")
+>>> print a
+<DNS Header: id=0xe1b0 type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+<DNS Question: 'abc.com' qtype=CNAME qclass=IN>
+<DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=0 rdata='xxx.abc.com'>
+>>> a.pack()
+...
+
+Add additional RRs:
+
+>>> a.add_answer(RR('xxx.abc.com',QTYPE.A,rdata=A("1.2.3.4")))
+>>> print a
+<DNS Header: id=0xe1b0 type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=2 ns=0 ar=0>
+<DNS Question: 'abc.com' qtype=CNAME qclass=IN>
+<DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=0 rdata='xxx.abc.com'>
+<DNS RR: 'xxx.abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
+>>> a.pack()
+...
+
