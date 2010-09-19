@@ -7,11 +7,11 @@
 
     The key classes are:
 
-        DNSRecord (contains a DNSHeader and one or more DNSQuestion/DNSRR records)
-        DNSHeader 
-        DNSQuestion
-        RR (resource records)
-        RD (resource data - superclass for TXT,A,MX,CNAME,PRT,SOA)
+        * DNSRecord (contains a DNSHeader and one or more DNSQuestion/DNSRR records)
+        * DNSHeader 
+        * DNSQuestion
+        * RR (resource records)
+        * RD (resource data - superclass for TXT,A,MX,CNAME,PRT,SOA)
 
     To decode a DNS packet:
 

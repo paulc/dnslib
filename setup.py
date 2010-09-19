@@ -23,5 +23,6 @@ setup(name='dnslib',
       cmdclass = { 'readme' : GenerateReadme },
       packages = ['dnslib'],
       package_dir = {'dnslib':'src'},
-      license = 'BSD'
+      license = 'BSD',
+      classifiers = [ "Topic :: Internet :: Name Service (DNS)" ],
      )
