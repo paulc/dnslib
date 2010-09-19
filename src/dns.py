@@ -68,12 +68,7 @@ class DNSHeader(object):
 
     @classmethod
     def parse(cls,buffer):
-        id = buffer.get_short()
-        bitmap = buffer.get_short()
-        q = buffer.get_short()
-        a = buffer.get_short()
-        ns = buffer.get_short()
-        ar = buffer.get_short()
+        (id,bitmap,q,a,ns,ar) = buffer.unpack("!HHHHHH")
         return cls(id,bitmap,q,a,ns,ar)
 
     def __init__(self,id=0,bitmap=0,q=0,a=0,ns=0,ar=0,**args):
@@ -177,8 +172,7 @@ class DNSQuestion(object):
     @classmethod
     def parse(cls,buffer):
         qname = buffer.decode_name()
-        qtype = buffer.get_short()
-        qclass = buffer.get_short()
+        qtype,qclass = buffer.unpack("!HH")
         return cls(qname,qtype,qclass)
 
     def __init__(self,qname="",qtype=1,qclass=1):
@@ -199,10 +193,7 @@ class RR(object):
     @classmethod
     def parse(cls,buffer):
         rname = buffer.decode_name()
-        rtype = buffer.get_short()
-        rclass = buffer.get_short()
-        ttl = buffer.get_int()
-        rdlength = buffer.get_short()
+        rtype,rclass,ttl,rdlength = buffer.unpack("!HHIH")
         type = TYPE[rtype]
         if type == 'CNAME':
             rdata = CNAME.parse(buffer,rdlength)
@@ -257,7 +248,7 @@ class TXT(RD):
 
     @classmethod
     def parse(cls,buffer,length):
-        txtlength = buffer.get_byte()
+        (txtlength,) = buffer.unpack("!B")
         # First byte is TXT length (not in RFC?)
         if txtlength < length:
             data = buffer.get(txtlength)
@@ -286,7 +277,7 @@ class MX(RD):
 
     @classmethod
     def parse(cls,buffer,length):
-        preference = buffer.get_short()
+        (preference,) = buffer.unpack("!H")
         mx = buffer.decode_name()
         return cls(mx,preference)
 

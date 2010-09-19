@@ -5,7 +5,8 @@ class Bimap(object):
 
     A simple bi-directional map which returns either forward or
     reverse lookup of key through explicit 'lookup' method or 
-    through __getattr__ or __getitem__.
+    through __getattr__ or __getitem__. If the key is not found
+    in either the forward/reverse dictionaries it is returned.
 
     >>> m = Bimap({1:'a',2:'b',3:'c'})
     >>> m[1]
@@ -15,9 +16,7 @@ class Bimap(object):
     >>> m.a
     1
     >>> m.x
-    Traceback (most recent call last):
-    ...
-    KeyError: 'x'
+    'x'
 
     """
 
