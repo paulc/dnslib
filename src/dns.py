@@ -48,7 +48,7 @@ class DNSRecord(object):
     <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.103'>
     <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.147'>
 
-    To create a DNS Packet:
+    To create a DNS Request Packet:
 
     >>> d = DNSRecord(q=DNSQuestion("google.com"))
     >>> print d
@@ -64,11 +64,13 @@ class DNSRecord(object):
     >>> d.pack()
     '...'
 
-    >>> d = DNSRecord(DNSHeader(aa=1,ra=1),
+    To create a DNS Response Packet:
+
+    >>> d = DNSRecord(DNSHeader(qr=1,aa=1,ra=1),
     ...               q=DNSQuestion("abc.com"),
     ...               a=RR("abc.com",rdata=A("1.2.3.4")))
     >>> print d
-    <DNS Header: id=... type=QUERY opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=A qclass=IN>
     <DNS RR: 'abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
     >>> d.pack()
