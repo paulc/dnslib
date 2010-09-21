@@ -14,7 +14,7 @@ class GenerateReadme(Command):
         open("README","w").write(long_description)
 
 setup(name='dnslib',
-      version = '0.1',
+      version = '0.2',
       description = 'Simple library to encode/decode DNS wire-format packets',
       long_description = long_description,
       author = 'Paul Chakravarti',
