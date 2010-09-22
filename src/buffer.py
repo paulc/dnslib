@@ -88,6 +88,8 @@ class Buffer(object):
         return ".".join(label)
 
     def encode_name(self,name):
+        if len(name) > 253:
+            raise DNSError("Domain name too long: %s: " % name)
         while name:
             if self.names.has_key(name):
                 pointer = self.names[name]
@@ -100,7 +102,7 @@ class Buffer(object):
                     element,name = name.split(".",1)
                 except ValueError:
                     element,name = name,""
-                if len(element) > 255:
+                if len(element) > 635:
                     raise DNSError("Label too long: %s: " % element)
                 self.pack("!B",len(element))
                 self.append(element)

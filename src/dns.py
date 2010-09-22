@@ -1,5 +1,5 @@
 
-import random,struct 
+import random,socket,struct 
 
 from bit import get_bits,set_bits
 from bimap import Bimap
@@ -159,6 +159,13 @@ class DNSRecord(object):
         for rr in self.rr:
             rr.pack(buffer)
         return buffer.data
+
+    def send(self,dest,port=53):
+        sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        sock.sendto(self.pack(),(dest,port))
+        response,server = sock.recvfrom(8192)
+        sock.close()
+        return DNSRecord.parse(response)
         
     def __str__(self):
         sections = [ str(self.header) ]
