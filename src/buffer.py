@@ -32,13 +32,20 @@ class Buffer(object):
     '036161610362626203636363000378787803797979037a7a7a00037a7a7a03787878c00403616161c01e'
     >>> b.offset = 0
     >>> b.decode_name()
-    'aaa.bbb.ccc'
+    ['aaa', 'bbb', 'ccc']
     >>> b.decode_name()
-    'xxx.yyy.zzz'
+    ['xxx', 'yyy', 'zzz']
     >>> b.decode_name()
-    'zzz.xxx.bbb.ccc'
+    ['zzz', 'xxx', 'bbb', 'ccc']
     >>> b.decode_name()
-    'aaa.xxx.bbb.ccc'
+    ['aaa', 'xxx', 'bbb', 'ccc']
+
+    >>> b = Buffer()
+    >>> b.encode_name(['a.aa','b.bb','c.cc'])
+    >>> b.offset = 0
+    >>> b.decode_name()
+    ['a.aa', 'b.bb', 'c.cc']
+
     """
 
     def __init__(self,data=""):
@@ -77,7 +84,7 @@ class Buffer(object):
                 pointer = get_bits(self.unpack("!H")[0],0,14)
                 save = self.offset
                 self.offset = pointer
-                label.append(self.decode_name())
+                label.extend(self.decode_name())
                 self.offset = save
                 done = True
             else:
@@ -85,24 +92,23 @@ class Buffer(object):
                     label.append(self.get(len))
                 else:
                     done = True
-        return ".".join(label)
+        return label
 
     def encode_name(self,name):
-        if len(name) > 253:
+        if type(name) != type([]):
+            name = name.split(".")
+        if len(".".join(name)) > 253:
             raise DNSError("Domain name too long: %s: " % name)
         while name:
-            if self.names.has_key(name):
-                pointer = self.names[name]
+            if self.names.has_key(tuple(name)):
+                pointer = self.names[tuple(name)]
                 pointer = set_bits(pointer,3,14,2)
                 self.pack("!H",pointer)
                 return
             else:
-                self.names[name] = self.offset
-                try:
-                    element,name = name.split(".",1)
-                except ValueError:
-                    element,name = name,""
-                if len(element) > 635:
+                self.names[tuple(name)] = self.offset
+                element = name.pop(0)
+                if len(element) > 63:
                     raise DNSError("Label too long: %s: " % element)
                 self.pack("!B",len(element))
                 self.append(element)
