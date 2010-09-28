@@ -7,13 +7,19 @@ from buffer import Buffer
 
 QTYPE =  Bimap({ 1:'A', 2:'NS', 3:'MD', 4:'MF', 5:'CNAME', 6:'SOA', 7:'MB', 
                  8:'MG', 9:'MR', 10:'NULL', 11:'WKS', 12:'PTR', 13:'HINFO',
-                 14:'MINFO', 15:'MX', 16:'TXT',252:'AXFR',253:'MAILB',
+                 14:'MINFO', 15:'MX', 16:'TXT',26:'AAAA',252:'AXFR',253:'MAILB',
                  254:'MAILA',255:'*'})
 CLASS =  Bimap({ 1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 255:'*'})
 QR =     Bimap({ 0:'QUERY', 1:'RESPONSE' })
 RCODE =  Bimap({ 0:'None', 1:'Format Error', 2:'Server failure', 
                  3:'Name Error', 4:'Not Implemented', 5:'Refused' })
 OPCODE = Bimap({ 0:'QUERY', 1:'IQUERY', 2:'STATUS' })
+
+def dot(s):
+    if type(s) == type([]):
+        return ".".join(s)
+    else:
+        return s
 
 class DNSError(Exception):
     pass
@@ -291,7 +297,7 @@ class DNSQuestion(object):
         qtype,qclass = buffer.unpack("!HH")
         return cls(qname,qtype,qclass)
 
-    def __init__(self,qname="",qtype=1,qclass=1):
+    def __init__(self,qname=[],qtype=1,qclass=1):
         self.qname = qname
         self.qtype = qtype
         self.qclass = qclass
@@ -302,7 +308,7 @@ class DNSQuestion(object):
 
     def __str__(self):
         return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
-                    self.qname, QTYPE[self.qtype], CLASS[self.qclass])
+                    dot(self.qname), QTYPE[self.qtype], CLASS[self.qclass])
             
 class RR(object):
 
@@ -317,7 +323,7 @@ class RR(object):
             rdata = RD.parse(buffer,rdlength)
         return cls(rname,rtype,rclass,ttl,rdata)
 
-    def __init__(self,rname="",rtype=1,rclass=1,ttl=0,rdata=None):
+    def __init__(self,rname=[],rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname
         self.rtype = rtype
         self.rclass = rclass
@@ -336,8 +342,8 @@ class RR(object):
 
     def __str__(self):
         return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    self.rname, QTYPE[self.rtype], CLASS[self.rclass],
-                    self.ttl, self.rdata )
+                    dot(self.rname), QTYPE[self.rtype], CLASS[self.rclass],
+                    self.ttl, self.rdata)
 
 class RD(object):
 
@@ -353,7 +359,7 @@ class RD(object):
         buffer.append(self.data)
 
     def __str__(self):
-        return '%s' % self.data
+        return '%s' % dot(self.data)
 
 class TXT(RD):
 
@@ -392,7 +398,7 @@ class MX(RD):
         mx = buffer.decode_name()
         return cls(mx,preference)
 
-    def __init__(self,mx="",preference=10):
+    def __init__(self,mx=[],preference=10):
         self.mx = mx
         self.preference = preference
 
@@ -401,7 +407,7 @@ class MX(RD):
         buffer.encode_name(self.mx)
         
     def __str__(self):
-        return "%d:%s" % (self.preference,self.mx)
+        return "%d:%s" % (self.preference,dot(self.mx))
 
 class CNAME(RD):
         
@@ -428,7 +434,7 @@ class SOA(RD):
         times = buffer.unpack("!IIIII")
         return cls(mname,rname,times)
 
-    def __init__(self,mname="",rname="",times=None):
+    def __init__(self,mname=[],rname=[],times=None):
         self.mname = mname
         self.rname = rname
         self.times = times or (0,0,0,0,0)
@@ -439,7 +445,7 @@ class SOA(RD):
         buffer.pack("!IIIII", *self.times)
 
     def __str__(self):
-        return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
+        return "%s:%s:%s" % (dot(self.mname),dot(self.rname),":".join(map(str,self.times)))
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS }
