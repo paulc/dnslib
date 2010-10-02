@@ -3,7 +3,7 @@ import random,socket,struct
 
 from bit import get_bits,set_bits
 from bimap import Bimap
-from buffer import Buffer
+from label import DNSLabel,DNSLabelError,DNSBuffer
 
 QTYPE =  Bimap({ 1:'A', 2:'NS', 3:'MD', 4:'MF', 5:'CNAME', 6:'SOA', 7:'MB', 
                  8:'MG', 9:'MR', 10:'NULL', 11:'WKS', 12:'PTR', 13:'HINFO',
@@ -14,12 +14,6 @@ QR =     Bimap({ 0:'QUERY', 1:'RESPONSE' })
 RCODE =  Bimap({ 0:'None', 1:'Format Error', 2:'Server failure', 
                  3:'Name Error', 4:'Not Implemented', 5:'Refused' })
 OPCODE = Bimap({ 0:'QUERY', 1:'IQUERY', 2:'STATUS' })
-
-def dot(s):
-    if type(s) == type([]):
-        return ".".join(s)
-    else:
-        return s
 
 class DNSError(Exception):
     pass
@@ -104,11 +98,19 @@ class DNSRecord(object):
     >>> a.pack()
     '...'
 
+    Changelog:
+
+    0.1     2010-09-19  Initial Release
+    0.2     2010-09-22  Minor fixes
+    0.3     2010-10-02  Add DNSLabel class to supportt arbitrary labels (embedded '.')
+
     """
+
+    version = "0.3"
 
     @classmethod
     def parse(cls,packet):
-        buffer = Buffer(packet)
+        buffer = DNSBuffer(packet)
         header = DNSHeader.parse(buffer)
         questions = []
         rr = []
@@ -158,7 +160,7 @@ class DNSRecord(object):
 
     def pack(self):
         self.set_header_qa()
-        buffer = Buffer()
+        buffer = DNSBuffer()
         self.header.pack(buffer)
         for q in self.questions:
             q.pack(buffer)
@@ -302,13 +304,24 @@ class DNSQuestion(object):
         self.qtype = qtype
         self.qclass = qclass
 
+    def set_qname(self,qname):
+        if isinstance(qname,DNSLabel):
+            self._qname = qname
+        else:
+            self._qname = DNSLabel(qname)
+
+    def get_qname(self):
+        return self._qname
+
+    qname = property(get_qname,set_qname)
+
     def pack(self,buffer):
         buffer.encode_name(self.qname)
         buffer.pack("!HH",self.qtype,self.qclass)
 
     def __str__(self):
         return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
-                    dot(self.qname), QTYPE[self.qtype], CLASS[self.qclass])
+                    self.qname, QTYPE[self.qtype], CLASS[self.qclass])
             
 class RR(object):
 
@@ -330,6 +343,17 @@ class RR(object):
         self.ttl = ttl
         self.rdata = rdata
 
+    def set_rname(self,rname):
+        if isinstance(rname,DNSLabel):
+            self._rname = rname
+        else:
+            self._rname = DNSLabel(rname)
+
+    def get_rname(self):
+        return self._rname
+
+    rname = property(get_rname,set_rname)
+
     def pack(self,buffer):
         buffer.encode_name(self.rname)
         buffer.pack("!HHI",self.rtype,self.rclass,self.ttl)
@@ -342,7 +366,7 @@ class RR(object):
 
     def __str__(self):
         return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    dot(self.rname), QTYPE[self.rtype], CLASS[self.rclass],
+                    self.rname, QTYPE[self.rtype], CLASS[self.rclass],
                     self.ttl, self.rdata)
 
 class RD(object):
@@ -359,7 +383,7 @@ class RD(object):
         buffer.append(self.data)
 
     def __str__(self):
-        return '%s' % dot(self.data)
+        return '%s' % self.data
 
 class TXT(RD):
 
@@ -370,7 +394,8 @@ class TXT(RD):
         if txtlength < length:
             data = buffer.get(txtlength)
         else:
-            raise DNSError("Invalid TXT record: length (%d) > RD length (%d)" % (txtlength,length))
+            raise DNSError("Invalid TXT record: length (%d) > RD length (%d)" % 
+                                    (txtlength,length))
         return cls(data)
 
     def pack(self,buffer):
@@ -402,22 +427,50 @@ class MX(RD):
         self.mx = mx
         self.preference = preference
 
+    def set_mx(self,mx):
+        if isinstance(mx,DNSLabel):
+            self._mx = mx
+        else:
+            self._mx = DNSLabel(mx)
+
+    def get_mx(self):
+        return self._mx
+
+    mx = property(get_mx,set_mx)
+
     def pack(self,buffer):
         buffer.pack("!H",self.preference)
         buffer.encode_name(self.mx)
         
     def __str__(self):
-        return "%d:%s" % (self.preference,dot(self.mx))
+        return "%d:%s" % (self.preference,self.mx)
 
 class CNAME(RD):
         
     @classmethod
     def parse(cls,buffer,length):
-        data = buffer.decode_name()
-        return cls(data)
+        label = buffer.decode_name()
+        return cls(label)
+
+    def __init__(self,label=[]):
+        self.label = label
+
+    def set_label(self,label):
+        if isinstance(label,DNSLabel):
+            self._label = label
+        else:
+            self._label = DNSLabel(label)
+
+    def get_label(self):
+        return self._label
+
+    label = property(get_label,set_label)
 
     def pack(self,buffer):
-        buffer.encode_name(self.data)
+        buffer.encode_name(self.label)
+
+    def __str__(self):
+        return "%s" % (self.label)
 
 class PTR(CNAME):
     pass
@@ -439,13 +492,35 @@ class SOA(RD):
         self.rname = rname
         self.times = times or (0,0,0,0,0)
 
+    def set_mname(self,mname):
+        if isinstance(mname,DNSLabel):
+            self._mname = mname
+        else:
+            self._mname = DNSLabel(mname)
+
+    def get_mname(self):
+        return self._mname
+
+    mname = property(get_mname,set_mname)
+
+    def set_rname(self,rname):
+        if isinstance(rname,DNSLabel):
+            self._rname = rname
+        else:
+            self._rname = DNSLabel(rname)
+
+    def get_rname(self):
+        return self._rname
+
+    rname = property(get_rname,set_rname)
+
     def pack(self,buffer):
         buffer.encode_name(self.mname)
         buffer.encode_name(self.rname)
         buffer.pack("!IIIII", *self.times)
 
     def __str__(self):
-        return "%s:%s:%s" % (dot(self.mname),dot(self.rname),":".join(map(str,self.times)))
+        return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS }

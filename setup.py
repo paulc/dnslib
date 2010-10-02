@@ -4,6 +4,7 @@ from distutils.core import Command,setup
 
 import src.dns
 long_description = src.dns.DNSRecord.__doc__.rstrip() + "\n"
+version = src.dns.DNSRecord.version
 
 class GenerateReadme(Command):
     description = "Generates README file from long_description"
@@ -14,7 +15,7 @@ class GenerateReadme(Command):
         open("README","w").write(long_description)
 
 setup(name='dnslib',
-      version = '0.2',
+      version = version,
       description = 'Simple library to encode/decode DNS wire-format packets',
       long_description = long_description,
       author = 'Paul Chakravarti',

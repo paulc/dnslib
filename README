@@ -75,3 +75,9 @@
     <DNS RR: 'xxx.abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
     >>> a.pack()
     '...'
+
+    Changelog:
+
+    0.1                 Initial Release
+    0.2                 Minor fixes
+    0.3     2/10/2010   Add DNSLabel class to supportt arbitrary labels (embedded '.')
