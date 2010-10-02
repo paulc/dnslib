@@ -12,6 +12,16 @@
         * DNSQuestion
         * RR (resource records)
         * RD (resource data - superclass for TXT,A,MX,CNAME,PRT,SOA)
+        * DNSLabel (envelope for a DNS label)
+
+    Note: In version 0.3 the library was modified to use the DNSLabel class to
+    support arbirary DNS labels (as specified in RFC2181) - and specifically
+    to allow embedded '.'s. In most cases this is transparent (DNSLabel will
+    automatically convert a domain label presented as a dot separated string &
+    convert pack to this format when converted to a string) however to get the
+    underlying label data (as a tuple) you need to access the DNSLabel.label
+    attribute. To specifiy a label to the DNSRecord classes you can either pass
+    a DNSLabel object or pass the elements as a list/tuple.
 
     To decode a DNS packet:
 
