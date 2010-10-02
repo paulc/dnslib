@@ -78,6 +78,6 @@
 
     Changelog:
 
-    0.1                 Initial Release
-    0.2                 Minor fixes
-    0.3     2/10/2010   Add DNSLabel class to supportt arbitrary labels (embedded '.')
+    0.1     2010-09-19  Initial Release
+    0.2     2010-09-22  Minor fixes
+    0.3     2010-10-02  Add DNSLabel class to supportt arbitrary labels (embedded '.')
