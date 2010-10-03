@@ -25,6 +25,10 @@ class DNSLabel(object):
 
     """
     def __init__(self,label):
+        """
+            Create label instance from elements in list/tuple. If label
+            argument is a string split into components (separated by '.')
+        """
         if type(label) in (types.ListType,types.TupleType):
             self.label = tuple(label)
         else:
@@ -74,12 +78,24 @@ class DNSBuffer(Buffer):
     3
     """
 
+    def __init__(self,data=""):
+        """
+            Add 'names' dict to cache stored labels
+        """
+        super(DNSBuffer,self).__init__(data)
+        self.names = {}
+
     def decode_name(self):
+        """
+            Decode label at current offset in buffer (following pointers
+            to cached elements where necessary)
+        """
         label = []
         done = False
         while not done:
             (len,) = self.unpack("!B")
             if get_bits(len,6,2) == 3:
+                # Pointer
                 self.offset -= 1
                 pointer = get_bits(self.unpack("!H")[0],0,14)
                 save = self.offset
@@ -95,6 +111,11 @@ class DNSBuffer(Buffer):
         return DNSLabel(label)
 
     def encode_name(self,name):
+        """
+            Encode label and store at end of buffer (compressing
+            cached elements where needed) and store elements
+            in 'names' dict
+        """
         if not isinstance(name,DNSLabel):
             name = DNSLabel(name)
         if len(name) > 253:
@@ -102,6 +123,7 @@ class DNSBuffer(Buffer):
         name = list(name.label)
         while name:
             if self.names.has_key(tuple(name)):
+                # Cached - set pointer
                 pointer = self.names[tuple(name)]
                 pointer = set_bits(pointer,3,14,2)
                 self.pack("!H",pointer)

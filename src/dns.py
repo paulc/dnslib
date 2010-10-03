@@ -120,6 +120,9 @@ class DNSRecord(object):
 
     @classmethod
     def parse(cls,packet):
+        """
+            Parse DNS packet data and return DNSRecord instance
+        """
         buffer = DNSBuffer(packet)
         header = DNSHeader.parse(buffer)
         questions = []
@@ -131,6 +134,9 @@ class DNSRecord(object):
         return cls(header,questions,rr)
 
     def __init__(self,header=None,questions=None,rr=None,q=None,a=None):
+        """
+            Create DNSRecord
+        """
         self.header = header or DNSHeader()
         self.questions = questions or []
         self.rr = rr or []
