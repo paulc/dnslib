@@ -15,8 +15,6 @@ class Bimap(object):
     1
     >>> m.a
     1
-    >>> m.x
-    'x'
 
     """
 
@@ -24,14 +22,17 @@ class Bimap(object):
         self.forward = forward
         self.reverse = dict([(v,k) for (k,v) in forward.items()])
 
-    def lookup(self,k):
+    def lookup(self,k,default=None):
         try:
             try:
                 return self.forward[k]
             except KeyError:
                 return self.reverse[k]
-        except:
-            return k
+        except KeyError:
+            if default:
+                return default
+            else:
+                raise
     
     def __getitem__(self,k):
         return self.lookup(k)
