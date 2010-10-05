@@ -116,7 +116,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.3.2"
+    version = "0.3.3"
 
     @classmethod
     def parse(cls,packet):
@@ -336,7 +336,7 @@ class DNSQuestion(object):
         buffer.pack("!HH",self.qtype,self.qclass)
 
     def __str__(self):
-        return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
+        return "<DNS Question: %r qtype=%s qclass=%s>" % (
                     self.qname, QTYPE[self.qtype], CLASS[self.qclass])
             
 class RR(object):
@@ -381,9 +381,9 @@ class RR(object):
         buffer.update(rdlength_ptr,"!H",end-start)
 
     def __str__(self):
-        return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    self.rname, QTYPE[self.rtype], CLASS[self.rclass],
-                    self.ttl, self.rdata)
+        return "<DNS RR: %r rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
+                    self.rname, QTYPE.lookup(self.rtype,self.rtype), 
+                    CLASS[self.rclass], self.ttl, self.rdata)
 
 class RD(object):
 
