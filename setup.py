@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-from distutils.core import Command,setup
+try:
+    from setuptools import setup, Command
+except ImportError:
+    from distutils.core import Command,setup
 
 import src.dns
 long_description = src.dns.DNSRecord.__doc__.rstrip() + "\n"
@@ -23,7 +26,6 @@ setup(name='dnslib',
       url = 'http://bitbucket.org/paulc/dnslib/',
       cmdclass = { 'readme' : GenerateReadme },
       packages = ['dnslib'],
-      package_dir = {'dnslib':'src'},
       license = 'BSD',
       classifiers = [ "Topic :: Internet :: Name Service (DNS)" ],
      )
