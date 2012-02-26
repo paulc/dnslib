@@ -114,22 +114,22 @@ class DNSRecord(object):
 
     Changelog:
 
-    0.1     2010-09-19  Initial Release
-    0.2     2010-09-22  Minor fixes
-    0.3     2010-10-02  Add DNSLabel class to supportt arbitrary labels (embedded '.')
-    0.4     2012-02-26  Merge with dbslib-circuits
+        *   0.1     2010-09-19  Initial Release
+        *   0.2     2010-09-22  Minor fixes
+        *   0.3     2010-10-02  Add DNSLabel class to supportt arbitrary labels (embedded '.')
+        *   0.4     2012-02-26  Merge with dbslib-circuits
 
     License:
 
-    BSD
+        *   BSD
 
     Author:
 
-    Paul Chakravarti paul.chakravarti@gmail.com
+        *   Paul Chakravarti (paul.chakravarti@gmail.com)
 
     """
 
-    version = "0.4.1"
+    version = "0.4.2"
 
     @classmethod
     def parse(cls,packet):
