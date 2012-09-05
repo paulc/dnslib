@@ -13,11 +13,12 @@ QTYPE =  Bimap({1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
                 48:'DNSKEY', 49:'DHCID', 50:'NSEC3', 51:'NSEC3PARAM',
                 55:'HIP', 99:'SPF', 249:'TKEY', 250:'TSIG', 251:'IXFR',
                 252:'AXFR', 255:'*', 32768:'TA', 32769:'DLV'})
-CLASS =  Bimap({ 1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 255:'*'})
+CLASS =  Bimap({ 1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'})
 QR =     Bimap({ 0:'QUERY', 1:'RESPONSE' })
 RCODE =  Bimap({ 0:'None', 1:'Format Error', 2:'Server failure', 
-                 3:'Name Error', 4:'Not Implemented', 5:'Refused' })
-OPCODE = Bimap({ 0:'QUERY', 1:'IQUERY', 2:'STATUS' })
+                 3:'Name Error', 4:'Not Implemented', 5:'Refused', 6:'YXDOMAIN',
+                 7:'YXRRSET', 8:'NXRRSET', 9:'NOTAUTH', 10:'NOTZONE'})
+OPCODE = Bimap({ 0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE' })
 
 class DNSError(Exception):
     pass
@@ -311,14 +312,24 @@ class DNSHeader(object):
               self.tc and 'TC', 
               self.rd and 'RD', 
               self.ra and 'RA' ] 
+        if OPCODE[self.opcode] == 'UPDATE':
+            f1='zo'
+            f2='pr'
+            f3='up'
+            f4='ad'
+        else:
+            f1='q'
+            f2='a'
+            f3='ns'
+            f4='ar'
         return "<DNS Header: id=0x%x type=%s opcode=%s flags=%s " \
-                            "rcode=%s q=%d a=%d ns=%d ar=%d>" % ( 
+                            "rcode=%s %s=%d %s=%d %s=%d %s=%d>" % ( 
                     self.id,
                     QR[self.qr],
                     OPCODE[self.opcode],
                     ",".join(filter(None,f)),
                     RCODE[self.rcode],
-                    self.q, self.a, self.ns, self.ar )
+                    f1, self.q, f2, self.a, f3, self.ns, f4, self.ar )
 
 class DNSQuestion(object):
     
