@@ -133,7 +133,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.6"
+    version = "0.6.1"
 
     @classmethod
     def parse(cls,packet):
@@ -473,6 +473,9 @@ class AAAA(RD):
     def pack(self,buffer):
         buffer.pack("!16B",*self.data)
 
+    def __str__(self):
+        return '%s' % ":".join(map(str,self.data))
+
 class MX(RD):
 
     @classmethod
@@ -580,7 +583,7 @@ class SOA(RD):
     def __str__(self):
         return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
 
-RDMAP = { 'CNAME':CNAME, 'A':A, 'TXT':TXT, 'MX':MX, 
+RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS }
 
 def test_unpack(s):
