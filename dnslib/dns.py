@@ -133,7 +133,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.6.1"
+    version = "0.6.2"
 
     @classmethod
     def parse(cls,packet):
