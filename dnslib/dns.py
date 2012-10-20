@@ -457,6 +457,21 @@ class A(RD):
     def pack(self,buffer):
         buffer.pack("!BBBB",*map(int,self.data.split(".")))
 
+class AAAA(RD):
+
+    """
+        Basic support for AAAA record - assumes IPv6 address data is presented
+        as a simple tuple of 16 bytes
+    """
+ 
+    @classmethod
+    def parse(cls,buffer,length):
+        data = buffer.unpack("!16B")
+        return cls(data)
+ 
+    def pack(self,buffer):
+        buffer.pack("!16B",*self.data)
+
 class MX(RD):
 
     @classmethod
