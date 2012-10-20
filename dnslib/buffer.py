@@ -33,6 +33,12 @@ class Buffer(object):
         self.data = data
         self.offset = 0
 
+    def remaining(self):
+        """
+            Return bytes remaining
+        """
+        return len(self.data) - self.offset
+
     def get(self,len):
         """
             Gen len bytes at current offset (& increment offset)

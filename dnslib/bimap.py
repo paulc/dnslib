@@ -35,10 +35,10 @@ class Bimap(object):
                 raise
     
     def __getitem__(self,k):
-        return self.lookup(k)
+        return self.lookup(k,k)
 
     def __getattr__(self,k):
-        return self.lookup(k)
+        return self.lookup(k,k)
 
 if __name__ == '__main__':
     import doctest
