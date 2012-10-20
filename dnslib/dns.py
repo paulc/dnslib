@@ -117,8 +117,10 @@ class DNSRecord(object):
 
         *   0.1     2010-09-19  Initial Release
         *   0.2     2010-09-22  Minor fixes
-        *   0.3     2010-10-02  Add DNSLabel class to supportt arbitrary labels (embedded '.')
+        *   0.3     2010-10-02  Add DNSLabel class to support arbitrary labels (embedded '.')
         *   0.4     2012-02-26  Merge with dbslib-circuits
+        *   0.5     2012-09-13  Add support for RFC2136 DDNS updates
+                                Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
 
     License:
 
@@ -130,7 +132,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.4.2"
+    version = "0.5"
 
     @classmethod
     def parse(cls,packet):
