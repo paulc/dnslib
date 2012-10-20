@@ -95,6 +95,7 @@
         *   0.5     2012-09-13  Add support for RFC2136 DDNS updates
                                 Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
         *   0.6     2012-10-20  Basic AAAA support
+        *   0.7     2012-10-20  Add initial EDNS0 support (untested)
 
     License:
 
