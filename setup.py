@@ -25,7 +25,7 @@ setup(name='dnslib',
       author_email = 'paul.chakravarti@gmail.com',
       url = 'http://bitbucket.org/paulc/dnslib/',
       cmdclass = { 'readme' : GenerateReadme },
-      packages = ['dnslib'],
+      packages = ['dnslib','dnslib.server'],
       license = 'BSD',
       classifiers = [ "Topic :: Internet :: Name Service (DNS)" ],
      )
