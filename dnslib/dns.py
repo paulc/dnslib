@@ -121,6 +121,7 @@ class DNSRecord(object):
         *   0.4     2012-02-26  Merge with dbslib-circuits
         *   0.5     2012-09-13  Add support for RFC2136 DDNS updates
                                 Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
+        *   0.6     2012-10-20  Basic AAAA support
 
     License:
 
@@ -132,7 +133,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.5"
+    version = "0.6"
 
     @classmethod
     def parse(cls,packet):
