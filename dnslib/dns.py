@@ -3,6 +3,7 @@ import random,socket,struct
 
 from bit import get_bits,set_bits
 from bimap import Bimap
+from buffer import Buffer
 from label import DNSLabel,DNSLabelError,DNSBuffer
 
 QTYPE =  Bimap({1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
@@ -144,19 +145,27 @@ class DNSRecord(object):
         header = DNSHeader.parse(buffer)
         questions = []
         rr = []
+        ns = []
+        ar = []
         for i in range(header.q):
             questions.append(DNSQuestion.parse(buffer))
         for i in range(header.a):
             rr.append(RR.parse(buffer))
-        return cls(header,questions,rr)
+        for i in range(header.ns):
+            ns.append(RR.parse(buffer))
+        for i in range(header.ar):
+            ar.append(RR.parse(buffer))
+        return cls(header,questions,rr,ns=ns,ar=ar)
 
-    def __init__(self,header=None,questions=None,rr=None,q=None,a=None):
+    def __init__(self,header=None,questions=None,rr=None,q=None,a=None,ns=None,ar=None):
         """
             Create DNSRecord
         """
         self.header = header or DNSHeader()
         self.questions = questions or []
         self.rr = rr or []
+        self.ns = ns or []
+        self.ar = ar or []
         # Shortcuts to add a single Question/Answer
         if q:
             self.questions.append(q)
@@ -165,9 +174,11 @@ class DNSRecord(object):
         self.set_header_qa()
 
     def reply(self,data="",ra=1,aa=1):
+        answer = RDMAP.get(QTYPE[self.q.qtype],RD)(data)
         return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
                          q=self.q,
-                         a=RR(self.q.qname,self.q.qtype,rdata=RDMAP[QTYPE[self.q.qtype]](data)))
+                         a=RR(self.q.qname,self.q.qtype,rdata=answer))
+
 
     def add_question(self,q):
         self.questions.append(q)
@@ -212,6 +223,8 @@ class DNSRecord(object):
         sections = [ str(self.header) ]
         sections.extend([str(q) for q in self.questions])
         sections.extend([str(rr) for rr in self.rr])
+        sections.extend([str(rr) for rr in self.ns])
+        sections.extend([str(rr) for rr in self.ar])
         return "\n".join(sections)
 
 class DNSHeader(object):
@@ -366,17 +379,31 @@ class DNSQuestion(object):
         return "<DNS Question: %r qtype=%s qclass=%s>" % (
                     self.qname, QTYPE[self.qtype], CLASS[self.qclass])
             
+class EDNSOption(object):
+
+    def __init__(self,code,data):
+        self.code = code
+        self.data = data
+
+    def __str__(self):
+        return "<EDNS Option: Code=%d Data=%s>" % (self.code,self.data)
+
 class RR(object):
 
     @classmethod
     def parse(cls,buffer):
         rname = buffer.decode_name()
         rtype,rclass,ttl,rdlength = buffer.unpack("!HHIH")
-        type = QTYPE[rtype]
-        try:
-            rdata = RDMAP[type].parse(buffer,rdlength)
-        except KeyError:
-            rdata = RD.parse(buffer,rdlength)
+        if rtype == QTYPE.OPT:
+            options = []
+            option_buffer = Buffer(buffer.get(rdlength))
+            while option_buffer.remaining() > 4:
+                code,length = option_buffer.unpack("!HH")
+                data = option_buffer.get(length)
+                options.append(EDNSOption(code,data))
+            rdata = options
+        else:
+            rdata = RDMAP.get(QTYPE[rtype],RD).parse(buffer,rdlength)
         return cls(rname,rtype,rclass,ttl,rdata)
 
     def __init__(self,rname=[],rtype=1,rclass=1,ttl=0,rdata=None):
@@ -409,8 +436,8 @@ class RR(object):
 
     def __str__(self):
         return "<DNS RR: %r rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    self.rname, QTYPE.lookup(self.rtype,self.rtype), 
-                    CLASS[self.rclass], self.ttl, self.rdata)
+                    self.rname, QTYPE[self.rtype], CLASS[self.rclass], 
+                    self.ttl, self.rdata)
 
 class RD(object):
 
