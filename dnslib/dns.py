@@ -189,9 +189,19 @@ class DNSRecord(object):
         self.rr.append(rr)
         self.set_header_qa()
 
+    def add_ns(self,ns):
+        self.ns.append(ns)
+        self.set_header_qa()
+
+    def add_ar(self,ar):
+        self.ar.append(ar)
+        self.set_header_qa()
+
     def set_header_qa(self):
         self.header.q = len(self.questions)
         self.header.a = len(self.rr)
+        self.header.ns = len(self.ns)
+        self.header.ar = len(self.ar)
 
     # Shortcut to get first question
     def get_q(self):
@@ -211,6 +221,10 @@ class DNSRecord(object):
             q.pack(buffer)
         for rr in self.rr:
             rr.pack(buffer)
+        for ns in self.ns:
+            ns.pack(buffer)
+        for ar in self.ar:
+            ar.pack(buffer)
         return buffer.data
 
     def send(self,dest,port=53):
@@ -611,8 +625,48 @@ class SOA(RD):
     def __str__(self):
         return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
 
+class NAPTR(RD):
+
+    def __init__(self,order,preference,flags,service,regexp,replacement):
+        self.order = order
+        self.preference = preference
+        self.flags = flags
+        self.service = service
+        self.regexp = regexp
+        self.replacement = replacement
+
+    @classmethod
+    def parse(cls, buffer, length):
+        order, preference = buffer.unpack('!HH')
+        (length,) = buffer.unpack('!B')
+        flags = buffer.get(length)
+        (length,) = buffer.unpack('!B')
+        service = buffer.get(length)
+        (length,) = buffer.unpack('!B')
+        regexp = buffer.get(length)
+        replacement = buffer.decode_name()
+        if not replacement:
+            replacement = '.'
+        return cls(order, preference, flags, service, regexp, replacement)
+
+    def pack(self, buffer):
+        buffer.pack('!HH', self.order, self.preference)
+        buffer.pack('!B', len(self.flags))
+        buffer.append(self.flags)
+        buffer.pack('!B', len(self.service))
+        buffer.append(self.service)
+        buffer.pack('!B', len(self.regexp))
+        buffer.append(self.regexp)
+        if self.replacement == '.':
+            buffer.encode_name([])
+        else:
+            buffer.encode_name(self.replacement)
+
+    def __str__(self):
+        return '%d %d "%s" "%s" "%s" %s' %(self.order,self.preference,self.flags,self.service,self.regexp,self.replacement)
+
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
-          'PTR':PTR, 'SOA':SOA, 'NS':NS }
+          'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR}
 
 def test_unpack(s):
     """
