@@ -627,13 +627,13 @@ class SOA(RD):
 
 class NAPTR(RD):
 
-    def __init__(self,order,preference,flags,service,regexp,replacement):
+    def __init__(self,order,preference,flags,service,regexp,replacement=None):
         self.order = order
         self.preference = preference
         self.flags = flags
         self.service = service
         self.regexp = regexp
-        self.replacement = replacement
+        self.replacement = replacement or DNSLabel([])
 
     @classmethod
     def parse(cls, buffer, length):
@@ -645,8 +645,6 @@ class NAPTR(RD):
         (length,) = buffer.unpack('!B')
         regexp = buffer.get(length)
         replacement = buffer.decode_name()
-        if not replacement:
-            replacement = '.'
         return cls(order, preference, flags, service, regexp, replacement)
 
     def pack(self, buffer):
@@ -657,13 +655,13 @@ class NAPTR(RD):
         buffer.append(self.service)
         buffer.pack('!B', len(self.regexp))
         buffer.append(self.regexp)
-        if self.replacement == '.':
-            buffer.encode_name([])
-        else:
-            buffer.encode_name(self.replacement)
+        buffer.encode_name(self.replacement)
 
     def __str__(self):
-        return '%d %d "%s" "%s" "%s" %s' %(self.order,self.preference,self.flags,self.service,self.regexp,self.replacement)
+        return '%d %d "%s" "%s" "%s" %s' %(
+            self.order,self.preference,self.flags,
+            self.service,self.regexp,self.replacement or '.'
+        )
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR}
@@ -738,6 +736,20 @@ def test_unpack(s):
         <DNS Header: id=0x28fb type=RESPONSE opcode=QUERY flags=RD,RA rcode=None q=1 a=1 ns=0 ar=0>
         <DNS Question: 'google.com' qtype=SOA qclass=IN>
         <DNS RR: 'google.com' rtype=SOA rclass=IN ttl=5 rdata='ns1.google.com:dns-admin.google.com:2008110701:7200:1800:1209600:300'>
+
+    Standard query response NAPTR sip2sip.info
+        >>> unpack('740481800001000300000000077369703273697004696e666f0000230001c00c0023000100000c940027001e00640173075349502b44325500045f736970045f756470077369703273697004696e666f00c00c0023000100000c940027000a00640173075349502b44325400045f736970045f746370077369703273697004696e666f00c00c0023000100000c94002900140064017308534950532b44325400055f73697073045f746370077369703273697004696e666f00')
+        <DNS Header: id=0x7404 type=RESPONSE opcode=QUERY flags=RD,RA rcode=None q=1 a=3 ns=0 ar=0>
+        <DNS Question: 'sip2sip.info' qtype=NAPTR qclass=IN>
+        <DNS RR: 'sip2sip.info' rtype=NAPTR rclass=IN ttl=3220 rdata='30 100 "s" "SIP+D2U" "" _sip._udp.sip2sip.info'>
+        <DNS RR: 'sip2sip.info' rtype=NAPTR rclass=IN ttl=3220 rdata='10 100 "s" "SIP+D2T" "" _sip._tcp.sip2sip.info'>
+        <DNS RR: 'sip2sip.info' rtype=NAPTR rclass=IN ttl=3220 rdata='20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info'>
+
+    Standard query response NAPTR 0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org
+        >>> unpack('aef0818000010001000000000130013001300130013101310131013301390133013001310138013701380465313634036f72670000230001c00c002300010000a6a300320064000a0175074532552b53495022215e5c2b3f282e2a2924217369703a5c5c31406677642e70756c7665722e636f6d2100')
+        <DNS Header: id=0xaef0 type=RESPONSE opcode=QUERY flags=RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+        <DNS Question: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org' qtype=NAPTR qclass=IN>
+        <DNS RR: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org' rtype=NAPTR rclass=IN ttl=42659 rdata='100 10 "u" "E2U+SIP" "!^\+?(.*)$!sip:\\\\1@fwd.pulver.com!" .'>
     """
     pass
 
