@@ -124,6 +124,8 @@ class DNSRecord(object):
                                 Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
         *   0.6     2012-10-20  Basic AAAA support
         *   0.7     2012-10-20  Add initial EDNS0 support (untested)
+        *   0.8     2012-11-04  Add support for NAPTR, Authority RR and additional RR
+                                Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
 
     License:
 
@@ -135,7 +137,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.7"
+    version = "0.8"
 
     @classmethod
     def parse(cls,packet):
