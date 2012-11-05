@@ -126,6 +126,8 @@ class DNSRecord(object):
         *   0.7     2012-10-20  Add initial EDNS0 support (untested)
         *   0.8     2012-11-04  Add support for NAPTR, Authority RR and additional RR
                                 Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
+        *   0.8.1   2012-11-05  Added NAPTR test case and fixed logic error
+                                Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
 
     License:
 
@@ -137,7 +139,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.8"
+    version = "0.8.1"
 
     @classmethod
     def parse(cls,packet):
