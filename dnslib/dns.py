@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import random,socket,struct 
 
@@ -39,8 +40,12 @@ class DNSRecord(object):
         * DNSHeader 
         * DNSQuestion
         * RR (resource records)
-        * RD (resource data - superclass for TXT,A,MX,CNAME,PRT,SOA)
+        * RD (resource data - superclass for TXT,A,AAAA,MX,CNAME,PRT,SOA,NAPTR)
         * DNSLabel (envelope for a DNS label)
+
+    The library has (in theory) very rudimentary support for EDNS0 options
+    however this has not been tested due to a lack of data (anyone wanting
+    to improve support or provide test data please raise an issue)
 
     Note: In version 0.3 the library was modified to use the DNSLabel class to
     support arbirary DNS labels (as specified in RFC2181) - and specifically
@@ -128,6 +133,8 @@ class DNSRecord(object):
                                 Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
         *   0.8.1   2012-11-05  Added NAPTR test case and fixed logic error
                                 Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
+        *   0.8.2   2012-11-11  Patch to fix IPv6 formatting
+                                Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
 
     License:
 
@@ -137,9 +144,13 @@ class DNSRecord(object):
 
         *   Paul Chakravarti (paul.chakravarti@gmail.com)
 
+    Master Repository/Issues:
+
+        *   https://bitbucket.org/paulc/dnslib
+
     """
 
-    version = "0.8.1"
+    version = "0.8.2"
 
     @classmethod
     def parse(cls,packet):
@@ -520,7 +531,8 @@ class AAAA(RD):
         buffer.pack("!16B",*self.data)
 
     def __str__(self):
-        return '%s' % ":".join(map(str,self.data))
+        hexes = map('{:02x}'.format, self.data)
+        return ':'.join([''.join(hexes[i:i+2]) for i in xrange(0, len(hexes), 2)])
 
 class MX(RD):
 
