@@ -433,7 +433,10 @@ class RR(object):
                 options.append(EDNSOption(code,data))
             rdata = options
         else:
-            rdata = RDMAP.get(QTYPE[rtype],RD).parse(buffer,rdlength)
+            if rdlength:
+                rdata = RDMAP.get(QTYPE[rtype],RD).parse(buffer,rdlength)
+            else:
+                rdata = ''
         return cls(rname,rtype,rclass,ttl,rdata)
 
     def __init__(self,rname=[],rtype=1,rclass=1,ttl=0,rdata=None):
