@@ -105,7 +105,9 @@
         *   0.8.1   2012-11-05  Added NAPTR test case and fixed logic error
                                 Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
         *   0.8.2   2012-11-11  Patch to fix IPv6 formatting
-                                Patch provide by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
+                                Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
+        *   0.8.3   2013-04-27  Don't parse rdata if rdlength is 0
+                                Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
 
     License:
 
