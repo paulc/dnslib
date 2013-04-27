@@ -135,6 +135,8 @@ class DNSRecord(object):
                                 Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
         *   0.8.2   2012-11-11  Patch to fix IPv6 formatting
                                 Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
+        *   0.8.3   2013-04-27  Don't parse rdata if rdlength is 0
+                                Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
 
     License:
 
@@ -150,7 +152,7 @@ class DNSRecord(object):
 
     """
 
-    version = "0.8.2"
+    version = "0.8.3"
 
     @classmethod
     def parse(cls,packet):
