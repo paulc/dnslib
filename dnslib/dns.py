@@ -417,6 +417,10 @@ class EDNSOption(object):
         self.code = code
         self.data = data
 
+    def pack(self,buffer):
+        buffer.pack("!HH",self.code,len(self.data))
+        buffer.append(self.data)
+
     def __str__(self):
         return "<EDNS Option: Code=%d Data=%s>" % (self.code,self.data)
 
@@ -465,7 +469,11 @@ class RR(object):
         rdlength_ptr = buffer.offset
         buffer.pack("!H",0)
         start = buffer.offset
-        self.rdata.pack(buffer)
+        if self.rtype == QTYPE.OPT:
+            for opt in self.rdata:
+                opt.pack(buffer)
+        else:
+            self.rdata.pack(buffer)
         end = buffer.offset
         buffer.update(rdlength_ptr,"!H",end-start)
 
