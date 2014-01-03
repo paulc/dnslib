@@ -2,10 +2,10 @@
 
 import random,socket,struct 
 
-from dnslib.bit import get_bits, set_bits
-from dnslib.bimap import Bimap
-from dnslib.buffer import Buffer
-from dnslib.label import DNSLabel, DNSLabelError, DNSBuffer
+from bit import get_bits,set_bits
+from bimap import Bimap
+from buffer import Buffer
+from label import DNSLabel,DNSLabelError,DNSBuffer
 
 QTYPE =  Bimap({1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
                 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY',
