@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
 
 from circuits.net.sockets import UDPServer
 
@@ -22,8 +21,8 @@ class DNSServer(UDPServer):
         id = request.header.id
         qname = request.q.qname
         qtype = request.q.qtype
-        print("------ Request (%s): %r (%s)" % (str(sock),
-              qname.label, QTYPE[qtype]))
+        print "------ Request (%s): %r (%s)" % (str(sock),
+                qname.label, QTYPE[qtype])
 
         reply = DNSRecord(DNSHeader(id=id, qr=1, aa=1, ra=1), q=request.q)
 

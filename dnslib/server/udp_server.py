@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
 
 import socket
 
@@ -19,9 +18,9 @@ def dns_handler(s, peer, data):
     id = request.header.id
     qname = request.q.qname
     qtype = request.q.qtype
-    print("------ Request (%s): %r (%s)" % (str(peer),
-          qname.label, QTYPE[qtype]))
-    print("\n".join([ "  %s" % l for l in str(request).split("\n")]))
+    print "------ Request (%s): %r (%s)" % (str(peer),
+            qname.label, QTYPE[qtype])
+    print "\n".join([ "  %s" % l for l in str(request).split("\n")])
 
     reply = DNSRecord(DNSHeader(id=id, qr=1, aa=1, ra=1), q=request.q)
     if qtype == QTYPE.A:
@@ -35,8 +34,8 @@ def dns_handler(s, peer, data):
     else:
         reply.add_answer(RR(qname, QTYPE.CNAME, rdata=CNAME(MSG)))
 
-    print("------ Reply")
-    print("\n".join(["  %s" % l for l in str(reply).split("\n")]))
+    print "------ Reply"
+    print "\n".join([ "  %s" % l for l in str(reply).split("\n")])
 
     s.sendto(reply.pack(), peer)
 
@@ -44,6 +43,6 @@ s = socket.socket(AF_INET, SOCK_DGRAM)
 s.bind(('', 53))
 
 while True:
-    print("====== Waiting for connection")
+    print "====== Waiting for connection"
     data, peer = s.recvfrom(8192)
-    dns_handler(s, peer, data)
+    dns_handler(s,peer,data)
