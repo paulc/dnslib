@@ -1,7 +1,7 @@
 
 import types
-from bit import get_bits,set_bits
-from buffer import Buffer
+from dnslib.bit import get_bits, set_bits
+from dnslib.buffer import Buffer
 
 class DNSLabelError(Exception):
     pass
