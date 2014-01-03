@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import gevent
 from gevent import socket
@@ -25,9 +26,9 @@ def dns_handler(s, peer, data):
     id = request.header.id
     qname = request.q.qname
     qtype = request.q.qtype
-    print "------ Request (%s): %r (%s)" % (str(peer),
-            qname.label, QTYPE[qtype])
-    print request
+    print("------ Request (%s): %r (%s)" % (str(peer),
+          qname.label, QTYPE[qtype]))
+    print(request)
 
     reply = DNSRecord(DNSHeader(id=id, qr=1, aa=1, ra=1), q=request.q)
     if qtype == QTYPE.A:
@@ -41,8 +42,8 @@ def dns_handler(s, peer, data):
     else:
         reply.add_answer(RR(qname, QTYPE.CNAME, rdata=CNAME(MSG)))
 
-    print "------ Reply"
-    print reply 
+    print("------ Reply")
+    print(reply)
 
     s.sendto(reply.pack(), peer)
 
