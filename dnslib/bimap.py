@@ -20,7 +20,7 @@ class Bimap(object):
 
     def __init__(self,forward):
         self.forward = forward
-        self.reverse = dict([(v,k) for (k,v) in forward.items()])
+        self.reverse = dict([(v,k) for (k,v) in list(forward.items())])
 
     def lookup(self,k,default=None):
         try:

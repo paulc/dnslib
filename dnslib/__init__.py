@@ -1,2 +1,2 @@
 
-from dns import *
+from dnslib.dns import *

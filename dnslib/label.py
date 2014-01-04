@@ -1,7 +1,8 @@
 
-import types
-from bit import get_bits,set_bits
-from buffer import Buffer
+from __future__ import print_function
+
+from dnslib.bit import get_bits,set_bits
+from dnslib.buffer import Buffer
 
 class DNSLabelError(Exception):
     pass
@@ -12,13 +13,13 @@ class DNSLabel(object):
     Container for DNS label supporting arbitary label chars (including '.')
 
     >>> l1 = DNSLabel("aaa.bbb.ccc")
-    >>> l2 = DNSLabel(["aaa","bbb","ccc"])
+    >>> l2 = DNSLabel([b"aaa",b"bbb",b"ccc"])
     >>> l1 == l2
     True
     >>> x = { l1 : 1 }
     >>> x[l1]
     1
-    >>> print l1
+    >>> print(l1)
     aaa.bbb.ccc
     >>> l1
     'aaa.bbb.ccc'
@@ -29,16 +30,18 @@ class DNSLabel(object):
             Create label instance from elements in list/tuple. If label
             argument is a string split into components (separated by '.')
         """
-        if type(label) in (types.ListType,types.TupleType):
+        if type(label) in (list,tuple):
             self.label = tuple(label)
         else:
-            self.label = tuple(label.split("."))
+            if type(label) is not bytes:
+                label = label.encode('utf8')
+            self.label = tuple(label.split(b'.'))
 
     def __str__(self):
-        return ".".join(self.label)
+        return b'.'.join(self.label).decode()
 
     def __repr__(self):
-        return "%r" % ".".join(self.label)
+        return (b'\'' + b'.'.join(self.label) + b'\'').decode()
 
     def __hash__(self):
         return hash(self.label)
@@ -47,19 +50,25 @@ class DNSLabel(object):
         return self.label == other.label
 
     def __len__(self):
-        return len(".".join(self.label))
+        return len(b'.'.join(self.label))
 
 class DNSBuffer(Buffer):
 
     """
     Extends Buffer to provide DNS name encoding/decoding (with caching)
 
+    # Needed for Python 2/3 doctest compatibility
+    >>> def p(s):
+    ...     if not isinstance(s,str):
+    ...         return s.decode()
+    ...     return s
+
     >>> b = DNSBuffer()
-    >>> b.encode_name("aaa.bbb.ccc")
-    >>> b.encode_name("xxx.yyy.zzz")
-    >>> b.encode_name("zzz.xxx.bbb.ccc")
-    >>> b.encode_name("aaa.xxx.bbb.ccc")
-    >>> b.data.encode("hex")
+    >>> b.encode_name(b'aaa.bbb.ccc')
+    >>> b.encode_name(b'xxx.yyy.zzz')
+    >>> b.encode_name(b'zzz.xxx.bbb.ccc')
+    >>> b.encode_name(b'aaa.xxx.bbb.ccc')
+    >>> p(b.hex())
     '036161610362626203636363000378787803797979037a7a7a00037a7a7a03787878c00403616161c01e'
     >>> b.offset = 0
     >>> b.decode_name()
@@ -72,13 +81,13 @@ class DNSBuffer(Buffer):
     'aaa.xxx.bbb.ccc'
 
     >>> b = DNSBuffer()
-    >>> b.encode_name(['a.aa','b.bb','c.cc'])
+    >>> b.encode_name([b'a.aa',b'b.bb',b'c.cc'])
     >>> b.offset = 0
     >>> len(b.decode_name().label)
     3
     """
 
-    def __init__(self,data=""):
+    def __init__(self,data=b''):
         """
             Add 'names' dict to cache stored labels
         """
@@ -122,7 +131,7 @@ class DNSBuffer(Buffer):
             raise DNSLabelError("Domain label too long: %r" % name)
         name = list(name.label)
         while name:
-            if self.names.has_key(tuple(name)):
+            if tuple(name) in self.names:
                 # Cached - set pointer
                 pointer = self.names[tuple(name)]
                 pointer = set_bits(pointer,3,14,2)
@@ -135,7 +144,7 @@ class DNSBuffer(Buffer):
                     raise DNSLabelError("Label component too long: %r" % element)
                 self.pack("!B",len(element))
                 self.append(element)
-        self.append("\x00")
+        self.append(b'\x00')
 
 if __name__ == '__main__':
     import doctest
