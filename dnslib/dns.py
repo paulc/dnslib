@@ -193,11 +193,15 @@ class DNSRecord(object):
             self.rr.append(a)
         self.set_header_qa()
 
-    def reply(self,data="",ra=1,aa=1):
-        answer = RDMAP.get(QTYPE[self.q.qtype],RD)(data)
-        return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
-                         q=self.q,
-                         a=RR(self.q.qname,self.q.qtype,rdata=answer))
+    def reply(self,data=None,ra=1,aa=1):
+        if data:
+            answer = RDMAP.get(QTYPE[self.q.qtype],RD)(data)
+            return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
+                             q=self.q,
+                             a=RR(self.q.qname,self.q.qtype,rdata=answer))
+        else:
+            return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
+                             q=self.q)
 
 
     def add_question(self,q):
@@ -447,9 +451,12 @@ class RR(object):
                 rdata = ''
         return cls(rname,rtype,rclass,ttl,rdata)
 
-    def __init__(self,rname=[],rtype=1,rclass=1,ttl=0,rdata=None):
-        self.rname = rname
-        self.rtype = rtype
+    def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
+        self.rname = rname or []
+        if type(rtype) != int:
+            self.rtype = QTYPE[rtype]
+        else:
+            self.rtype = rtype
         self.rclass = rclass
         self.ttl = ttl
         self.rdata = rdata
@@ -496,30 +503,17 @@ class RD(object):
         data = buffer.get(length)
         return cls(data)
 
-    def __init__(self,data=""):
+    def __init__(self,data=b""):
         self.data = data
 
     def pack(self,buffer):
         buffer.append(self.data)
 
-    def __str__(self):
-        if type(self.data) is bytes: 
-            try:
-                return self.data.decode()
-            except UnicodeDecodeError:
-                return binascii.hexlify(self.data).decode()
-        else:
-            return '%s' % self.data
-
     def __repr__(self):
-        if type(self.data) is bytes: 
-            try:
-                return self.data.decode()
-            except UnicodeDecodeError:
-                return binascii.hexlify(self.data).decode()
-        else:
-            return '%r' % self.data
-
+        try:
+            return self.data.decode()
+        except UnicodeDecodeError:
+            return binascii.hexlify(self.data).decode()
 
 class TXT(RD):
 
@@ -544,12 +538,20 @@ class A(RD):
 
     @classmethod
     def parse(cls,buffer,length):
-        ip = buffer.unpack("!BBBB")
-        data = "%d.%d.%d.%d" % ip
+        data = buffer.unpack("!BBBB")
         return cls(data)
 
+    def __init__(self,data):
+        if type(data) is tuple:
+            self.data = data
+        else:
+            self.data = tuple(map(int,data.split(".")))
+
     def pack(self,buffer):
-        buffer.pack("!BBBB",*map(int,self.data.split(".")))
+        buffer.pack("!BBBB",*self.data)
+
+    def __repr__(self):
+        return "%d.%d.%d.%d" % self.data
 
 class AAAA(RD):
 
@@ -566,7 +568,7 @@ class AAAA(RD):
     def pack(self,buffer):
         buffer.pack("!16B",*self.data)
 
-    def __str__(self):
+    def __repr__(self):
         hexes = list(map('{:02x}'.format, self.data))
         return ':'.join([''.join(hexes[i:i+2]) for i in range(0, len(hexes), 2)])
 
@@ -578,8 +580,8 @@ class MX(RD):
         mx = buffer.decode_name()
         return cls(mx,preference)
 
-    def __init__(self,mx=[],preference=10):
-        self.mx = mx
+    def __init__(self,mx=None,preference=10):
+        self.mx = mx or []
         self.preference = preference
 
     def set_mx(self,mx):
@@ -597,7 +599,7 @@ class MX(RD):
         buffer.pack("!H",self.preference)
         buffer.encode_name(self.mx)
         
-    def __str__(self):
+    def __repr__(self):
         return "%d:%s" % (self.preference,self.mx)
 
 class CNAME(RD):
@@ -624,7 +626,7 @@ class CNAME(RD):
     def pack(self,buffer):
         buffer.encode_name(self.label)
 
-    def __str__(self):
+    def __repr__(self):
         return "%s" % (self.label)
 
 class PTR(CNAME):
@@ -642,9 +644,9 @@ class SOA(RD):
         times = buffer.unpack("!IIIII")
         return cls(mname,rname,times)
 
-    def __init__(self,mname=[],rname=[],times=None):
-        self.mname = mname
-        self.rname = rname
+    def __init__(self,mname=None,rname=None,times=None):
+        self.mname = mname or []
+        self.rname = rname or []
         self.times = times or (0,0,0,0,0)
 
     def set_mname(self,mname):
@@ -674,7 +676,7 @@ class SOA(RD):
         buffer.encode_name(self.rname)
         buffer.pack("!IIIII", *self.times)
 
-    def __str__(self):
+    def __repr__(self):
         return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
 
 class NAPTR(RD):
@@ -709,7 +711,7 @@ class NAPTR(RD):
         buffer.append(self.regexp)
         buffer.encode_name(self.replacement)
 
-    def __str__(self):
+    def __repr__(self):
         return '%d %d "%s" "%s" "%s" %s' %(
             self.order,self.preference,self.flags.decode(),
             self.service.decode(),self.regexp.decode(),
