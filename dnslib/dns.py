@@ -545,7 +545,7 @@ class A(RD):
         if type(data) is tuple:
             self.data = data
         else:
-            self.data = tuple(map(int,data.split(".")))
+            self.data = tuple(map(int,data.rstrip(".").split(".")))
 
     def pack(self,buffer):
         buffer.pack("!BBBB",*self.data)
