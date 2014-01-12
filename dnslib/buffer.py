@@ -1,6 +1,9 @@
 
 import binascii,struct
 
+class BufferError(Exception):
+    pass
+
 class Buffer(object):
 
     """
@@ -47,13 +50,16 @@ class Buffer(object):
         """
         return len(self.data) - self.offset
 
-    def get(self,len):
+    def get(self,length):
         """
             Gen len bytes at current offset (& increment offset)
         """
+        if length > self.remaining():
+            raise BufferError("Not enough bytes [offset=%d,remaining=%d,requested=%d]" %
+                    (self.offset,self.remaining(),length))
         start = self.offset
-        end = self.offset + len
-        self.offset += len
+        end = self.offset + length
+        self.offset += length
         return bytes(self.data[start:end])
 
     def hex(self):
@@ -83,13 +89,17 @@ class Buffer(object):
         """
         s = struct.pack(fmt,*args)
         self.data[ptr:ptr+len(s)] = s
-        #self.data = self.data[:ptr] + s + self.data[ptr+len(s):]
 
     def unpack(self,fmt):
         """
             Unpack data at current offset according to fmt (from struct)
         """
-        return struct.unpack(fmt,self.get(struct.calcsize(fmt)))
+        try:
+            data = self.get(struct.calcsize(fmt))
+            return struct.unpack(fmt,data)
+        except struct.error as e:
+            raise BufferError("Error unpacking struct '%s' <%s>" % 
+                    (fmt,binascii.hexlify(data).decode()))
 
 if __name__ == '__main__':
     import doctest
