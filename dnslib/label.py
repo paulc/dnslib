@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 from dnslib.bit import get_bits,set_bits
-from dnslib.buffer import Buffer
+from dnslib.buffer import Buffer, BufferError
 
 class DNSLabelError(Exception):
     pass
@@ -94,7 +94,7 @@ class DNSBuffer(Buffer):
         super(DNSBuffer,self).__init__(data)
         self.names = {}
 
-    def decode_name(self):
+    def decode_name(self,last=-1):
         """
             Decode label at current offset in buffer (following pointers
             to cached elements where necessary)
@@ -102,19 +102,31 @@ class DNSBuffer(Buffer):
         label = []
         done = False
         while not done:
-            (len,) = self.unpack("!B")
-            if get_bits(len,6,2) == 3:
+            (length,) = self.unpack("!B")
+            if get_bits(length,6,2) == 3:
                 # Pointer
                 self.offset -= 1
                 pointer = get_bits(self.unpack("!H")[0],0,14)
                 save = self.offset
-                self.offset = pointer
-                label.extend(self.decode_name().label)
+                if last == save:
+                    raise BufferError("Recursive pointer in DNSLabel [pointer=%d,length=%d]" % 
+                            (pointer,len(self.data)))
+                if pointer < len(self.data):
+                    self.offset = pointer
+                else:
+                    raise BufferError("Invalid pointer in DNSLabel [pointer=%d,length=%d]" % 
+                            (pointer,len(self.data)))
+                label.extend(self.decode_name(save).label)
                 self.offset = save
                 done = True
             else:
-                if len > 0:
-                    label.append(self.get(len))
+                if length > 0:
+                    l = self.get(length)
+                    try:
+                        l.decode()
+                    except UnicodeDecodeError:
+                        raise BufferError("Invalid label <%s>" % l)
+                    label.append(l)
                 else:
                     done = True
         return DNSLabel(label)
