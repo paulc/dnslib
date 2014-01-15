@@ -10,9 +10,11 @@ class DNSLabelError(Exception):
 class DNSLabel(object):
 
     """
-    Container for DNS label supporting arbitary label chars (including '.')
+    Container for DNS label 
 
-    >>> l1 = DNSLabel("aaa.bbb.ccc")
+    Supports IDNA encoding for unicode domain names
+
+    >>> l1 = DNSLabel(u"aaa.bbb.ccc.")
     >>> l2 = DNSLabel([b"aaa",b"bbb",b"ccc"])
     >>> l1 == l2
     True
@@ -23,25 +25,45 @@ class DNSLabel(object):
     aaa.bbb.ccc
     >>> l1
     'aaa.bbb.ccc'
+    >>> l1.add("xxx.yyy")
+    'xxx.yyy.aaa.bbb.ccc'
+    >>> u1 = DNSLabel(u"\u2295.com")
+    >>> u1.__str__() == u"\u2295.com"
+    True
+    >>> u1.label == ( b"xn--keh", b"com" )
+    True
 
     """
     def __init__(self,label):
         """
-            Create label instance from elements in list/tuple. If label
-            argument is a string split into components (separated by '.')
+            Create DNS label instance 
+
+            Label can be specified as:
+            - a list/tuple of byte strings
+            - a byte string (split into components separated by '.')
+            - a unicode string encoded according to RFC3490 (IDNA)
         """
         if type(label) in (list,tuple):
             self.label = tuple(label)
         else:
             if type(label) is not bytes:
-                label = label.encode('utf8')
-            self.label = tuple(label.split(b'.'))
+                self.label = tuple(label.encode("idna").rstrip(b".").split(b"."))
+            else:
+                self.label = tuple(label.rstrip(b".").split(b"."))
+
+    def add(self,name):
+        """
+            Prepend label 
+        """
+        new = DNSLabel(name)
+        new.label += self.label
+        return new
 
     def __str__(self):
-        return b'.'.join(self.label).decode()
+        return ".".join([ s.decode("idna") for s in self.label ])
 
     def __repr__(self):
-        return (b'\'' + b'.'.join(self.label) + b'\'').decode()
+        return "'" + str(self) + "'"
 
     def __hash__(self):
         return hash(self.label)
