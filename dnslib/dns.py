@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import binascii,random,socket,struct 
+from itertools import chain
 
 from dnslib.bit import get_bits,set_bits
 from dnslib.bimap import Bimap, BimapError
@@ -113,11 +114,13 @@ class DNSRecord(object):
     Add additional RRs:
 
     >>> a.add_answer(RR("xxx.abc.com",QTYPE.A,rdata=A("1.2.3.4")))
+    >>> a.add_answer(RR("xxx.abc.com",QTYPE.AAAA,rdata=AAAA("1234:5678::1")))
     >>> print(a)
-    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=2 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=3 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=CNAME qclass=IN>
     <DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=0 rdata='xxx.abc.com'>
     <DNS RR: 'xxx.abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
+    <DNS RR: 'xxx.abc.com' rtype=AAAA rclass=IN ttl=0 rdata='1234:5678::1'>
     >>> str(DNSRecord.parse(a.pack())) == str(a)
     True
 
@@ -568,8 +571,8 @@ class A(RD):
             raise DNSError("Error unpacking A [offset=%d]: %s" % (buffer.offset,e))
 
     def __init__(self,data):
-        if type(data) is tuple:
-            self.data = data
+        if type(data) in (tuple,list):
+            self.data = tuple(data)
         else:
             self.data = tuple(map(int,data.rstrip(".").split(".")))
 
@@ -579,11 +582,66 @@ class A(RD):
     def __repr__(self):
         return "%d.%d.%d.%d" % self.data
 
+def _parse_ipv6(a):
+    """
+        Parse IPv6 address. Ideally we would use the ipaddress module in 
+        Python3.3 but can't rely on having this.
+
+        Does not handle dotted-quad addresses or subnet prefix
+
+        >>> _parse_ipv6("::") == [0] * 16
+        True
+        >>> _parse_ipv6("1234:5678::abcd:0:ff00")
+        [18, 52, 86, 120, 0, 0, 0, 0, 0, 0, 171, 205, 0, 0, 255, 0]
+
+    """
+    l,_,r = a.partition("::")
+    l_groups = list(chain(*[divmod(int(x,16),256) for x in l.split(":") if x]))
+    r_groups = list(chain(*[divmod(int(x,16),256) for x in r.split(":") if x]))
+    zeros = [0] * (16 - len(l_groups) - len(r_groups))
+    return l_groups + zeros + r_groups 
+
+def _format_ipv6(a):
+    """
+        Format IPv6 address (from tuple of 16 bytes) compressing sequence of
+        sero bytes to '::'. Ideally we would use the ipaddress module in
+        Python3.3 but can't rely on having this.
+
+        >>> _format_ipv6([0]*16)
+        '::'
+        >>> _format_ipv6(_parse_ipv6("::0012:5678"))
+        '::12:5678'
+        >>> _format_ipv6(_parse_ipv6("1234:0:5678::ff:0:1"))
+        '1234:0:5678::ff:0:1'
+    """
+    left = []
+    right = []
+    current = 'left'
+    for i in range(0,16,2):
+        group = (a[i] << 8) + a[i+1]
+        if current == 'left':
+            if group == 0 and i < 14:
+                if (a[i+2] << 8) + a[i+3] == 0:
+                    current = 'right'
+                else:
+                    left.append("0")
+            else:
+                left.append("%x" % group)
+        else:
+            if group == 0 and len(right) == 0:
+                pass
+            else:
+                right.append("%x" % group)
+    if len(left) < 8:
+        return ":".join(left) + "::" + ":".join(right)
+    else:
+        return ":".join(left)
+    
 class AAAA(RD):
 
     """
-        Basic support for AAAA record - assumes IPv6 address data is presented
-        as a simple tuple of 16 bytes
+        Basic support for AAAA record - accepts IPv6 address data as either
+        a tuple of 16 bytes or in text format
     """
  
     @classmethod
@@ -594,12 +652,17 @@ class AAAA(RD):
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking AAAA [offset=%d]: %s" % (buffer.offset,e))
  
+    def __init__(self,data):
+        if type(data) in (tuple,list):
+            self.data = tuple(data)
+        else:
+            self.data = _parse_ipv6(data)
+
     def pack(self,buffer):
         buffer.pack("!16B",*self.data)
 
     def __repr__(self):
-        hexes = list(map('{:02x}'.format, self.data))
-        return ':'.join([''.join(hexes[i:i+2]) for i in range(0, len(hexes), 2)])
+        return _format_ipv6(self.data)
 
 class MX(RD):
 
