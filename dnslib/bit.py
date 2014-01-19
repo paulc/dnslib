@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 """
     Some basic bit mainpulation utilities
