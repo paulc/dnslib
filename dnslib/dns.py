@@ -265,7 +265,7 @@ class DNSRecord(object):
         sock.close()
         return DNSRecord.parse(response)
         
-    def format(self,prefix):
+    def format(self,prefix=""):
         sections = [ str(self.header) ]
         sections.extend([str(q) for q in self.questions])
         sections.extend([str(rr) for rr in self.rr])
