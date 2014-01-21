@@ -265,16 +265,16 @@ class DNSRecord(object):
         sock.close()
         return DNSRecord.parse(response)
         
-    def records(self):
+    def format(self,prefix):
         sections = [ str(self.header) ]
         sections.extend([str(q) for q in self.questions])
         sections.extend([str(rr) for rr in self.rr])
         sections.extend([str(rr) for rr in self.ns])
         sections.extend([str(rr) for rr in self.ar])
-        return sections
+        return prefix + ("\n" + prefix).join(sections)
 
     def __str__(self):
-        return "\n".join(self.records())
+        return self.format()
 
 class DNSHeader(object):
 

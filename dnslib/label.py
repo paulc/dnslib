@@ -43,8 +43,8 @@ class DNSLabel(object):
 
             Label can be specified as:
             - a list/tuple of byte strings
-            - a byte string (split into components separated by '.')
-            - a unicode string encoded according to RFC3490 (IDNA)
+            - a byte string (split into components separated by b'.')
+            - a unicode string which will be encoded according to RFC3490/IDNA
         """
         if type(label) in (list,tuple):
             self.label = tuple(label)

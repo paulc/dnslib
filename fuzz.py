@@ -48,7 +48,7 @@ for f in (fuzz_delete,fuzz_add,fuzz_change):
             if diff:
                 p("  " + "\n  ".join(diff))
         except DNSError as e:
-            p("  >>> " + str(e))
+            print("  >>> " + str(e))
         except Exception as e:
             uncaught += 1
             print(traceback.format_exc())
