@@ -380,7 +380,7 @@ class DNSHeader(object):
               self.tc and 'TC', 
               self.rd and 'RD', 
               self.ra and 'RA' ] 
-        if OPCODE.lookup(self.opcode,str(self.opcode)) == 'UPDATE':
+        if OPCODE[self.opcode] == 'UPDATE':
             f1='zo'
             f2='pr'
             f3='up'
@@ -393,10 +393,10 @@ class DNSHeader(object):
         return "<DNS Header: id=0x%x type=%s opcode=%s flags=%s " \
                             "rcode=%s %s=%d %s=%d %s=%d %s=%d>" % ( 
                     self.id,
-                    QR.f(self.qr),
-                    OPCODE.f(self.opcode),
+                    QR[self.qr],
+                    OPCODE[self.opcode],
                     ",".join(filter(None,f)),
-                    RCODE.f(self.rcode),
+                    RCODE[self.rcode],
                     f1, self.q, f2, self.a, f3, self.ns, f4, self.ar )
 
 class DNSQuestion(object):
@@ -432,7 +432,7 @@ class DNSQuestion(object):
 
     def __str__(self):
         return "<DNS Question: %r qtype=%s qclass=%s>" % (
-                    self.qname, QTYPE.f(self.qtype), CLASS.f(self.qclass))
+                    self.qname, QTYPE[self.qtype], CLASS[self.qclass])
             
 class EDNSOption(object):
 
@@ -513,7 +513,7 @@ class RR(object):
             return "\n".join(s)
         else:
             return "<DNS RR: %r rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    self.rname, QTYPE.f(self.rtype), CLASS.f(self.rclass), 
+                    self.rname, QTYPE[self.rtype], CLASS[self.rclass], 
                     self.ttl, self.rdata)
 
 class RD(object):
