@@ -5,9 +5,9 @@ try:
 except ImportError:
     from distutils.core import Command,setup
 
-import dnslib.dns
-long_description = dnslib.dns.DNSRecord.__doc__.rstrip() + "\n"
-version = dnslib.dns.DNSRecord.version
+import dnslib
+long_description = dnslib.__doc__.rstrip() + "\n"
+version = dnslib.version
 
 class GenerateReadme(Command):
     description = "Generates README file from long_description"
