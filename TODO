@@ -1,0 +1,14 @@
+
+* Zonefile parser
+* Server module
+    - Static
+    - Zone
+    - Proxy
+    - MITM
+    - Dynamic
+    - CLI
+* SVR RR
+* Other RRs ?
+* RR toZone/fromZone
+* More tests
+* Update docs
