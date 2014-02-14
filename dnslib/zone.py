@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 from dnslib.lex import WordLexer
+from dnslib.label import DNSLabel
 
 secs = {'s':1,'m':60,'h':3600,'d':86400,'w':604800}
 
@@ -11,66 +12,64 @@ def parse_time(s):
     else:
         return int(s)
 
-def parse_label(label,origin):
-    if label.endswith("."):
-        return label
-    elif label == "@":
-        return origin
-    else:
-        return label + "." + origin
-
-def parse_rr(rr,state):
-    i = rr.index('IN')
-    ttl = lambda : int(rr[i-1])
-    kind = lambda : rr[i+1]
-    rd = lambda : [ x.strip('"') for x in rr[i+2:]]
-    if i == 0:
-        return (state['label'],state['ttl'],kind(),rd())
-    elif i == 1:
-        if rr[0].isdigit():
-            return (state['label'],ttl(),kind(),rd())
-        else:
-            state['label'] = parse_label(rr[0],state['origin'])
-            return (state['label'],state['ttl'],kind(),rd())
-    elif i == 2:
-        state['label'] = parse_label(rr[0],state['origin'])
-        return (state['label'],ttl(),kind(),rd())
-    else:
-        raise ValueError("Invalid RR",rr)
-
-def parse_zone(zone):
+def zone_iter(zone):
 
     l = WordLexer(zone)
     l.commentchars = ';'
     l.nltok = ('NL',)
     l.spacetok = ('SPACE',)
-    rr = []
-    paren = False
-
     i = iter(l)
+
+    rr = []
     prev = None
+    paren = False
+    prev_label = DNSLabel(".")
+    origin = DNSLabel(".")
+    ttl = 0
+
+    def parse_label(label):
+        if label.endswith("."):
+            return DNSLabel(label)
+        elif label == "@":
+            return origin
+        elif label == '':
+            return prev_label
+        else:
+            return origin.add(label)
 
     for tok in i:
         if tok[0] == 'NL':
             if not paren and rr:
-                print("RR:",rr)
+                _label = prev_label = parse_label(rr.pop(0))
+                if rr[0].isdigit():
+                    _ttl = int(rr.pop(0))
+                else:
+                    _ttl = ttl
+                if rr[0] in ('IN'):
+                    _class = rr.pop(0)
+                else:
+                    _class = 'IN'
+                _type = rr.pop(0)
+                _rdata = rr
+                yield((_label,_ttl,_class,_type,_rdata))
                 rr = []
-        elif tok[0] == 'SPACE' and prev[0] == 'NL':
-            rr.append('<prev>')
+        elif tok[0] == 'SPACE' and prev[0] == 'NL' and not paren:
+            rr.append('')
         elif tok[0] == 'ATOM':
             if tok[1] == '(':
                 paren = True
             elif tok[1] == ')':
                 paren = False
             elif tok[1] == '$ORIGIN':
-                next(i)
-                print("ORIGIN:",next(i)[1])
+                next(i) # Skip space
+                origin = prev_label = DNSLabel(next(i)[1])
             elif tok[1] == '$TTL':
-                next(i)
-                print("TTL:",next(i)[1])
+                next(i) # Skip space
+                ttl = parse_time(next(i)[1])
             else:
                 rr.append(tok[1])
         prev = tok
+
 
 zone1 = """
 $ORIGIN example.com.        ; Comment
@@ -102,8 +101,8 @@ last    40  IN  HINFO   "HW Info" "SW"
 
 $TTL 5s
 $ORIGIN 4.3.2.1.5.5.5.0.0.8.1.e164.arpa.
-IN NAPTR ( 100 10 "U" "E2U+sip" "!^.*$!sip:customer-service@example.com!" . )
-IN NAPTR ( 102 10 "U" "E2U+email" "!^.*$!mailto:information@example.com!" . )
+    IN NAPTR ( 100 10 "U" "E2U+sip" "!^.*$!sip:customer-service@example.com!" . )
+    IN NAPTR ( 102 10 "U" "E2U+email" "!^.*$!mailto:information@example.com!" . )
 
 """
 
@@ -122,4 +121,12 @@ home.ipv6.pchak.net.    3600    IN  AAAA    2001:470:6d:33:95c0:2178:58d1:6803
 vds6.ipv6.pchak.net.    3600    IN  AAAA    2a01:4f8:150:1102:0:0:0:fa
 ipv6.pchak.net. 3600    IN  AAAA    2001:41d0:a:105f:0:0:0:1
 """
+
+for rr in zone_iter(zone1):
+    print(rr)
+
+print()
+
+for rr in zone_iter(zone2):
+    print(rr)
 
