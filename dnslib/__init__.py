@@ -9,7 +9,8 @@
 
     The key classes are:
 
-        * DNSRecord (contains a DNSHeader and one or more DNSQuestion/DNSRR records)
+        * DNSRecord (contains a DNSHeader and one or more DNSQuestion/
+                     DNSRR records)
         * DNSHeader 
         * DNSQuestion
         * RR (resource records)

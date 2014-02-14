@@ -66,9 +66,11 @@ class DNSRecord(object):
         except DNSError:
             raise
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking DNSRecord [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking DNSRecord [offset=%d]: %s" % (
+                                    buffer.offset,e))
 
-    def __init__(self,header=None,questions=None,rr=None,q=None,a=None,ns=None,ar=None):
+    def __init__(self,header=None,questions=None,
+                      rr=None,q=None,a=None,ns=None,ar=None):
         """
             Create DNSRecord
         """
@@ -87,11 +89,15 @@ class DNSRecord(object):
     def reply(self,data=None,ra=1,aa=1):
         if data:
             answer = RDMAP.get(QTYPE[self.q.qtype],RD)(data)
-            return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
+            return DNSRecord(DNSHeader(id=self.header.id,
+                                       bitmap=self.header.bitmap,
+                                       qr=1,ra=ra,aa=aa),
                              q=self.q,
                              a=RR(self.q.qname,self.q.qtype,rdata=answer))
         else:
-            return DNSRecord(DNSHeader(id=self.header.id,bitmap=self.header.bitmap,qr=1,ra=ra,aa=aa),
+            return DNSRecord(DNSHeader(id=self.header.id,
+                                       bitmap=self.header.bitmap,
+                                       qr=1,ra=ra,aa=aa),
                              q=self.q)
 
 
@@ -167,7 +173,8 @@ class DNSHeader(object):
             (id,bitmap,q,a,ns,ar) = buffer.unpack("!HHHHHH")
             return cls(id,bitmap,q,a,ns,ar)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking DNSHeader [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking DNSHeader [offset=%d]: %s" % (
+                                buffer.offset,e))
 
     def __init__(self,id=None,bitmap=None,q=0,a=0,ns=0,ar=0,**args):
         if id is None:
@@ -291,7 +298,8 @@ class DNSQuestion(object):
             qtype,qclass = buffer.unpack("!HH")
             return cls(qname,qtype,qclass)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking DNSQuestion [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking DNSQuestion [offset=%d]: %s" % (
+                                buffer.offset,e))
 
     def __init__(self,qname=[],qtype=1,qclass=1):
         self.qname = qname
@@ -352,7 +360,8 @@ class RR(object):
                     rdata = ''
             return cls(rname,rtype,rclass,ttl,rdata)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking RR [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking RR [offset=%d]: %s" % (
+                                buffer.offset,e))
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname or []
@@ -407,7 +416,8 @@ class RD(object):
             data = buffer.get(length)
             return cls(data)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking RD [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking RD [offset=%d]: %s" % 
+                                    (buffer.offset,e))
 
     def __init__(self,data=b""):
         self.data = data
@@ -431,11 +441,12 @@ class TXT(RD):
             if txtlength < length:
                 data = buffer.get(txtlength)
             else:
-                raise DNSError("Invalid TXT record: length (%d) > RD length (%d)" % 
+                raise DNSError("Invalid TXT record: len(%d) > RD len(%d)" % 
                                         (txtlength,length))
             return cls(data)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking TXT [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking TXT [offset=%d]: %s" % 
+                                        (buffer.offset,e))
 
     def pack(self,buffer):
         if len(self.data) > 255:
@@ -451,7 +462,8 @@ class A(RD):
             data = buffer.unpack("!BBBB")
             return cls(data)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking A [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking A [offset=%d]: %s" % 
+                                (buffer.offset,e))
 
     def __init__(self,data):
         if type(data) in (tuple,list):
@@ -533,7 +545,8 @@ class AAAA(RD):
             data = buffer.unpack("!16B")
             return cls(data)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking AAAA [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking AAAA [offset=%d]: %s" % 
+                                        (buffer.offset,e))
  
     def __init__(self,data):
         if type(data) in (tuple,list):
@@ -556,7 +569,8 @@ class MX(RD):
             mx = buffer.decode_name()
             return cls(mx,preference)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking MX [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking MX [offset=%d]: %s" % 
+                                        (buffer.offset,e))
 
     def __init__(self,mx=None,preference=10):
         self.mx = mx or []
@@ -588,7 +602,8 @@ class CNAME(RD):
             label = buffer.decode_name()
             return cls(label)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking CNAME [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking CNAME [offset=%d]: %s" % 
+                                        (buffer.offset,e))
 
     def __init__(self,label=[]):
         self.label = label
@@ -626,7 +641,8 @@ class SOA(RD):
             times = buffer.unpack("!IIIII")
             return cls(mname,rname,times)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking SOA [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking SOA [offset=%d]: %s" % 
+                                        (buffer.offset,e))
 
     def __init__(self,mname=None,rname=None,times=None):
         self.mname = mname or []
@@ -661,7 +677,7 @@ class SOA(RD):
         buffer.pack("!IIIII", *self.times)
 
     def __repr__(self):
-        return "%s:%s:%s" % (self.mname,self.rname,":".join(map(str,self.times)))
+        return "%s:%s:%s"%(self.mname,self.rname,":".join(map(str,self.times)))
 
 class NAPTR(RD):
 
@@ -686,7 +702,8 @@ class NAPTR(RD):
             replacement = buffer.decode_name()
             return cls(order, preference, flags, service, regexp, replacement)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking NAPTR [offset=%d]: %s" % (buffer.offset,e))
+            raise DNSError("Error unpacking NAPTR [offset=%d]: %s" % 
+                                    (buffer.offset,e))
 
     def pack(self, buffer):
         buffer.pack('!HH', self.order, self.preference)

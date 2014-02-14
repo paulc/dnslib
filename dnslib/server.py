@@ -12,9 +12,9 @@ from dnslib import DNSRecord,DNSError,QTYPE,RR
 
 class StaticResolver(object):
     """
-        Simple resolver implementation. Provides 'resolve' method which is called
-        by DNSHandler and returns answer (example just searches for match in list
-        of RRs provided at initialisation. 
+        Simple resolver implementation. Provides 'resolve' method which is
+        called by DNSHandler and returns answer (example just searches for
+        match in list of RRs provided at initialisation. 
 
         Replace with approptiate resolver code for application.
 
@@ -62,9 +62,9 @@ class DynamicResolver(object):
 
 class DNSHandler(socketserver.BaseRequestHandler):
     """
-        Handler for socketserver. Handles both TCP/UDP requests (TCP requests have
-        length prepended) and hands off lookup to resolver instance specified
-        in <SocketServer>.resolver 
+        Handler for socketserver. Handles both TCP/UDP requests (TCP requests
+        have length prepended) and hands off lookup to resolver instance
+        specified in <SocketServer>.resolver 
     """
     def handle(self):
         if self.server.socket_type == socket.SOCK_STREAM:
