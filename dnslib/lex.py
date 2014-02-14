@@ -53,7 +53,7 @@ class Lexer(object):
         elif type(f) == str:
             self.f = StringIO(f)
         elif type(f) == bytes:
-            self.f = BytesIO(f.decode())
+            self.f = StringIO(f.decode())
         else:
             raise ValueError("Invalid input")
         self.debug = debug
@@ -250,15 +250,19 @@ class RandomLexer(Lexer):
 
         Extract strings of letters/numbers from /dev/urandom
 
-        >>> import itertools
-        >>> r = RandomLexer(open("/dev/urandom"))
+        >>> import itertools,sys
+        >>> if sys.version[0] == '2':
+        ...     f = open("/dev/urandom")
+        ... else:
+        ...     f = open("/dev/urandom",encoding="ascii",errors="replace")
+        >>> r = RandomLexer(f)
         >>> i = iter(r)
         >>> len(list(itertools.islice(i,10)))
         10
     """
 
-    minalpha = 5
-    mindigits = 4
+    minalpha = 4
+    mindigits = 3
 
     def lexStart(self):
         return (None,self.lexRandom)
