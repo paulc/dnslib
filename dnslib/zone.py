@@ -1,185 +1,78 @@
 
-import collections,string
+from __future__ import print_function
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import (StringIO,BytesIO)
+from dnslib.lex import WordLexer
 
-class Parser(object):
+secs = {'s':1,'m':60,'h':3600,'d':86400,'w':604800}
 
-    """
+def parse_time(s):
+    if s[-1].lower() in secs:
+        return int(s[:-1]) * secs[s[-1].lower()]
+    else:
+        return int(s)
 
-        >>> p = Parser("Hello there.... this is a test")
-        >>> p.match("Hello")
-        True
-        >>> p.pushback("Hello")
-        >>> p.read(4)
-        'Hell'
-        >>> p.peek(10)
-        'o there...'
-        >>> p.match("there")
-        False
-        >>> p.read(2)
-        'o '
-        >>> p.match("there")
-        True
-        >>> p.readupto("this")
-        '.... this'
+def parse_label(label,origin):
+    if label.endswith("."):
+        return label
+    elif label == "@":
+        return origin
+    else:
+        return label + "." + origin
 
-    """
-
-    def __init__(self,f):
-        if hasattr(f,'read'):
-            self.f = f
-        elif type(f) == str:
-            self.f = StringIO(f)
-        elif type(f) == bytes:
-            self.f = BytesIO(f.decode())
+def parse_rr(rr,state):
+    i = rr.index('IN')
+    ttl = lambda : int(rr[i-1])
+    kind = lambda : rr[i+1]
+    rd = lambda : [ x.strip('"') for x in rr[i+2:]]
+    if i == 0:
+        return (state['label'],state['ttl'],kind(),rd())
+    elif i == 1:
+        if rr[0].isdigit():
+            return (state['label'],ttl(),kind(),rd())
         else:
-            raise ValueError("Invalid input")
-        self.q = collections.deque()
-        self.state = self.lexStart
-        self.eof = False
-        self.escaped = False
+            state['label'] = parse_label(rr[0],state['origin'])
+            return (state['label'],state['ttl'],kind(),rd())
+    elif i == 2:
+        state['label'] = parse_label(rr[0],state['origin'])
+        return (state['label'],ttl(),kind(),rd())
+    else:
+        raise ValueError("Invalid RR",rr)
 
-    def parse(self):
-        while self.state is not None and not self.eof:
-            (tok,self.state) = self.state()
-            if tok:
-                yield tok 
+def parse_zone(zone):
 
-    def read(self,n=1):
-        s = ""
-        while self.q and n > 0:
-            s += self.q.popleft()
-            n -= 1
-        s += self.f.read(n)
-        if s == '':
-            self.eof = True
-        return s
+    l = WordLexer(zone)
+    l.commentchars = ';'
+    l.nltok = ('NL',)
+    l.spacetok = ('SPACE',)
+    rr = []
+    paren = False
 
-    def readupto(self,s):
-        c = []
-        if type(s) == str:
-            s = [s]
-        while not self.eof:
-            c.append(self.read())
-            if "".join(c[-len(s[0]):]) in s:
-                break
-        return "".join(c)
+    i = iter(l)
+    prev = None
 
-    def readescaped(self):
-        c = self.read(1)
-        if c == '\\':
-            self.escaped = True
-            n = self.peek(3)
-            if n.isdigit():
-                n = self.read(3)
-                return chr(int(n,8))
+    for tok in i:
+        if tok[0] == 'NL':
+            if not paren and rr:
+                print("RR:",rr)
+                rr = []
+        elif tok[0] == 'SPACE' and prev[0] == 'NL':
+            rr.append('<prev>')
+        elif tok[0] == 'ATOM':
+            if tok[1] == '(':
+                paren = True
+            elif tok[1] == ')':
+                paren = False
+            elif tok[1] == '$ORIGIN':
+                next(i)
+                print("ORIGIN:",next(i)[1])
+            elif tok[1] == '$TTL':
+                next(i)
+                print("TTL:",next(i)[1])
             else:
-                c = self.read(1)
-                if c == 'n':
-                    return '\n'
-                elif c == 't':
-                    return '\t'
-                else:
-                    return c
-        else:
-            self.escaped = False
-            return c
+                rr.append(tok[1])
+        prev = tok
 
-    def readnotmatching(self,l):
-        l = list(l)
-        s = []
-        while not self.eof:
-            c = self.read(1)
-            if c not in l:
-                s.append(c)
-            else:
-                self.pushback(c)
-                break
-        return "".join(s)
-
-    def readmatching(self,l):
-        l = list(l)
-        s = []
-        while not self.eof:
-            c = self.read(1)
-            if c in l:
-                s.append(c)
-            else:
-                self.pushback(c)
-                break
-        return "".join(s)
-
-    def peek(self,n=1):
-        s = ""
-        i = 0
-        while len(self.q) > i and n > 0:
-            s += self.q[i]
-            i += 1
-            n -= 1
-        r = self.f.read(n)
-        self.q.extend(r)
-        return s + r
-
-    def pushback(self,s):
-        p = collections.deque(s)
-        p.extend(self.q)
-        self.q = p
-
-    def match(self,m):
-        s = self.read(len(m))
-        if s == m:
-            return True
-        else:
-            self.pushback(s)
-            return False
-
-    def lexStart(self):
-        return (None,None)
-
-class WordParser(Parser):
-    """
-        >>> p = WordParser(r'abc "def\100 ghi" jkl')
-        >>> list(p.parse())
-        ['abc', 'def@ ghi', 'jkl']
-    """
-
-    def lexStart(self):
-        return (None,self.lexSpace)
-
-    def lexWord(self):
-        s = self.readnotmatching([" ","\n"])
-        if self.eof:
-            return (s,None)
-        else:
-            return (s,self.lexSpace)
-
-    def lexQuote(self):
-        q = self.read(1)
-        s = []
-        while not self.eof:
-            c = self.readescaped()
-            if c == q and not self.escaped:
-                break
-            else:
-                s.append(c)
-        return ("".join(s),self.lexSpace)
-
-    def lexSpace(self):
-        s = self.readmatching([" ","\n"])
-        if self.eof:
-            return (s,None)
-        else:
-            n = self.peek()
-            if n == '"':
-                return (None,self.lexQuote)
-            else:
-                return (None,self.lexWord)
-
-zone = """
+zone1 = """
 $ORIGIN example.com.        ; Comment
 $TTL 90m
 
@@ -214,8 +107,7 @@ IN NAPTR ( 102 10 "U" "E2U+email" "!^.*$!mailto:information@example.com!" . )
 
 """
 
-
-zone = """
+zone2 = """
 ipv6.pchak.net. 86400   IN  SOA ns1.he.net. hostmaster.he.net. (
                     2014020901  ; Serial
                     10800   ; Refresh
@@ -231,43 +123,3 @@ vds6.ipv6.pchak.net.    3600    IN  AAAA    2a01:4f8:150:1102:0:0:0:fa
 ipv6.pchak.net. 3600    IN  AAAA    2001:41d0:a:105f:0:0:0:1
 """
 
-secs = {'s':1,'m':60,'h':3600,'d':86400,'w':604800}
-
-def parse_time(s):
-    if s[-1].lower() in secs:
-        return int(s[:-1]) * secs[s[-1].lower()]
-    else:
-        return int(s)
-
-def parse_label(label,origin):
-    if label.endswith("."):
-        return label
-    elif label == "@":
-        return origin
-    else:
-        return label + "." + origin
-
-def parse_rr(rr,state):
-    print(">>>",rr)
-    i = rr.index('IN')
-    ttl = lambda : int(rr[i-1])
-    kind = lambda : rr[i+1]
-    rd = lambda : [ x.strip('"') for x in rr[i+2:]]
-    if i == 0:
-        return (state['label'],state['ttl'],kind(),rd())
-    elif i == 1:
-        if rr[0].isdigit():
-            return (state['label'],ttl(),kind(),rd())
-        else:
-            state['label'] = parse_label(rr[0],state['origin'])
-            return (state['label'],state['ttl'],kind(),rd())
-    elif i == 2:
-        state['label'] = parse_label(rr[0],state['origin'])
-        return (state['label'],ttl(),kind(),rd())
-    else:
-        raise ValueError("Invalid RR",rr)
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
