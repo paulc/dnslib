@@ -9,6 +9,7 @@ from dnslib.bit import get_bits,set_bits
 from dnslib.bimap import Bimap, BimapError
 from dnslib.buffer import Buffer, BufferError
 from dnslib.label import DNSLabel,DNSLabelError,DNSBuffer
+from dnslib.zone import ZoneParser
 
 QTYPE =  Bimap('QTYPE', {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
                 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY', 28:'AAAA',
@@ -363,6 +364,15 @@ class RR(object):
             raise DNSError("Error unpacking RR [offset=%d]: %s" % (
                                 buffer.offset,e))
 
+    @classmethod
+    def fromZone(cls,zone):
+        return [ cls(rname=rr[0],
+                     ttl=rr[1], 
+                     rclass=getattr(CLASS,rr[2]),
+                     rtype=getattr(QTYPE,rr[3]),
+                     rdata=RDMAP.get(rr[3],RD).fromZone(rr[4])) 
+                 for rr in ZoneParser(zone) ]
+
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname or []
         if type(rtype) != int:
@@ -419,6 +429,10 @@ class RD(object):
             raise DNSError("Error unpacking RD [offset=%d]: %s" % 
                                     (buffer.offset,e))
 
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd)
+
     def __init__(self,data=b""):
         self.data = data
 
@@ -448,6 +462,10 @@ class TXT(RD):
             raise DNSError("Error unpacking TXT [offset=%d]: %s" % 
                                         (buffer.offset,e))
 
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd[0])
+
     def pack(self,buffer):
         if len(self.data) > 255:
             raise DNSError("TXT record too long: %s" % self.data)
@@ -464,6 +482,10 @@ class A(RD):
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking A [offset=%d]: %s" % 
                                 (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd[0])
 
     def __init__(self,data):
         if type(data) in (tuple,list):
@@ -548,6 +570,10 @@ class AAAA(RD):
             raise DNSError("Error unpacking AAAA [offset=%d]: %s" % 
                                         (buffer.offset,e))
  
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd[0])
+
     def __init__(self,data):
         if type(data) in (tuple,list):
             self.data = tuple(data)
@@ -571,6 +597,10 @@ class MX(RD):
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking MX [offset=%d]: %s" % 
                                         (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd[1],int(rd[0]))
 
     def __init__(self,mx=None,preference=10):
         self.mx = mx or []
@@ -604,6 +634,10 @@ class CNAME(RD):
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking CNAME [offset=%d]: %s" % 
                                         (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd[0])
 
     def __init__(self,label=[]):
         self.label = label
@@ -643,6 +677,10 @@ class SOA(RD):
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking SOA [offset=%d]: %s" % 
                                         (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(rd[0],rd[1],map(int,rd[2:]))
 
     def __init__(self,mname=None,rname=None,times=None):
         self.mname = mname or []
@@ -688,6 +726,10 @@ class NAPTR(RD):
         self.service = service
         self.regexp = regexp
         self.replacement = replacement or DNSLabel([])
+
+    @classmethod
+    def fromZone(cls,rd):
+        raise ValueError
 
     @classmethod
     def parse(cls, buffer, length):

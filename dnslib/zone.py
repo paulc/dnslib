@@ -29,6 +29,10 @@ class ZoneParser:
         ('ipv6.example.com', 5400, 'IN', 'AAAA', ['1234:5678::1'])
         ('www.example.com', 5400, 'IN', 'CNAME', ['abc'])
         ('4.3.2.1.5.5.5.0.0.8.1.e164.arpa', 300, 'IN', 'NAPTR', ['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
+
+        >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
+        >>> z.next()
+        ('www.example.com', 60, 'IN', 'A', ['1.2.3.4'])
     """
 
     def __init__(self,zone,origin="",ttl=0):
@@ -41,6 +45,7 @@ class ZoneParser:
             self.origin = origin
         else:
             self.origin= DNSLabel(origin)
+        self.ttl = ttl
         self.label = DNSLabel("")
         self.prev = None
 
@@ -73,28 +78,34 @@ class ZoneParser:
     def next(self):
         rr = []
         paren = False
-        while True:
-            tok = next(self.i)
-            if tok[0] == 'NL':
-                if not paren and rr:
-                    self.prev = tok[0]
-                    return self.parse_rr(rr)
-            elif tok[0] == 'SPACE' and self.prev == 'NL' and not paren:
-                rr.append('')
-            elif tok[0] == 'ATOM':
-                if tok[1] == '(':
-                    paren = True
-                elif tok[1] == ')':
-                    paren = False
-                elif tok[1] == '$ORIGIN':
-                    _ = next(self.i) # Skip space
-                    self.origin = self.label = DNSLabel(next(self.i)[1])
-                elif tok[1] == '$TTL':
-                    _ = next(self.i) # Skip space
-                    self.ttl = parse_time(next(self.i)[1])
-                else:
-                    rr.append(tok[1])
-            self.prev = tok[0]
+        try:
+            while True:
+                tok = next(self.i)
+                if tok[0] == 'NL':
+                    if not paren and rr:
+                        self.prev = tok[0]
+                        return self.parse_rr(rr)
+                elif tok[0] == 'SPACE' and self.prev == 'NL' and not paren:
+                    rr.append('')
+                elif tok[0] == 'ATOM':
+                    if tok[1] == '(':
+                        paren = True
+                    elif tok[1] == ')':
+                        paren = False
+                    elif tok[1] == '$ORIGIN':
+                        _ = next(self.i) # Skip space
+                        self.origin = self.label = DNSLabel(next(self.i)[1])
+                    elif tok[1] == '$TTL':
+                        _ = next(self.i) # Skip space
+                        self.ttl = parse_time(next(self.i)[1])
+                    else:
+                        rr.append(tok[1])
+                self.prev = tok[0]
+        except StopIteration:
+            if rr:
+                return self.parse_rr(rr)
+            else:
+                raise StopIteration
 
 if __name__ == '__main__':
 
@@ -125,6 +136,7 @@ if __name__ == '__main__':
                     IN  NAPTR   ( 100 10 "U" "E2U+sip" 
                                   "!^.*$!sip:customer-service@example.com!" 
                                   . )
+
     """)
 
     doctest.testmod()
