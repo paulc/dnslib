@@ -163,7 +163,7 @@ class DNSRecord(object):
         sections.extend([str(rr) for rr in self.ar])
         return prefix + ("\n" + prefix).join(sections)
 
-    def __str__(self):
+    def __repr__(self):
         return self.format()
 
 class DNSHeader(object):
@@ -266,7 +266,7 @@ class DNSHeader(object):
     def pack(self,buffer):
         buffer.pack("!HHHHHH",self.id,self.bitmap,self.q,self.a,self.ns,self.ar)
 
-    def __str__(self):
+    def __repr__(self):
         f = [ self.aa and 'AA', 
               self.tc and 'TC', 
               self.rd and 'RD', 
@@ -322,7 +322,7 @@ class DNSQuestion(object):
         buffer.encode_name(self.qname)
         buffer.pack("!HH",self.qtype,self.qclass)
 
-    def __str__(self):
+    def __repr__(self):
         return "<DNS Question: %r qtype=%s qclass=%s>" % (
                     self.qname, QTYPE[self.qtype], CLASS[self.qclass])
             
@@ -336,7 +336,7 @@ class EDNSOption(object):
         buffer.pack("!HH",self.code,len(self.data))
         buffer.append(self.data)
 
-    def __str__(self):
+    def __repr__(self):
         return "<EDNS Option: Code=%d Data='%s'>" % (self.code,self.data)
 
 class RR(object):
@@ -408,7 +408,7 @@ class RR(object):
         end = buffer.offset
         buffer.update(rdlength_ptr,"!H",end-start)
 
-    def __str__(self):
+    def __repr__(self):
         if self.rtype == QTYPE.OPT:
             s = ["<DNS OPT: udp_len=%d rcode=%d>" % (self.rclass,self.ttl)]
             s.extend([str(opt) for opt in self.rdata])
