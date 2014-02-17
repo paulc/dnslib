@@ -49,17 +49,21 @@ class DNSLabel(object):
         if type(label) in (list,tuple):
             self.label = tuple(label)
         else:
-            if type(label) is not bytes:
+            if not label or label in (b'.','.'):
+                self.label = ()
+            elif type(label) is not bytes:
                 self.label = tuple(label.encode("idna").rstrip(b".").split(b"."))
             else:
                 self.label = tuple(label.rstrip(b".").split(b"."))
+
 
     def add(self,name):
         """
             Prepend label 
         """
         new = DNSLabel(name)
-        new.label += self.label
+        if self.label:
+            new.label += self.label
         return new
 
     def __str__(self):

@@ -71,16 +71,39 @@
     >>> str(DNSRecord.parse(d.pack())) == str(d)
     True
 
+    It is also possible to create RRs from a string in zone file format
+
+    >>> RR.fromZone("abc.com IN A 1.2.3.4")
+    [<DNS RR: 'abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>]
+
+    The zone file can contain multiple entries and supports most of the normal
+    format defined in RFC1035 (specifically not $INCLUDE)
+
+    >>> z = '''
+    ...         $TTL 300
+    ...         $ORIGIN abc.com
+    ...
+    ...         @       IN      MX      10  mail.abc.com.
+    ...         www     IN      A       1.2.3.4
+    ...                 IN      TXT     "Some Text"
+    ...         mail    IN      CNAME   www.abc.com.
+    ... '''
+    >>> for rr in RR.fromZone(textwrap.dedent(z)):
+    ...     print(rr)
+    <DNS RR: 'abc.com' rtype=MX rclass=IN ttl=300 rdata='10:mail.abc.com'>
+    <DNS RR: 'www.abc.com' rtype=A rclass=IN ttl=300 rdata='1.2.3.4'>
+    <DNS RR: 'www.abc.com' rtype=TXT rclass=IN ttl=300 rdata='Some Text'>
+    <DNS RR: 'mail.abc.com' rtype=CNAME rclass=IN ttl=300 rdata='www.abc.com'>
+
     To create a skeleton reply to a DNS query:
 
-    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.CNAME)) 
-    >>> a = q.reply(data="xxx.abc.com")
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
+    >>> a = q.reply()
+    >>> a.add_answer(RR("abc.com",QTYPE.A,rdata=A("1.2.3.4"),ttl=60))
     >>> print(a)
     <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
-    <DNS Question: 'abc.com' qtype=CNAME qclass=IN>
-    <DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=0 rdata='xxx.abc.com'>
-    >>> str(DNSRecord.parse(d.pack())) == str(d)
-    True
+    <DNS Question: 'abc.com' qtype=ANY qclass=IN>
+    <DNS RR: 'abc.com' rtype=A rclass=IN ttl=60 rdata='1.2.3.4'>
 
     Add additional RRs:
 
@@ -88,12 +111,32 @@
     >>> a.add_answer(RR("xxx.abc.com",QTYPE.AAAA,rdata=AAAA("1234:5678::1")))
     >>> print(a)
     <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=3 ns=0 ar=0>
-    <DNS Question: 'abc.com' qtype=CNAME qclass=IN>
-    <DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=0 rdata='xxx.abc.com'>
+    <DNS Question: 'abc.com' qtype=ANY qclass=IN>
+    <DNS RR: 'abc.com' rtype=A rclass=IN ttl=60 rdata='1.2.3.4'>
     <DNS RR: 'xxx.abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
     <DNS RR: 'xxx.abc.com' rtype=AAAA rclass=IN ttl=0 rdata='1234:5678::1'>
     >>> str(DNSRecord.parse(a.pack())) == str(a)
     True
+
+    It is also possible to create a reply from a string in zone file format:
+
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
+    >>> a = q.replyZone("abc.com 60 IN CNAME xxx.abc.com")
+    >>> print(a)
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+    <DNS Question: 'abc.com' qtype=ANY qclass=IN>
+    <DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=60 rdata='xxx.abc.com'>
+    >>> str(DNSRecord.parse(a.pack())) == str(a)
+    True
+
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
+    >>> q.replyZone(textwrap.dedent(z))
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=4 ns=0 ar=0>
+    <DNS Question: 'abc.com' qtype=ANY qclass=IN>
+    <DNS RR: 'abc.com' rtype=MX rclass=IN ttl=300 rdata='10:mail.abc.com'>
+    <DNS RR: 'www.abc.com' rtype=A rclass=IN ttl=300 rdata='1.2.3.4'>
+    <DNS RR: 'www.abc.com' rtype=TXT rclass=IN ttl=300 rdata='Some Text'>
+    <DNS RR: 'mail.abc.com' rtype=CNAME rclass=IN ttl=300 rdata='www.abc.com'>
 
     Changelog:
 
@@ -131,3 +174,8 @@
 from dnslib.dns import *
 
 version = "0.9.0"
+
+if __name__ == '__main__':
+    import doctest,textwrap
+    doctest.testmod(optionflags=doctest.ELLIPSIS)
+
