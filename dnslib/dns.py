@@ -17,7 +17,7 @@ QTYPE =  Bimap('QTYPE', {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
                 41:'OPT', 42:'APL', 43:'DS', 44:'SSHFP', 45:'IPSECKEY',
                 46:'RRSIG', 47:'NSEC', 48:'DNSKEY', 49:'DHCID', 50:'NSEC3',
                 51:'NSEC3PARAM', 55:'HIP', 99:'SPF', 249:'TKEY', 250:'TSIG',
-                251:'IXFR', 252:'AXFR', 255:'*', 32768:'TA', 32769:'DLV'})
+                251:'IXFR', 252:'AXFR', 255:'ANY', 32768:'TA', 32769:'DLV'})
 
 CLASS =  Bimap('CLASS',{1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'})
 QR =     Bimap('QR',{0:'QUERY', 1:'RESPONSE'})
@@ -87,6 +87,13 @@ class DNSRecord(object):
             self.rr.append(a)
         self.set_header_qa()
 
+    def replyZone(self,zone,ra=1,aa=1):
+        return DNSRecord(DNSHeader(id=self.header.id,
+                                   bitmap=self.header.bitmap,
+                                   qr=1,ra=ra,aa=aa),
+                         q=self.q,
+                         rr=RR.fromZone(zone))
+
     def reply(self,data=None,ra=1,aa=1):
         if data:
             answer = RDMAP.get(QTYPE[self.q.qtype],RD)(data)
@@ -100,7 +107,6 @@ class DNSRecord(object):
                                        bitmap=self.header.bitmap,
                                        qr=1,ra=ra,aa=aa),
                              q=self.q)
-
 
     def add_question(self,q):
         self.questions.append(q)
@@ -434,7 +440,10 @@ class RD(object):
         return cls(rd)
 
     def __init__(self,data=b""):
-        self.data = data
+        if type(data) != bytes:
+            self.data = data.encode()
+        else:
+            self.data = data
 
     def pack(self,buffer):
         buffer.append(self.data)
