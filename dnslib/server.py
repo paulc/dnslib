@@ -1,33 +1,105 @@
 
 from __future__ import print_function
 
-import socket,struct,threading,time
+import copy,socket,struct,threading,time
 
 try:
     import socketserver
 except ImportError:
     import SocketServer as socketserver
 
-from dnslib import DNSRecord,DNSError,QTYPE,RR
+from dnslib import DNSRecord,DNSError,QTYPE,RCODE,RR
 
-class StaticResolver(object):
+class BaseResolver(object):
     """
-        Simple resolver implementation. Provides 'resolve' method which is
-        called by DNSHandler and returns answer (example just searches for
-        match in list of RRs provided at initialisation. 
+        Base resolver implementation. Provides 'resolve' method which is
+        called by DNSHandler and returns answer.
 
-        Replace with approptiate resolver code for application.
+        Subclass is expected to replace resolve method with appropriate
+        resolver code for application.
 
         Note that a single instance is used by all DNSHandler instances so need
-        to consider thread safety if data changes.
+        to consider thread safety.
+    """
+    def log_request(self,request,handler):
+        """
+            Utility function to log request. Call from resolve
+            method if needed
+        """
+        print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
+                  handler.client_address[0],
+                  handler.client_address[1],
+                  handler.protocol,
+                  request.q.qname,
+                  QTYPE[request.q.qtype]))
+        print(request.format("    : "))
+
+    def log_reply(self,reply,handler):
+        """
+            Utility function to log reply. Call from resolve
+            method if needed
+        """
+        print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+                  handler.client_address[0],
+                  handler.client_address[1],
+                  handler.protocol,
+                  reply.q.qname,
+                  QTYPE[reply.q.qtype],
+                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
+        print(reply.format("    : "))
+
+    def resolve(self,request,handler):
+        """
+            Respond to all requests with NOTIMP rcode
+        """
+        self.log_request(request,handler)
+        reply = request.reply()
+        reply.header.rcode = getattr(RCODE,'Not Implemented')
+        self.log_reply(reply,handler)
+        return reply
+
+class FixedResolver(BaseResolver):
+    """
+        Respond with fixed response to all requests
+    """
+    def __init__(self,rrs):
+        """
+            Accept either a string in zone format, list of RRs, or single RR
+        """
+        if type(rrs) == str:
+            self.rrs = RR.fromZone(rrs)
+        elif type(rrs) in (list,tuple) and all(map(lambda i:type(i) is RR,rrs)):
+            self.rrs = rrs
+        elif type(rrs) is RR:
+            self.rrs = [rrs]
+        else:
+            raise ValueError("Must be zone, list of RRs or RR")
+
+    def resolve(self,request,handler):
+        self.log_request(request,handler)
+        reply = request.reply()
+        qname = request.q.qname
+        # Replace labels with request label
+        for rr in self.rrs:
+            a = copy.copy(rr)
+            a.rname = qname
+            reply.add_answer(a)
+        self.log_reply(reply,handler)
+        return reply
+
+class ZoneResolver(BaseResolver):
+    """
+        Simple fixed zone file resolver.
     """
 
-    def __init__(self,*rrs):
+    def __init__(self,zone):
         """
-            Initialise resolver. Takes list of RR objects to respond with
+            Initialise resolver from zone file. 
+
+            Stores RRs as a list of (label,type,rr) tuples
         """
         self.zone = []
-        for rr in rrs:
+        for rr in RR.fromZone(zone):
             self.zone.append((rr.rname,QTYPE[rr.rtype],rr))
 
     def resolve(self,request,handler):
@@ -35,21 +107,30 @@ class StaticResolver(object):
             Respond to DNS request - parameters are request packet & handler.
             Method is expected to return DNS response
         """
-        a = request.reply()
+        self.log_request(request,handler)
+        reply = request.reply()
         qname = request.q.qname
         qtype = QTYPE[request.q.qtype]
         for name,rtype,rr in self.zone:
             if qname == name and (qtype == rtype or 
-                                  qtype == '*' or 
+                                  qtype == 'ANY' or 
                                   rtype == 'CNAME'):
-                a.add_answer(rr)
-        return a
+                reply.add_answer(rr)
+                # Check for A/AAAA records associated with reply and
+                # add in additional section
+                if rtype in ['CNAME','NS','MX','PTR']:
+                    for a_name,a_rtype,a_rr in self.zone:
+                        if a_name == rr.rdata.label and a_rtype in ['A','AAAA']:
+                            reply.add_ar(a_rr)
+        self.log_reply(reply,handler)
+        return reply
 
 class DynamicResolver(object):
     """
         Example dynamic resolver
     """
     def resolve(self,request,handler):
+        self.log.request(request)
         a = request.reply()
         qname = request.q.qname
         if qname.label[0] == b'date':
@@ -58,6 +139,7 @@ class DynamicResolver(object):
         elif qname.label[0] == b'hello':
             a.add_answer(RR(qname,"TXT",ttl=0,rdata=TXT(
                 b"Hello " + str(handler.client_address).encode('utf8'))))
+        self.log_reply(a)
         return a
 
 class DNSHandler(socketserver.BaseRequestHandler):
@@ -81,13 +163,9 @@ class DNSHandler(socketserver.BaseRequestHandler):
         try:
             request = DNSRecord.parse(data)
 
-            self.log_request(request)
-
             resolver = self.server.resolver
             reply = resolver.resolve(request,self)
             data = reply.pack()
-
-            self.log_reply(reply)
 
             if self.protocol == 'tcp':
                 data = struct.pack("!H",len(data)) + data
@@ -97,25 +175,6 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
         except DNSError as e:
             self.handle_error(e)
-
-    def log_request(self,request):
-        print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
-                                                  self.client_address[0],
-                                                  self.client_address[1],
-                                                  self.protocol,
-                                                  request.q.qname,
-                                                  QTYPE[request.q.qtype]))
-        print(request.format("    : "))
-
-    def log_reply(self,reply):
-        print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
-                                                  self.client_address[0],
-                                                  self.client_address[1],
-                                                  self.protocol,
-                                                  reply.q.qname,
-                                                  QTYPE[reply.q.qtype],
-                                                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
-        print(reply.format("    : "))
 
     def handle_error(self,e):
         print("Invalid Request:",e)
@@ -155,23 +214,34 @@ class DNSServer(object):
 
 if __name__ == "__main__":
 
-    import time
-    from dnslib import A,AAAA,TXT,CNAME,MX,PTR,NS,SOA,NAPTR
+    import time,textwrap
+    from dnslib import RR
 
     # Initialise resolver instance
-    resolver = StaticResolver(
-            RR("abc.def.com","A",ttl=60,rdata=A("1.2.3.4.")),
-            RR("abc.def.com","A",ttl=60,rdata=A((9,8,7,6))),
-            RR("abc.def.com","AAAA",ttl=60,rdata=AAAA((1,)*16)),
-            RR("abc.def.com","MX",ttl=60,rdata=MX("mx1.abc.com")),
-            RR("abc.def.com","MX",ttl=60,rdata=MX("mx2.abc.com",20)),
-            RR("abc.def.com","TXT",ttl=60,rdata=TXT(b"A message")),
-            RR("abc.def.com","NS",ttl=60,rdata=NS("ns.abc.com")),
-            RR("abc.def.com","SOA",ttl=60,rdata=SOA("abc.com","abc.com",(60,)*5)),
-            RR("4.3.2.1.in-addr.arpa","PTR",ttl=60,rdata=PTR("host1.abc.com")),
-            RR("xyz.def.com","CNAME",ttl=60,rdata=CNAME("abc.def.com")),
-    )
+    zone = textwrap.dedent("""
+            $ORIGIN     def.com
+            $TTL        60
 
+            @           IN  SOA     ( def.com def.com 1234
+                                      60 60 60 60 )
+                        IN  NS      ns1.def.com
+                        IN  MX      10 mx1.def.com.
+            ns1         IN  CNAME   abc.def.com.
+            mx1         IN  CNAME   abc.def.com.
+
+            abc         IN  A       1.2.3.4
+                        IN  A       5.6.7.8
+                        IN  AAAA    1234:5678::1
+                        IN  TXT     "A TXT Record"
+            
+            $ORIGIN in-addr.arpa.
+            4.3.2.1     IN PTR  abc.def.com.
+
+    """)
+
+    resolver = BaseResolver()
+    #resolver = FixedResolver(". 60 IN A 127.0.0.1")
+    #resolver = ZoneResolver(zone)
     #resolver = DynamicResolver()
 
     # Configure UDP server
@@ -183,7 +253,8 @@ if __name__ == "__main__":
     # Configure TCP server
     # (can also be Threaded server if needed)
     socketserver.TCPServer.allow_reuse_address = True
-    tcp_server = DNSServer(server=socketserver.TCPServer,port=8053,resolver=resolver)
+    tcp_server = DNSServer(server=socketserver.TCPServer,
+                            port=8053,resolver=resolver)
     tcp_server.start_thread()
 
     while udp_server.isAlive():
