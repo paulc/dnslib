@@ -611,27 +611,27 @@ class MX(RD):
     def fromZone(cls,rd):
         return cls(rd[1],int(rd[0]))
 
-    def __init__(self,mx=None,preference=10):
-        self.mx = mx or []
+    def __init__(self,label=None,preference=10):
+        self.label = label or []
         self.preference = preference
 
-    def set_mx(self,mx):
-        if isinstance(mx,DNSLabel):
-            self._mx = mx
+    def set_label(self,label):
+        if isinstance(label,DNSLabel):
+            self._label = label
         else:
-            self._mx = DNSLabel(mx)
+            self._label = DNSLabel(label)
 
-    def get_mx(self):
-        return self._mx
+    def get_label(self):
+        return self._label
 
-    mx = property(get_mx,set_mx)
+    label = property(get_label,set_label)
 
     def pack(self,buffer):
         buffer.pack("!H",self.preference)
-        buffer.encode_name(self.mx)
+        buffer.encode_name(self.label)
         
     def __repr__(self):
-        return "%d:%s" % (self.preference,self.mx)
+        return "%d:%s" % (self.preference,self.label)
 
 class CNAME(RD):
         
@@ -689,7 +689,7 @@ class SOA(RD):
 
     @classmethod
     def fromZone(cls,rd):
-        return cls(rd[0],rd[1],map(int,rd[2:]))
+        return cls(rd[0],rd[1],[int(t) for t in rd[2:]])
 
     def __init__(self,mname=None,rname=None,times=None):
         self.mname = mname or []
