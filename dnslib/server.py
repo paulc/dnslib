@@ -32,7 +32,10 @@ class BaseResolver(object):
                   handler.protocol,
                   request.q.qname,
                   QTYPE[request.q.qtype]))
-        print(request.format("    : "))
+        #print(request.format("    : "))
+        print()
+        print(request.toZone("    "))
+        print()
 
     def log_reply(self,reply,handler):
         """
@@ -46,7 +49,10 @@ class BaseResolver(object):
                   reply.q.qname,
                   QTYPE[reply.q.qtype],
                   ",".join([QTYPE[a.rtype] for a in reply.rr])))
-        print(reply.format("    : "))
+        #print(reply.format("    : "))
+        print()
+        print(reply.toZone("    "))
+        print()
 
     def resolve(self,request,handler):
         """
@@ -55,35 +61,6 @@ class BaseResolver(object):
         self.log_request(request,handler)
         reply = request.reply()
         reply.header.rcode = getattr(RCODE,'Not Implemented')
-        self.log_reply(reply,handler)
-        return reply
-
-class FixedResolver(BaseResolver):
-    """
-        Respond with fixed response to all requests
-    """
-    def __init__(self,rrs):
-        """
-            Accept either a string in zone format, list of RRs, or single RR
-        """
-        if type(rrs) == str:
-            self.rrs = RR.fromZone(rrs)
-        elif type(rrs) in (list,tuple) and all(map(lambda i:type(i) is RR,rrs)):
-            self.rrs = rrs
-        elif type(rrs) is RR:
-            self.rrs = [rrs]
-        else:
-            raise ValueError("Must be zone, list of RRs or RR")
-
-    def resolve(self,request,handler):
-        self.log_request(request,handler)
-        reply = request.reply()
-        qname = request.q.qname
-        # Replace labels with request label
-        for rr in self.rrs:
-            a = copy.copy(rr)
-            a.rname = qname
-            reply.add_answer(a)
         self.log_reply(reply,handler)
         return reply
 
@@ -179,6 +156,11 @@ class DNSHandler(socketserver.BaseRequestHandler):
     def handle_error(self,e):
         print("Invalid Request:",e)
 
+class UDPServer(socketserver.UDPServer):
+    allow_reuse_address = True
+
+class TCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
 
 class DNSServer(object):
 
@@ -187,18 +169,25 @@ class DNSServer(object):
         server to be started in blocking or threaded mode
     """
     def __init__(self,resolver,
-                      server=socketserver.UDPServer,
-                      host="",
+                      address="",
                       port=53,
+                      tcp=False,
+                      server=None,
                       handler=DNSHandler):
         """
-            server:     server class (socketserver.XXXserver)
-            host:       listen address
+            address:    listen address
             port:       listen port
             handler:    handler class
+            tcp:        UDP (false) / TCP (true)
+            server:     custom socketserver class
             resolver:   resolver *instance*
         """
-        self.server = server((host,port),handler)
+        if not server:
+            if tcp:
+                server = TCPServer
+            else:
+                server = UDPServer
+        self.server = server((address,port),handler)
         self.server.resolver = resolver
     
     def start(self):
@@ -239,22 +228,17 @@ if __name__ == "__main__":
 
     """)
 
-    resolver = BaseResolver()
+    #resolver = BaseResolver()
     #resolver = FixedResolver(". 60 IN A 127.0.0.1")
-    #resolver = ZoneResolver(zone)
+    resolver = ZoneResolver(zone)
     #resolver = DynamicResolver()
 
     # Configure UDP server
-    # (can also be Threaded server if needed)
-    socketserver.UDPServer.allow_reuse_address = True
-    udp_server = DNSServer(port=8053,resolver=resolver)
+    udp_server = DNSServer(resolver,port=8053)
     udp_server.start_thread()
 
     # Configure TCP server
-    # (can also be Threaded server if needed)
-    socketserver.TCPServer.allow_reuse_address = True
-    tcp_server = DNSServer(server=socketserver.TCPServer,
-                            port=8053,resolver=resolver)
+    tcp_server = DNSServer(resolver,port=8053,tcp=True)
     tcp_server.start_thread()
 
     while udp_server.isAlive():

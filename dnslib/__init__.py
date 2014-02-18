@@ -35,7 +35,7 @@
     >>> packet = binascii.unhexlify(b'd5ad818000010005000000000377777706676f6f676c6503636f6d0000010001c00c0005000100000005000803777777016cc010c02c0001000100000005000442f95b68c02c0001000100000005000442f95b63c02c0001000100000005000442f95b67c02c0001000100000005000442f95b93')
     >>> d = DNSRecord.parse(packet)
     >>> print(d)
-    <DNS Header: id=0xd5ad type=RESPONSE opcode=QUERY flags=RD,RA rcode=None q=1 a=5 ns=0 ar=0>
+    <DNS Header: id=0xd5ad type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=5 ns=0 ar=0>
     <DNS Question: 'www.google.com' qtype=A qclass=IN>
     <DNS RR: 'www.google.com' rtype=CNAME rclass=IN ttl=5 rdata='www.l.google.com'>
     <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.104'>
@@ -47,14 +47,14 @@
 
     >>> d = DNSRecord(q=DNSQuestion("google.com"))
     >>> print(d)
-    <DNS Header: id=... type=QUERY opcode=QUERY flags=RD rcode=None q=1 a=0 ns=0 ar=0>
+    <DNS Header: id=... type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
     <DNS Question: 'google.com' qtype=A qclass=IN>
     >>> str(DNSRecord.parse(d.pack())) == str(d)
     True
 
     >>> d = DNSRecord(q=DNSQuestion("google.com",QTYPE.MX))
     >>> print(d)
-    <DNS Header: id=... type=QUERY opcode=QUERY flags=RD rcode=None q=1 a=0 ns=0 ar=0>
+    <DNS Header: id=... type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
     <DNS Question: 'google.com' qtype=MX qclass=IN>
     >>> str(DNSRecord.parse(d.pack())) == str(d)
     True
@@ -65,7 +65,7 @@
     ...               q=DNSQuestion("abc.com"),
     ...               a=RR("abc.com",rdata=A("1.2.3.4")))
     >>> print(d)
-    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=A qclass=IN>
     <DNS RR: 'abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
     >>> str(DNSRecord.parse(d.pack())) == str(d)
@@ -101,7 +101,7 @@
     >>> a = q.reply()
     >>> a.add_answer(RR("abc.com",QTYPE.A,rdata=A("1.2.3.4"),ttl=60))
     >>> print(a)
-    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=ANY qclass=IN>
     <DNS RR: 'abc.com' rtype=A rclass=IN ttl=60 rdata='1.2.3.4'>
 
@@ -110,7 +110,7 @@
     >>> a.add_answer(RR("xxx.abc.com",QTYPE.A,rdata=A("1.2.3.4")))
     >>> a.add_answer(RR("xxx.abc.com",QTYPE.AAAA,rdata=AAAA("1234:5678::1")))
     >>> print(a)
-    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=3 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode='No Error' q=1 a=3 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=ANY qclass=IN>
     <DNS RR: 'abc.com' rtype=A rclass=IN ttl=60 rdata='1.2.3.4'>
     <DNS RR: 'xxx.abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
@@ -123,7 +123,7 @@
     >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
     >>> a = q.replyZone("abc.com 60 IN CNAME xxx.abc.com")
     >>> print(a)
-    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=1 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=ANY qclass=IN>
     <DNS RR: 'abc.com' rtype=CNAME rclass=IN ttl=60 rdata='xxx.abc.com'>
     >>> str(DNSRecord.parse(a.pack())) == str(a)
@@ -131,7 +131,7 @@
 
     >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
     >>> q.replyZone(textwrap.dedent(z))
-    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode=None q=1 a=4 ns=0 ar=0>
+    <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode='No Error' q=1 a=4 ns=0 ar=0>
     <DNS Question: 'abc.com' qtype=ANY qclass=IN>
     <DNS RR: 'abc.com' rtype=MX rclass=IN ttl=300 rdata='10:mail.abc.com'>
     <DNS RR: 'www.abc.com' rtype=A rclass=IN ttl=300 rdata='1.2.3.4'>
