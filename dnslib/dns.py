@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import binascii,random,socket,struct,textwrap
+import binascii,collections,random,socket,struct,textwrap
 from itertools import chain
 
 from dnslib.bit import get_bits,set_bits
@@ -28,6 +28,9 @@ OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE'})
 
 class DNSError(Exception):
     pass
+
+def append_flat(a,b):
+    a.extend(b) if (type(b) in (tuple,list)) else a.append(b)
 
 class DNSRecord(object):
 
@@ -109,19 +112,19 @@ class DNSRecord(object):
                              q=self.q)
 
     def add_question(self,q):
-        self.questions.append(q)
+        append_flat(self.questions,q)
         self.set_header_qa()
 
     def add_answer(self,rr):
-        self.rr.append(rr)
+        append_flat(self.rr,rr)
         self.set_header_qa()
 
     def add_auth(self,auth):
-        self.auth.append(auth)
+        append_flat(self.auth,auth)
         self.set_header_qa()
 
     def add_ar(self,ar):
-        self.ar.append(ar)
+        append_flat(self.ar,ar)
         self.set_header_qa()
 
     def set_header_qa(self):
@@ -173,16 +176,16 @@ class DNSRecord(object):
         sections = self.header.toZone()
         if self.questions:
             sections.append(";; QUESTION SECTION")
-            sections.extend([q.toZone() for q in self.questions])
+            [ append_flat(sections,q.toZone()) for q in self.questions ]
         if self.rr:
             sections.append(";; ANSWER SECTION")
-            sections.extend([rr.toZone() for rr in self.rr])
+            [ append_flat(sections,rr.toZone()) for rr in self.rr ]
         if self.auth:
             sections.append(";; AUTHORITY SECTION")
-            sections.extend([rr.toZone() for rr in self.auth])
+            [ append_flat(sections,rr.toZone()) for rr in self.auth ]
         if self.ar:
             sections.append(";; ADDITIONAL SECTION")
-            sections.extend([rr.toZone() for rr in self.ar])
+            [ append_flat(sections,rr.toZone()) for rr in self.ar ]
         return prefix + ("\n" + prefix).join(sections)
 
     def __repr__(self):
@@ -478,15 +481,14 @@ class RR(object):
 
     def toZone(self):
         if self.rtype == QTYPE.OPT:
-            z = [ ";OPT PSEUDOSECTION", 
-                  ";EDNS: version: %d, flags: %s; udp: %d" % (
-                        self.edns_ver, 
-                        "do" if self.edns_do else "",
-                         self.edns_len)
-                ]
-            z.extend([str(opt) for opt in self.rdata])
-            # FIXME This breaks prefix handling in DNSRecord.toZone
-            return "\n".join(z)
+            edns = [ ";OPT PSEUDOSECTION", 
+                     ";EDNS: version: %d, flags: %s; udp: %d" % (
+                             self.edns_ver, 
+                             "do" if self.edns_do else "",
+                             self.edns_len)
+                    ]
+            edns.extend([str(opt) for opt in self.rdata])
+            return edns
         else:
             return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
                                                 CLASS[self.rclass],
@@ -494,7 +496,10 @@ class RR(object):
                                                 self.rdata.toZone())
 
     def __str__(self):
-        return self.toZone()
+        if self.rtype == QTYPE.OPT:
+            return "\n".join(self.toZone())
+        else:
+            return self.toZone()
 
 class RD(object):
 
@@ -709,9 +714,6 @@ class MX(RD):
         buffer.encode_name(self.label)
         
     def __repr__(self):
-        return "%d:%s" % (self.preference,self.label)
-
-    def toZone(self):
         return "%d %s" % (self.preference,self.label)
 
 class CNAME(RD):
@@ -805,11 +807,49 @@ class SOA(RD):
         buffer.pack("!IIIII", *self.times)
 
     def __repr__(self):
-        return "%s:%s:%s"%(self.mname,self.rname,":".join(map(str,self.times)))
+        return "%s %s %s" % (self.mname,self.rname,
+                             " ".join(map(str,self.times)))
 
-    def toZone(self):
-        return "( %s %s %s )" % (self.mname,self.rname,
-                                 " ".join(map(str,self.times)))
+class SRV(RD):
+        
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            priority,weight,port = buffer.unpack("!HHH")
+            target = buffer.decode_name()
+            return cls(priority,weight,port,target)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking SRV [offset=%d]: %s" % 
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd):
+        return cls(int(rd[0]),int(rd[1]),int(rd[2]),rd[3])
+
+    def __init__(self,priority=0,weight=0,port=0,target=None):
+        self.priority = priority
+        self.weight = weight
+        self.port = port
+        self.target = target or []
+
+    def set_target(self,target):
+        if isinstance(target,DNSLabel):
+            self._target = target
+        else:
+            self._target = DNSLabel(target)
+
+    def get_target(self):
+        return self._target
+
+    target = property(get_target,set_target)
+    
+    def pack(self,buffer):
+        buffer.pack("!HHH",self.priority,self.weight,self.port)
+        buffer.encode_name(self.target)
+
+    def __repr__(self):
+        return "%d %d %d %s" % (self.priority,self.weight,self.port,self.target)
+
 
 class NAPTR(RD):
 
@@ -859,7 +899,8 @@ class NAPTR(RD):
         )
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
-          'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR}
+          'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
+        }
 
 if __name__ == '__main__':
     import doctest
