@@ -21,12 +21,12 @@ class DNSLabel(object):
     >>> x = { l1 : 1 }
     >>> x[l1]
     1
-    >>> print(l1)
-    aaa.bbb.ccc
     >>> l1
+    <DNSLabel: aaa.bbb.ccc>
+    >>> str(l1)
     'aaa.bbb.ccc'
     >>> l1.add("xxx.yyy")
-    'xxx.yyy.aaa.bbb.ccc'
+    <DNSLabel: xxx.yyy.aaa.bbb.ccc>
 
     # Too hard to get unicode doctests to work on Python 3.2  
     # (works on 3.3)
@@ -70,7 +70,7 @@ class DNSLabel(object):
         return ".".join([ s.decode("idna") for s in self.label ])
 
     def __repr__(self):
-        return "'" + str(self) + "'"
+        return "<DNSLabel: %s>" % str(self)
 
     def __hash__(self):
         return hash(self.label)
@@ -103,14 +103,14 @@ class DNSBuffer(Buffer):
     >>> p(b.hex())
     '036161610362626203636363000378787803797979037a7a7a00037a7a7a03787878c00403616161c01e'
     >>> b.offset = 0
-    >>> b.decode_name()
-    'aaa.bbb.ccc'
-    >>> b.decode_name()
-    'xxx.yyy.zzz'
-    >>> b.decode_name()
-    'zzz.xxx.bbb.ccc'
-    >>> b.decode_name()
-    'aaa.xxx.bbb.ccc'
+    >>> print(b.decode_name())
+    aaa.bbb.ccc
+    >>> print(b.decode_name())
+    xxx.yyy.zzz
+    >>> print(b.decode_name())
+    zzz.xxx.bbb.ccc
+    >>> print(b.decode_name())
+    aaa.xxx.bbb.ccc
 
     >>> b = DNSBuffer()
     >>> b.encode_name([b'a.aa',b'b.bb',b'c.cc'])

@@ -20,19 +20,19 @@ class ZoneParser:
         >>> z = ZoneParser(zone)
         >>> for rr in z:
         ...     print(rr)
-        ('example.com', 5400, 'IN', 'SOA', ['ns1.example.com.', 'admin.example.com.', '2014020901', '10800', '1800', '604800', '86400'])
-        ('example.com', 1800, 'IN', 'NS', ['ns1.example.com.'])
-        ('example.com', 5400, 'IN', 'MX', ['10', 'mail.example.com.'])
-        ('abc.example.com', 5400, 'IN', 'A', ['1.2.3.4'])
-        ('abc.example.com', 5400, 'IN', 'TXT', ['A B C'])
-        ('ns1.example.com', 60, 'IN', 'A', ['6.7.8.9'])
-        ('ipv6.example.com', 5400, 'IN', 'AAAA', ['1234:5678::1'])
-        ('www.example.com', 5400, 'IN', 'CNAME', ['abc'])
-        ('4.3.2.1.5.5.5.0.0.8.1.e164.arpa', 300, 'IN', 'NAPTR', ['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
+        (<DNSLabel: example.com>, 5400, 'IN', 'SOA', ['ns1.example.com.', 'admin.example.com.', '2014020901', '10800', '1800', '604800', '86400'])
+        (<DNSLabel: example.com>, 1800, 'IN', 'NS', ['ns1.example.com.'])
+        (<DNSLabel: example.com>, 5400, 'IN', 'MX', ['10', 'mail.example.com.'])
+        (<DNSLabel: abc.example.com>, 5400, 'IN', 'A', ['1.2.3.4'])
+        (<DNSLabel: abc.example.com>, 5400, 'IN', 'TXT', ['A B C'])
+        (<DNSLabel: ns1.example.com>, 60, 'IN', 'A', ['6.7.8.9'])
+        (<DNSLabel: ipv6.example.com>, 5400, 'IN', 'AAAA', ['1234:5678::1'])
+        (<DNSLabel: www.example.com>, 5400, 'IN', 'CNAME', ['abc'])
+        (<DNSLabel: 4.3.2.1.5.5.5.0.0.8.1.e164.arpa>, 300, 'IN', 'NAPTR', ['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
 
         >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
         >>> z.next()
-        ('www.example.com', 60, 'IN', 'A', ['1.2.3.4'])
+        (<DNSLabel: www.example.com>, 60, 'IN', 'A', ['1.2.3.4'])
     """
 
     def __init__(self,zone,origin="",ttl=0):

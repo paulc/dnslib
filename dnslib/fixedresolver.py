@@ -30,25 +30,29 @@ if __name__ == '__main__':
     import argparse,sys,time
 
     p = argparse.ArgumentParser(description="Fixed DNS Resolver")
-    p.add_argument("--zone","-z",default=". 60 IN A 127.0.0.1",
-                        help="Response string (Zone file format)")
+    p.add_argument("--response","-r",default=". 60 IN A 127.0.0.1",
+                    metavar="<response>",
+                    help="DNS response (zone format) (default: 127.0.0.1)")
     p.add_argument("--zonefile","-f",
-                        help="Response (Zone file)")
+                    metavar="<zonefile>",
+                    help="DNS response (zone file, '-' for stdin)")
     p.add_argument("--port","-p",type=int,default=53,
-                        help="Server port (default:53)")
+                    metavar="<port>",
+                    help="Server port (default:53)")
     p.add_argument("--address","-a",default="",
-                        help="Listen address (default:all)")
+                    metavar="<address>",
+                    help="Listen address (default:all)")
     p.add_argument("--tcp",action='store_true',default=False,
-                        help="TCP server (default: UDP only)")
+                    help="TCP server (default: UDP only)")
     args = p.parse_args()
     
     if args.zonefile:
         if args.zonefile == '-':
-            args.zone = sys.stdin
+            args.response = sys.stdin
         else:
-            args.zone = open(args.zonefile)
+            args.response = open(args.zonefile)
 
-    resolver = FixedResolver(args.zone)
+    resolver = FixedResolver(args.response)
 
     print("Starting Fixed Resolver (%s:%d) [%s]" % (
                         args.address or "*",
@@ -56,7 +60,8 @@ if __name__ == '__main__':
                         "UDP/TCP" if args.tcp else "UDP"))
 
     for rr in resolver.rrs:
-        print("    ;; ",rr.toZone().strip())
+        print("    | ",rr.toZone().strip(),sep="")
+    print()
 
     udp_server = DNSServer(resolver,port=args.port,address=args.address)
     udp_server.start_thread()
