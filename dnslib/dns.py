@@ -61,7 +61,7 @@ class DNSRecord(object):
             for i in range(header.a):
                 rr.append(RR.parse(buffer))
             for i in range(header.auth):
-                ns.append(RR.parse(buffer))
+                auth.append(RR.parse(buffer))
             for i in range(header.ar):
                 ar.append(RR.parse(buffer))
             return cls(header,questions,rr,auth=auth,ar=ar)
