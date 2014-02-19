@@ -39,19 +39,21 @@ def p(*args):
 
 for f in (fuzz_delete,fuzz_add,fuzz_change):
     for i in range(100):
-        p("! %s [%d]" % (fname(f),i))
         try:
             original = DNSRecord.parse(packet)
             fuzzed = DNSRecord.parse(f(packet))
-            diff = difflib.unified_diff(original.toZone(),fuzzed.toZone(),n=0)
-            diff = [ l for l in diff if l[0] in ['-','+'] and l[1] == '<']
+            diff = difflib.ndiff(original.toZone().split("\n"),
+                                 fuzzed.toZone().split("\n"))
+            diff = [ l.rstrip() for l in diff if l[0] in ('-','+','?') ]
+            print("[%s:parsed ok] >>> %d Diff Errors" % (fname(f),len(diff)))
             if diff:
                 p("  " + "\n  ".join(diff))
         except DNSError as e:
-            print("  >>> " + str(e))
+            print("[%s:exception] >>> %s" % (fname(f),str(e)))
         except Exception as e:
             uncaught += 1
             print(traceback.format_exc())
 
+print("-----------------------")
 print("Uncaught Exceptions: %d" % uncaught)
 
