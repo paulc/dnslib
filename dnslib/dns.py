@@ -358,11 +358,11 @@ class DNSQuestion(object):
         buffer.pack("!HH",self.qtype,self.qclass)
 
     def __repr__(self):
-        return "<DNS Question: %r qtype=%s qclass=%s>" % (
+        return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
                     self.qname, QTYPE[self.qtype], CLASS[self.qclass])
 
     def toZone(self):
-       return ';%-31s%-8s%-8s' % (self.qname,CLASS[self.qclass],
+       return ';%-30s %-7s %-7s' % (self.qname,CLASS[self.qclass],
                                              QTYPE[self.qtype])
             
 class EDNSOption(object):
@@ -453,13 +453,15 @@ class RR(object):
             s.extend([str(opt) for opt in self.rdata])
             return "\n".join(s)
         else:
-            return "<DNS RR: %r rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
+            return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
                     self.rname, QTYPE[self.rtype], CLASS[self.rclass], 
                     self.ttl, self.rdata)
 
     def toZone(self):
-       return '%-24s%-8s%-8s%-8s%s' % (self.rname,self.ttl,CLASS[self.rclass],
-                                       QTYPE[self.rtype],self.rdata.toZone())
+       return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
+                                           CLASS[self.rclass],
+                                           QTYPE[self.rtype],
+                                           self.rdata.toZone())
 
 class RD(object):
 
@@ -774,7 +776,7 @@ class SOA(RD):
 
     def toZone(self):
         return "( %s %s %s )" % (self.mname,self.rname,
-                                 " ".join(map,str,self.times))
+                                 " ".join(map(str,self.times)))
 
 class NAPTR(RD):
 

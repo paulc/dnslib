@@ -1,7 +1,7 @@
 
 from __future__ import print_function
 
-import copy,socket,struct,threading,time
+import socket,struct,threading
 
 try:
     import socketserver
@@ -32,10 +32,7 @@ class BaseResolver(object):
                   handler.protocol,
                   request.q.qname,
                   QTYPE[request.q.qtype]))
-        #print(request.format("    : "))
-        print()
-        print(request.toZone("    "))
-        print()
+        print("\n",request.toZone("    "),"\n",sep="")
 
     def log_reply(self,reply,handler):
         """
@@ -49,10 +46,7 @@ class BaseResolver(object):
                   reply.q.qname,
                   QTYPE[reply.q.qtype],
                   ",".join([QTYPE[a.rtype] for a in reply.rr])))
-        #print(reply.format("    : "))
-        print()
-        print(reply.toZone("    "))
-        print()
+        print("\n",reply.toZone("    "),"\n",sep="")
 
     def resolve(self,request,handler):
         """
@@ -63,61 +57,6 @@ class BaseResolver(object):
         reply.header.rcode = getattr(RCODE,'Not Implemented')
         self.log_reply(reply,handler)
         return reply
-
-class ZoneResolver(BaseResolver):
-    """
-        Simple fixed zone file resolver.
-    """
-
-    def __init__(self,zone):
-        """
-            Initialise resolver from zone file. 
-
-            Stores RRs as a list of (label,type,rr) tuples
-        """
-        self.zone = []
-        for rr in RR.fromZone(zone):
-            self.zone.append((rr.rname,QTYPE[rr.rtype],rr))
-
-    def resolve(self,request,handler):
-        """
-            Respond to DNS request - parameters are request packet & handler.
-            Method is expected to return DNS response
-        """
-        self.log_request(request,handler)
-        reply = request.reply()
-        qname = request.q.qname
-        qtype = QTYPE[request.q.qtype]
-        for name,rtype,rr in self.zone:
-            if qname == name and (qtype == rtype or 
-                                  qtype == 'ANY' or 
-                                  rtype == 'CNAME'):
-                reply.add_answer(rr)
-                # Check for A/AAAA records associated with reply and
-                # add in additional section
-                if rtype in ['CNAME','NS','MX','PTR']:
-                    for a_name,a_rtype,a_rr in self.zone:
-                        if a_name == rr.rdata.label and a_rtype in ['A','AAAA']:
-                            reply.add_ar(a_rr)
-        self.log_reply(reply,handler)
-        return reply
-
-class DynamicResolver(object):
-    """
-        Example dynamic resolver
-    """
-    def resolve(self,request,handler):
-        self.log.request(request)
-        a = request.reply()
-        qname = request.q.qname
-        if qname.label[0] == b'date':
-            a.add_answer(RR(qname,"TXT",ttl=0,rdata=TXT(
-                time.ctime().encode('utf8'))))
-        elif qname.label[0] == b'hello':
-            a.add_answer(RR(qname,"TXT",ttl=0,rdata=TXT(
-                b"Hello " + str(handler.client_address).encode('utf8'))))
-        self.log_reply(a)
-        return a
 
 class DNSHandler(socketserver.BaseRequestHandler):
     """
@@ -175,12 +114,12 @@ class DNSServer(object):
                       server=None,
                       handler=DNSHandler):
         """
-            address:    listen address
-            port:       listen port
-            handler:    handler class
-            tcp:        UDP (false) / TCP (true)
-            server:     custom socketserver class
-            resolver:   resolver *instance*
+            @resolver:   resolver instance
+            @address:    listen address
+            @port:       listen port
+            @handler:    handler class
+            @tcp:        UDP (false) / TCP (true)
+            @server:     custom socketserver class
         """
         if not server:
             if tcp:
@@ -203,44 +142,4 @@ class DNSServer(object):
 
 if __name__ == "__main__":
 
-    import time,textwrap
-    from dnslib import RR
-
-    # Initialise resolver instance
-    zone = textwrap.dedent("""
-            $ORIGIN     def.com
-            $TTL        60
-
-            @           IN  SOA     ( def.com def.com 1234
-                                      60 60 60 60 )
-                        IN  NS      ns1.def.com
-                        IN  MX      10 mx1.def.com.
-            ns1         IN  CNAME   abc.def.com.
-            mx1         IN  CNAME   abc.def.com.
-
-            abc         IN  A       1.2.3.4
-                        IN  A       5.6.7.8
-                        IN  AAAA    1234:5678::1
-                        IN  TXT     "A TXT Record"
-            
-            $ORIGIN in-addr.arpa.
-            4.3.2.1     IN PTR  abc.def.com.
-
-    """)
-
-    #resolver = BaseResolver()
-    #resolver = FixedResolver(". 60 IN A 127.0.0.1")
-    resolver = ZoneResolver(zone)
-    #resolver = DynamicResolver()
-
-    # Configure UDP server
-    udp_server = DNSServer(resolver,port=8053)
-    udp_server.start_thread()
-
-    # Configure TCP server
-    tcp_server = DNSServer(resolver,port=8053,tcp=True)
-    tcp_server.start_thread()
-
-    while udp_server.isAlive():
-        time.sleep(1)
-
+    pass
