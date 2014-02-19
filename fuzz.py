@@ -43,7 +43,7 @@ for f in (fuzz_delete,fuzz_add,fuzz_change):
         try:
             original = DNSRecord.parse(packet)
             fuzzed = DNSRecord.parse(f(packet))
-            diff = difflib.unified_diff(original.records(),fuzzed.records(),n=0)
+            diff = difflib.unified_diff(original.toZone(),fuzzed.toZone(),n=0)
             diff = [ l for l in diff if l[0] in ['-','+'] and l[1] == '<']
             if diff:
                 p("  " + "\n  ".join(diff))
