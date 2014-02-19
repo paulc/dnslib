@@ -10,6 +10,7 @@ from dnslib.bimap import Bimap, BimapError
 from dnslib.buffer import Buffer, BufferError
 from dnslib.label import DNSLabel,DNSLabelError,DNSBuffer
 from dnslib.zone import ZoneParser
+from dnslib.error import DNSError
 
 QTYPE =  Bimap('QTYPE', {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
                 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY', 28:'AAAA',
@@ -25,9 +26,6 @@ RCODE =  Bimap('RCODE',{0:'NOERROR', 1:'FORMERR', 2:'SERVFAIL',
                  3:'NXDOMAIN', 4:'NOTIMP', 5:'REFUSED', 6:'YXDOMAIN',
                  7:'YXRRSET', 8:'NXRRSET', 9:'NOTAUTH', 10:'NOTZONE'})
 OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE'})
-
-class DNSError(Exception):
-    pass
 
 def append_flat(a,b):
     a.extend(b) if (type(b) in (tuple,list)) else a.append(b)
