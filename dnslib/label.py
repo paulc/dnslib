@@ -25,8 +25,15 @@ class DNSLabel(object):
     <DNSLabel: aaa.bbb.ccc>
     >>> str(l1)
     'aaa.bbb.ccc'
-    >>> l1.add("xxx.yyy")
+    >>> l3 = l1.add("xxx.yyy")
+    >>> l3
     <DNSLabel: xxx.yyy.aaa.bbb.ccc>
+    >>> l3.matchSuffix(l1)
+    True
+    >>> l3.matchSuffix("xxx.yyy")
+    False
+    >>> l3.stripSuffix("bbb.ccc")
+    <DNSLabel: xxx.yyy.aaa>
 
     # Too hard to get unicode doctests to work on Python 3.2  
     # (works on 3.3)
@@ -46,25 +53,44 @@ class DNSLabel(object):
             - a byte string (split into components separated by b'.')
             - a unicode string which will be encoded according to RFC3490/IDNA
         """
-        if type(label) in (list,tuple):
+        if type(label) == DNSLabel:
+            self.label = label.label
+        elif type(label) in (list,tuple):
             self.label = tuple(label)
         else:
             if not label or label in (b'.','.'):
                 self.label = ()
             elif type(label) is not bytes:
-                self.label = tuple(label.encode("idna").rstrip(b".").split(b"."))
+                self.label = tuple(label.encode("idna").\
+                                rstrip(b".").split(b"."))
             else:
                 self.label = tuple(label.rstrip(b".").split(b"."))
 
-
     def add(self,name):
         """
-            Prepend label 
+            Prepend name to label 
         """
         new = DNSLabel(name)
         if self.label:
             new.label += self.label
         return new
+
+    def matchSuffix(self,suffix):
+        """
+            Return True if label suffix matches 
+        """
+        suffix = DNSLabel(suffix)
+        return self.label[-len(suffix.label):] == suffix.label
+
+    def stripSuffix(self,suffix):
+        """
+            Strip suffix from label
+        """
+        suffix = DNSLabel(suffix)
+        if self.label[-len(suffix.label):] == suffix.label:
+            return DNSLabel(self.label[:-len(suffix.label)])
+        else:
+            return self
 
     def __str__(self):
         return ".".join([ s.decode("idna") for s in self.label ])
