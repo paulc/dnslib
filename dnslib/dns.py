@@ -21,8 +21,8 @@ QTYPE =  Bimap('QTYPE', {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
 
 CLASS =  Bimap('CLASS',{1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'})
 QR =     Bimap('QR',{0:'QUERY', 1:'RESPONSE'})
-RCODE =  Bimap('RCODE',{0:'No Error', 1:'Format Error', 2:'Server failure', 
-                 3:'Name Error', 4:'Not Implemented', 5:'Refused', 6:'YXDOMAIN',
+RCODE =  Bimap('RCODE',{0:'NOERROR', 1:'FORMERR', 2:'SERVFAIL', 
+                 3:'NXDOMAIN', 4:'NOTIMP', 5:'REFUSED', 6:'YXDOMAIN',
                  7:'YXRRSET', 8:'NXRRSET', 9:'NOTAUTH', 10:'NOTZONE'})
 OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE'})
 
@@ -162,11 +162,11 @@ class DNSRecord(object):
         return DNSRecord.parse(response)
         
     def format(self,prefix=""):
-        sections = [ str(self.header) ]
-        sections.extend([str(q) for q in self.questions])
-        sections.extend([str(rr) for rr in self.rr])
-        sections.extend([str(rr) for rr in self.auth])
-        sections.extend([str(rr) for rr in self.ar])
+        sections = [ repr(self.header) ]
+        sections.extend([repr(q) for q in self.questions])
+        sections.extend([repr(rr) for rr in self.rr])
+        sections.extend([repr(rr) for rr in self.auth])
+        sections.extend([repr(rr) for rr in self.ar])
         return prefix + ("\n" + prefix).join(sections)
 
     def toZone(self,prefix=""):
@@ -187,6 +187,9 @@ class DNSRecord(object):
 
     def __repr__(self):
         return self.format()
+
+    def __str__(self):
+        return self.toZone()
 
 class DNSHeader(object):
 
@@ -319,11 +322,14 @@ class DNSHeader(object):
               self.rd and 'rd', 
               self.ra and 'ra' ] 
         z1 = ';; ->>HEADER<<- opcode: %s, status: %s, id: %d' % (
-                    QR[self.qr],RCODE[self.rcode],self.id)
+                    OPCODE[self.opcode],RCODE[self.rcode],self.id)
         z2 = ';; flags: %s; QUERY: %d, ANSWER: %d, AUTHORITY: %d, ADDITIONAL: %d' % (
                       " ".join(filter(None,f)),
                       self.q,self.a,self.auth,self.ar)
         return [z1,z2]
+
+    def __str__(self):
+        return "\n".join(self.toZone())
 
 class DNSQuestion(object):
     
@@ -357,13 +363,16 @@ class DNSQuestion(object):
         buffer.encode_name(self.qname)
         buffer.pack("!HH",self.qtype,self.qclass)
 
+    def toZone(self):
+       return ';%-30s %-7s %s' % (self.qname,CLASS[self.qclass],
+                                             QTYPE[self.qtype])
+
     def __repr__(self):
         return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
                     self.qname, QTYPE[self.qtype], CLASS[self.qclass])
 
-    def toZone(self):
-       return ';%-30s %-7s %-7s' % (self.qname,CLASS[self.qclass],
-                                             QTYPE[self.qtype])
+    def __str__(self):
+        return self.toZone()
             
 class EDNSOption(object):
 
@@ -376,7 +385,13 @@ class EDNSOption(object):
         buffer.append(self.data)
 
     def __repr__(self):
-        return "<EDNS Option: Code=%d Data='%s'>" % (self.code,self.data)
+        return "<EDNS Option: Code=%d Data='%s'>" % (self.code,binascii.hexlify(self.data).decode())
+
+    def toZone(self):
+        return ";EDNS: code: %s; data: %s" % (self.code,binascii.hexlify(self.data).decode())
+
+    def __str__(self):
+        return self.toZone()
 
 class RR(object):
 
@@ -414,13 +429,16 @@ class RR(object):
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname or []
-        if type(rtype) != int:
-            self.rtype = QTYPE[rtype]
-        else:
-            self.rtype = rtype
+        self.rtype = rtype
         self.rclass = rclass
         self.ttl = ttl
         self.rdata = rdata
+        # TODO Add property getters/setters
+        if self.rtype == QTYPE.OPT:
+            self.edns_len = self.rclass
+            self.edns_do = get_bits(self.ttl,15)
+            self.edns_ver = get_bits(self.ttl,16,8)
+            self.edns_rcode = get_bits(self.ttl,24,8)
 
     def set_rname(self,rname):
         if isinstance(rname,DNSLabel):
@@ -449,8 +467,9 @@ class RR(object):
 
     def __repr__(self):
         if self.rtype == QTYPE.OPT:
-            s = ["<DNS OPT: udp_len=%d rcode=%d>" % (self.rclass,self.ttl)]
-            s.extend([str(opt) for opt in self.rdata])
+            s = ["<DNS OPT: edns_ver=%d do=%d ext_rcode=%d udp_len=%d>" % (
+                        self.edns_ver,self.edns_do,self.edns_rcode,self.edns_len)]
+            s.extend([repr(opt) for opt in self.rdata])
             return "\n".join(s)
         else:
             return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
@@ -458,10 +477,24 @@ class RR(object):
                     self.ttl, self.rdata)
 
     def toZone(self):
-       return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
-                                           CLASS[self.rclass],
-                                           QTYPE[self.rtype],
-                                           self.rdata.toZone())
+        if self.rtype == QTYPE.OPT:
+            z = [ ";OPT PSEUDOSECTION", 
+                  ";EDNS: version: %d, flags: %s; udp: %d" % (
+                        self.edns_ver, 
+                        "do" if self.edns_do else "",
+                         self.edns_len)
+                ]
+            z.extend([str(opt) for opt in self.rdata])
+            # FIXME This breaks prefix handling in DNSRecord.toZone
+            return "\n".join(z)
+        else:
+            return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
+                                                CLASS[self.rclass],
+                                                QTYPE[self.rtype],
+                                                self.rdata.toZone())
+
+    def __str__(self):
+        return self.toZone()
 
 class RD(object):
 
@@ -827,106 +860,6 @@ class NAPTR(RD):
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR}
-
-def _unpack(s):
-    return  DNSRecord.parse(binascii.unhexlify(s))
-
-def test_unpack(s):
-    """
-    Test decoding with sample DNS packets captured from server/udp_proxy.py
-
-    >>> def _dump(s):
-    ...     print(_unpack(s))
-
-    Standard query A www.google.com
-        >>> _dump(b'd5ad010000010000000000000377777706676f6f676c6503636f6d0000010001')
-        <DNS Header: id=0xd5ad type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
-        <DNS Question: 'www.google.com' qtype=A qclass=IN>
-
-    Standard query response CNAME www.l.google.com A 66.249.91.104 A 66.249.91.99 A 66.249.91.103 A 66.249.91.147
-        >>> _dump(b'd5ad818000010005000000000377777706676f6f676c6503636f6d0000010001c00c0005000100000005000803777777016cc010c02c0001000100000005000442f95b68c02c0001000100000005000442f95b63c02c0001000100000005000442f95b67c02c0001000100000005000442f95b93')
-        <DNS Header: id=0xd5ad type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=5 ns=0 ar=0>
-        <DNS Question: 'www.google.com' qtype=A qclass=IN>
-        <DNS RR: 'www.google.com' rtype=CNAME rclass=IN ttl=5 rdata='www.l.google.com'>
-        <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.104'>
-        <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.99'>
-        <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.103'>
-        <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.147'>
-
-    Standard query MX google.com
-        >>> _dump(b'95370100000100000000000006676f6f676c6503636f6d00000f0001')
-        <DNS Header: id=0x9537 type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
-        <DNS Question: 'google.com' qtype=MX qclass=IN>
-
-    Standard query response MX 10 smtp2.google.com MX 10 smtp3.google.com MX 10 smtp4.google.com MX 10 smtp1.google.com
-        >>> _dump(b'95378180000100040000000006676f6f676c6503636f6d00000f0001c00c000f000100000005000a000a05736d747032c00cc00c000f000100000005000a000a05736d747033c00cc00c000f000100000005000a000a05736d747034c00cc00c000f000100000005000a000a05736d747031c00c')
-        <DNS Header: id=0x9537 type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=4 ns=0 ar=0>
-        <DNS Question: 'google.com' qtype=MX qclass=IN>
-        <DNS RR: 'google.com' rtype=MX rclass=IN ttl=5 rdata='10:smtp2.google.com'>
-        <DNS RR: 'google.com' rtype=MX rclass=IN ttl=5 rdata='10:smtp3.google.com'>
-        <DNS RR: 'google.com' rtype=MX rclass=IN ttl=5 rdata='10:smtp4.google.com'>
-        <DNS RR: 'google.com' rtype=MX rclass=IN ttl=5 rdata='10:smtp1.google.com'>
-
-    Standard query PTR 103.91.249.66.in-addr.arpa
-        >>> _dump(b'b38001000001000000000000033130330239310332343902363607696e2d61646472046172706100000c0001')
-        <DNS Header: id=0xb380 type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
-        <DNS Question: '103.91.249.66.in-addr.arpa' qtype=PTR qclass=IN>
-
-    Standard query response PTR ik-in-f103.google.com
-        >>> _dump(b'b38081800001000100000000033130330239310332343902363607696e2d61646472046172706100000c0001c00c000c00010000000500170a696b2d696e2d6631303306676f6f676c6503636f6d00')
-        <DNS Header: id=0xb380 type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
-        <DNS Question: '103.91.249.66.in-addr.arpa' qtype=PTR qclass=IN>
-        <DNS RR: '103.91.249.66.in-addr.arpa' rtype=PTR rclass=IN ttl=5 rdata='ik-in-f103.google.com'>
-
-    Standard query TXT google.com
-
-        >>> _dump(b'c89f0100000100000000000006676f6f676c6503636f6d0000100001')
-        <DNS Header: id=0xc89f type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
-        <DNS Question: 'google.com' qtype=TXT qclass=IN>
-
-    Standard query response TXT
-        >>> _dump(b'c89f8180000100010000000006676f6f676c6503636f6d0000100001c00c0010000100000005002a29763d7370663120696e636c7564653a5f6e6574626c6f636b732e676f6f676c652e636f6d207e616c6c')
-        <DNS Header: id=0xc89f type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
-        <DNS Question: 'google.com' qtype=TXT qclass=IN>
-        <DNS RR: 'google.com' rtype=TXT rclass=IN ttl=5 rdata='v=spf1 include:_netblocks.google.com ~all'>
-
-    Standard query SOA google.com
-        >>> _dump(b'28fb0100000100000000000006676f6f676c6503636f6d0000060001')
-        <DNS Header: id=0x28fb type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=0>
-        <DNS Question: 'google.com' qtype=SOA qclass=IN>
-
-    Standard query response SOA ns1.google.com
-        >>> _dump(b'28fb8180000100010000000006676f6f676c6503636f6d0000060001c00c00060001000000050026036e7331c00c09646e732d61646d696ec00c77b1566d00001c2000000708001275000000012c')
-        <DNS Header: id=0x28fb type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
-        <DNS Question: 'google.com' qtype=SOA qclass=IN>
-        <DNS RR: 'google.com' rtype=SOA rclass=IN ttl=5 rdata='ns1.google.com:dns-admin.google.com:2008110701:7200:1800:1209600:300'>
-
-    Standard query response NAPTR sip2sip.info
-        >>> _dump(b'740481800001000300000000077369703273697004696e666f0000230001c00c0023000100000c940027001e00640173075349502b44325500045f736970045f756470077369703273697004696e666f00c00c0023000100000c940027000a00640173075349502b44325400045f736970045f746370077369703273697004696e666f00c00c0023000100000c94002900140064017308534950532b44325400055f73697073045f746370077369703273697004696e666f00')
-        <DNS Header: id=0x7404 type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=3 ns=0 ar=0>
-        <DNS Question: 'sip2sip.info' qtype=NAPTR qclass=IN>
-        <DNS RR: 'sip2sip.info' rtype=NAPTR rclass=IN ttl=3220 rdata='30 100 "s" "SIP+D2U" "" _sip._udp.sip2sip.info'>
-        <DNS RR: 'sip2sip.info' rtype=NAPTR rclass=IN ttl=3220 rdata='10 100 "s" "SIP+D2T" "" _sip._tcp.sip2sip.info'>
-        <DNS RR: 'sip2sip.info' rtype=NAPTR rclass=IN ttl=3220 rdata='20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info'>
-
-    Standard query response NAPTR 0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org
-        >>> _dump(b'aef0818000010001000000000130013001300130013101310131013301390133013001310138013701380465313634036f72670000230001c00c002300010000a6a300320064000a0175074532552b53495022215e5c2b3f282e2a2924217369703a5c5c31406677642e70756c7665722e636f6d2100')
-        <DNS Header: id=0xaef0 type=RESPONSE opcode=QUERY flags=RD,RA rcode='No Error' q=1 a=1 ns=0 ar=0>
-        <DNS Question: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org' qtype=NAPTR qclass=IN>
-        <DNS RR: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org' rtype=NAPTR rclass=IN ttl=42659 rdata='100 10 "u" "E2U+SIP" "!^\+?(.*)$!sip:\\\\1@fwd.pulver.com!" .'>
-
-    EDNS0 OPT record 
-    ** this doesnt look right but don't have any other sample data **
-
-        >>> _dump(b'896f010000010000000000010661613332343703636f6d0000010001000029100000000000000c50fa000800012000d99f29cf')
-        <DNS Header: id=0x896f type=QUERY opcode=QUERY flags=RD rcode='No Error' q=1 a=0 ns=0 ar=1>
-        <DNS Question: 'aa3247.com' qtype=A qclass=IN>
-        <DNS OPT: udp_len=4096 rcode=0>
-        <EDNS Option: Code=20730 Data=...>
-
-    """
-    pass
-
 
 if __name__ == '__main__':
     import doctest
