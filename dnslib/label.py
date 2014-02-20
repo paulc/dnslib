@@ -23,18 +23,18 @@ class DNSLabel(object):
     >>> x[l1]
     1
     >>> l1
-    <DNSLabel: aaa.bbb.ccc>
+    <DNSLabel: 'aaa.bbb.ccc.'>
     >>> str(l1)
-    'aaa.bbb.ccc'
+    'aaa.bbb.ccc.'
     >>> l3 = l1.add("xxx.yyy")
     >>> l3
-    <DNSLabel: xxx.yyy.aaa.bbb.ccc>
+    <DNSLabel: 'xxx.yyy.aaa.bbb.ccc.'>
     >>> l3.matchSuffix(l1)
     True
-    >>> l3.matchSuffix("xxx.yyy")
+    >>> l3.matchSuffix("xxx.yyy.")
     False
-    >>> l3.stripSuffix("bbb.ccc")
-    <DNSLabel: xxx.yyy.aaa>
+    >>> l3.stripSuffix("bbb.ccc.")
+    <DNSLabel: 'xxx.yyy.aaa.'>
 
     # Too hard to get unicode doctests to work on Python 3.2  
     # (works on 3.3)
@@ -94,10 +94,10 @@ class DNSLabel(object):
             return self
 
     def __str__(self):
-        return ".".join([ s.decode("idna") for s in self.label ])
+        return ".".join([ s.decode("idna") for s in self.label ]) + "."
 
     def __repr__(self):
-        return "<DNSLabel: %s>" % str(self)
+        return "<DNSLabel: '%s'>" % str(self)
 
     def __hash__(self):
         return hash(self.label)
@@ -123,21 +123,21 @@ class DNSBuffer(Buffer):
     ...     return s
 
     >>> b = DNSBuffer()
-    >>> b.encode_name(b'aaa.bbb.ccc')
+    >>> b.encode_name(b'aaa.bbb.ccc.')
     >>> b.encode_name(b'xxx.yyy.zzz')
-    >>> b.encode_name(b'zzz.xxx.bbb.ccc')
+    >>> b.encode_name(b'zzz.xxx.bbb.ccc.')
     >>> b.encode_name(b'aaa.xxx.bbb.ccc')
     >>> p(b.hex())
     '036161610362626203636363000378787803797979037a7a7a00037a7a7a03787878c00403616161c01e'
     >>> b.offset = 0
     >>> print(b.decode_name())
-    aaa.bbb.ccc
+    aaa.bbb.ccc.
     >>> print(b.decode_name())
-    xxx.yyy.zzz
+    xxx.yyy.zzz.
     >>> print(b.decode_name())
-    zzz.xxx.bbb.ccc
+    zzz.xxx.bbb.ccc.
     >>> print(b.decode_name())
-    aaa.xxx.bbb.ccc
+    aaa.xxx.bbb.ccc.
 
     >>> b = DNSBuffer()
     >>> b.encode_name([b'a.aa',b'b.bb',b'c.cc'])

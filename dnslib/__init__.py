@@ -36,12 +36,12 @@
     >>> d = DNSRecord.parse(packet)
     >>> d
     <DNS Header: id=0xd5ad type=RESPONSE opcode=QUERY flags=RD,RA rcode='NOERROR' q=1 a=5 ns=0 ar=0>
-    <DNS Question: 'www.google.com' qtype=A qclass=IN>
-    <DNS RR: 'www.google.com' rtype=CNAME rclass=IN ttl=5 rdata='www.l.google.com'>
-    <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.104'>
-    <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.99'>
-    <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.103'>
-    <DNS RR: 'www.l.google.com' rtype=A rclass=IN ttl=5 rdata='66.249.91.147'>
+    <DNS Question: 'www.google.com.' qtype=A qclass=IN>
+    <DNS RR: 'www.google.com.' rtype=CNAME rclass=IN ttl=5 rdata='www.l.google.com.'>
+    <DNS RR: 'www.l.google.com.' rtype=A rclass=IN ttl=5 rdata='66.249.91.104'>
+    <DNS RR: 'www.l.google.com.' rtype=A rclass=IN ttl=5 rdata='66.249.91.99'>
+    <DNS RR: 'www.l.google.com.' rtype=A rclass=IN ttl=5 rdata='66.249.91.103'>
+    <DNS RR: 'www.l.google.com.' rtype=A rclass=IN ttl=5 rdata='66.249.91.147'>
 
     The default text representation of the DNSRecord is in zone file format:
 
@@ -49,20 +49,20 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
     ;; flags: rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;www.google.com                 IN      A
+    ;www.google.com.                IN      A
     ;; ANSWER SECTION
-    www.google.com          5       IN      CNAME   www.l.google.com
-    www.l.google.com        5       IN      A       66.249.91.104
-    www.l.google.com        5       IN      A       66.249.91.99
-    www.l.google.com        5       IN      A       66.249.91.103
-    www.l.google.com        5       IN      A       66.249.91.147
+    www.google.com.         5       IN      CNAME   www.l.google.com.
+    www.l.google.com.       5       IN      A       66.249.91.104
+    www.l.google.com.       5       IN      A       66.249.91.99
+    www.l.google.com.       5       IN      A       66.249.91.103
+    www.l.google.com.       5       IN      A       66.249.91.147
 
     To create a DNS Request Packet:
 
     >>> d = DNSRecord(q=DNSQuestion("google.com"))
     >>> d
     <DNS Header: id=... type=QUERY opcode=QUERY flags=RD rcode='NOERROR' q=1 a=0 ns=0 ar=0>
-    <DNS Question: 'google.com' qtype=A qclass=IN>
+    <DNS Question: 'google.com.' qtype=A qclass=IN>
 
     >>> str(DNSRecord.parse(d.pack())) == str(d)
     True
@@ -71,7 +71,7 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;google.com                     IN      A
+    ;google.com.                    IN      A
 
     >>> d = DNSRecord(q=DNSQuestion("google.com",QTYPE.MX))
     >>> str(DNSRecord.parse(d.pack())) == str(d)
@@ -81,7 +81,7 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;google.com                     IN      MX
+    ;google.com.                    IN      MX
 
     To create a DNS Response Packet:
 
@@ -90,8 +90,8 @@
     ...               a=RR("abc.com",rdata=A("1.2.3.4")))
     >>> d
     <DNS Header: id=... type=RESPONSE opcode=QUERY flags=AA,RD,RA rcode='NOERROR' q=1 a=1 ns=0 ar=0>
-    <DNS Question: 'abc.com' qtype=A qclass=IN>
-    <DNS RR: 'abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
+    <DNS Question: 'abc.com.' qtype=A qclass=IN>
+    <DNS RR: 'abc.com.' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>
     >>> str(DNSRecord.parse(d.pack())) == str(d)
     True
 
@@ -99,14 +99,14 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;abc.com                        IN      A
+    ;abc.com.                       IN      A
     ;; ANSWER SECTION
-    abc.com                 0       IN      A       1.2.3.4
+    abc.com.                0       IN      A       1.2.3.4
 
     It is also possible to create RRs from a string in zone file format
 
     >>> RR.fromZone("abc.com IN A 1.2.3.4")
-    [<DNS RR: 'abc.com' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>]
+    [<DNS RR: 'abc.com.' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>]
 
     The zone file can contain multiple entries and supports most of the normal
     format defined in RFC1035 (specifically not $INCLUDE)
@@ -122,10 +122,10 @@
     ... '''
     >>> for rr in RR.fromZone(textwrap.dedent(z)):
     ...     print(rr)
-    abc.com                 300     IN      MX      10 mail.abc.com
-    www.abc.com             300     IN      A       1.2.3.4
-    www.abc.com             300     IN      TXT     "Some Text"
-    mail.abc.com            300     IN      CNAME   www.abc.com
+    abc.com.                300     IN      MX      10 mail.abc.com.
+    www.abc.com.            300     IN      A       1.2.3.4
+    www.abc.com.            300     IN      TXT     "Some Text"
+    mail.abc.com.           300     IN      CNAME   www.abc.com.
 
     To create a skeleton reply to a DNS query:
 
@@ -138,9 +138,9 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;abc.com                        IN      ANY
+    ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
-    abc.com                 60      IN      A       1.2.3.4
+    abc.com.                60      IN      A       1.2.3.4
 
     Add additional RRs:
 
@@ -152,11 +152,11 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;abc.com                        IN      ANY
+    ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
-    abc.com                 60      IN      A       1.2.3.4
-    xxx.abc.com             0       IN      A       1.2.3.4
-    xxx.abc.com             0       IN      AAAA    1234:5678::1
+    abc.com.                60      IN      A       1.2.3.4
+    xxx.abc.com.            0       IN      A       1.2.3.4
+    xxx.abc.com.            0       IN      AAAA    1234:5678::1
 
 
     It is also possible to create a reply from a string in zone file format:
@@ -167,9 +167,9 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;abc.com                        IN      ANY
+    ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
-    abc.com                 60      IN      CNAME   xxx.abc.com
+    abc.com.                60      IN      CNAME   xxx.abc.com.
 
     >>> str(DNSRecord.parse(a.pack())) == str(a)
     True
@@ -180,12 +180,12 @@
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: aa rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
-    ;abc.com                        IN      ANY
+    ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
-    abc.com                 300     IN      MX      10 mail.abc.com
-    www.abc.com             300     IN      A       1.2.3.4
-    www.abc.com             300     IN      TXT     "Some Text"
-    mail.abc.com            300     IN      CNAME   www.abc.com
+    abc.com.                300     IN      MX      10 mail.abc.com.
+    www.abc.com.            300     IN      A       1.2.3.4
+    www.abc.com.            300     IN      TXT     "Some Text"
+    mail.abc.com.           300     IN      CNAME   www.abc.com.
 
     Changelog:
 
