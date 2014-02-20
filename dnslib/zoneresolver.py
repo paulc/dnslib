@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+import copy
+
 from dnslib import RR,QTYPE
 from dnslib.server import DNSServer,BaseResolver
 
@@ -10,12 +12,15 @@ class ZoneResolver(BaseResolver):
         Simple fixed zone file resolver.
     """
 
-    def __init__(self,zone):
+    def __init__(self,zone,glob=False):
         """
             Initialise resolver from zone file. 
             Stores RRs as a list of (label,type,rr) tuples
+            If 'glob' is True use glob match against zone file 
         """
         self.zone = [(rr.rname,QTYPE[rr.rtype],rr) for rr in RR.fromZone(zone)]
+        self.glob = glob
+        self.eq = 'matchGlob' if glob else '__eq__'
 
     def resolve(self,request,handler):
         """
@@ -27,10 +32,16 @@ class ZoneResolver(BaseResolver):
         qname = request.q.qname
         qtype = QTYPE[request.q.qtype]
         for name,rtype,rr in self.zone:
-            if qname == name and (qtype == rtype or 
-                                  qtype == 'ANY' or 
-                                  rtype == 'CNAME'):
-                reply.add_answer(rr)
+            if getattr(qname,self.eq)(name) and (qtype == rtype or 
+                                                 qtype == 'ANY' or 
+                                                 rtype == 'CNAME'):
+                # If we have a glob match fix reply label
+                if self.glob:
+                    a = copy.copy(rr)
+                    a.rname = qname
+                    reply.add_answer(a)
+                else:
+                    reply.add_answer(rr)
                 # Check for A/AAAA records associated with reply and
                 # add in additional section
                 if rtype in ['CNAME','NS','MX','PTR']:
@@ -54,6 +65,8 @@ if __name__ == '__main__':
     p.add_argument("--address","-a",default="",
                         metavar="<address>",
                         help="Listen address (default:all)")
+    p.add_argument("--glob",action='store_true',default=False,
+                        help="Glob match against zone file (default: false)")
     p.add_argument("--tcp",action='store_true',default=False,
                         help="TCP server (default: UDP only)")
     args = p.parse_args()
@@ -63,7 +76,7 @@ if __name__ == '__main__':
     else:
         args.zone = open(args.zone)
 
-    resolver = ZoneResolver(args.zone)
+    resolver = ZoneResolver(args.zone,args.glob)
 
     print("Starting Zone Resolver (%s:%d) [%s]" % (
                         args.address or "*",

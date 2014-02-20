@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+import fnmatch
+
 from dnslib.bit import get_bits,set_bits
 from dnslib.buffer import Buffer, BufferError
 
@@ -35,11 +37,15 @@ class DNSLabel(object):
     False
     >>> l3.stripSuffix("bbb.ccc.")
     <DNSLabel: 'xxx.yyy.aaa.'>
+    >>> l3.matchGlob("*.[abc]aa.bbb.ccc")
+    True
+    >>> l3.matchGlob("*.[abc]xx.bbb.ccc")
+    False
 
     # Too hard to get unicode doctests to work on Python 3.2  
     # (works on 3.3)
     # >>> u1 = DNSLabel(u'\u2295.com')
-    # >>> u1.__str__() == u'\u2295.com'
+    # >>> u1.__str__() == u'\u2295.com.'
     # True
     # >>> u1.label == ( b"xn--keh", b"com" )
     # True
@@ -62,10 +68,10 @@ class DNSLabel(object):
             if not label or label in (b'.','.'):
                 self.label = ()
             elif type(label) is not bytes:
-                self.label = tuple(label.encode("idna").\
+                self.label = tuple(label.encode("idna").lower().\
                                 rstrip(b".").split(b"."))
             else:
-                self.label = tuple(label.rstrip(b".").split(b"."))
+                self.label = tuple(label.lower().rstrip(b".").split(b"."))
 
     def add(self,name):
         """
@@ -75,6 +81,11 @@ class DNSLabel(object):
         if self.label:
             new.label += self.label
         return new
+
+    def matchGlob(self,pattern):
+        if type(pattern) != DNSLabel:
+            pattern = DNSLabel(pattern)
+        return fnmatch.fnmatch(str(self),str(pattern))
 
     def matchSuffix(self,suffix):
         """
@@ -93,8 +104,11 @@ class DNSLabel(object):
         else:
             return self
 
-    def __str__(self):
+    def idna(self):
         return ".".join([ s.decode("idna") for s in self.label ]) + "."
+
+    def __str__(self):
+        return ".".join([ s.decode() for s in self.label ]) + "."
 
     def __repr__(self):
         return "<DNSLabel: '%s'>" % str(self)
