@@ -344,7 +344,7 @@ class DNSQuestion(object):
             raise DNSError("Error unpacking DNSQuestion [offset=%d]: %s" % (
                                 buffer.offset,e))
 
-    def __init__(self,qname=[],qtype=1,qclass=1):
+    def __init__(self,qname=None,qtype=1,qclass=1):
         self.qname = qname
         self.qtype = qtype
         self.qclass = qclass
@@ -429,7 +429,7 @@ class RR(object):
                  for rr in ZoneParser(zone) ]
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
-        self.rname = rname or []
+        self.rname = rname
         self.rtype = rtype
         self.rclass = rclass
         self.ttl = ttl
@@ -693,7 +693,7 @@ class MX(RD):
         return cls(rd[1],int(rd[0]))
 
     def __init__(self,label=None,preference=10):
-        self.label = label or []
+        self.label = label
         self.preference = preference
 
     def set_label(self,label):
@@ -729,7 +729,7 @@ class CNAME(RD):
     def fromZone(cls,rd):
         return cls(rd[0])
 
-    def __init__(self,label=[]):
+    def __init__(self,label=None):
         self.label = label
 
     def set_label(self,label):
@@ -773,8 +773,8 @@ class SOA(RD):
         return cls(rd[0],rd[1],[int(t) for t in rd[2:]])
 
     def __init__(self,mname=None,rname=None,times=None):
-        self.mname = mname or []
-        self.rname = rname or []
+        self.mname = mname
+        self.rname = rname
         self.times = times or (0,0,0,0,0)
 
     def set_mname(self,mname):
@@ -828,7 +828,7 @@ class SRV(RD):
         self.priority = priority
         self.weight = weight
         self.port = port
-        self.target = target or []
+        self.target = target
 
     def set_target(self,target):
         if isinstance(target,DNSLabel):
@@ -848,20 +848,34 @@ class SRV(RD):
     def __repr__(self):
         return "%d %d %d %s" % (self.priority,self.weight,self.port,self.target)
 
-
 class NAPTR(RD):
 
-    def __init__(self,order,preference,flags,service,regexp,replacement=None):
-        self.order = order
-        self.preference = preference
-        self.flags = flags
-        self.service = service
-        self.regexp = regexp
-        self.replacement = replacement or DNSLabel([])
+    """
+        NAPTR Record
 
-    @classmethod
-    def fromZone(cls,rd):
-        raise ValueError
+        >>> q = DNSRecord(q=DNSQuestion("sip2sip.info",QTYPE.NAPTR))
+        >>> a = q.replyZone('sip2sip.info 3600 IN NAPTR 20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info')
+        >>> print(a)
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+        ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; QUESTION SECTION
+        ;sip2sip.info.                  IN      NAPTR
+        ;; ANSWER SECTION
+        sip2sip.info.           3600    IN      NAPTR   20 100 "s" "SIPS+D2T" "_sips._tcp.sip2sip.info" .
+        >>> r = DNSRecord.parse(a.pack())
+        >>> str(r) == str(a)
+        True
+
+        >>> a = q.replyZone('sip2sip.info 3600 IN NAPTR 20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info sip2sip.info')
+        >>> print(DNSRecord.parse(a.pack()))
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+        ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; QUESTION SECTION
+        ;sip2sip.info.                  IN      NAPTR
+        ;; ANSWER SECTION
+        sip2sip.info.           3600    IN      NAPTR   20 100 "s" "SIPS+D2T" "_sips._tcp.sip2sip.info" sip2sip.info.
+
+    """
 
     @classmethod
     def parse(cls, buffer, length):
@@ -878,6 +892,32 @@ class NAPTR(RD):
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking NAPTR [offset=%d]: %s" % 
                                     (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd):
+        encode = lambda s : s.encode()
+        label = lambda s : DNSLabel(s)
+        m = (int,int,encode,encode,encode,label)
+        return cls(*[ f(v) for f,v in zip(m,rd)])
+
+    def __init__(self,order,preference,flags,service,regexp,replacement=None):
+        self.order = order
+        self.preference = preference
+        self.flags = flags
+        self.service = service
+        self.regexp = regexp
+        self.replacement = replacement
+
+    def set_replacement(self,replacement):
+        if isinstance(replacement,DNSLabel):
+            self._replacement = replacement
+        else:
+            self._replacement = DNSLabel(replacement)
+
+    def get_replacement(self):
+        return self._replacement
+
+    replacement = property(get_replacement,set_replacement)
 
     def pack(self, buffer):
         buffer.pack('!HH', self.order, self.preference)
