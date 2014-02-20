@@ -7,7 +7,7 @@ try:
 except ImportError:
     from commands import getoutput
 
-from dnslib import RR,QTYPE,TXT
+from dnslib import RR,QTYPE,RCODE,TXT
 from dnslib.label import DNSLabel
 from dnslib.server import DNSServer,BaseResolver
 from dnslib.zone import parse_time
@@ -16,6 +16,7 @@ class ShellResolver(BaseResolver):
     """
         Example dynamic resolver. 
         Maps DNS labels to shell commands and returns result as TXT record
+        (Note: No context is passed to the shell command)
     """
     def __init__(self,routes,origin,ttl):
         self.origin = DNSLabel(origin)
@@ -38,6 +39,8 @@ class ShellResolver(BaseResolver):
             output = getoutput(cmd).encode()
             reply.add_answer(RR(qname,QTYPE.TXT,ttl=self.ttl,
                                 rdata=TXT(output[:254])))
+        else:
+            reply.header.rcode = RCODE.NXDOMAIN
         self.log_request(reply,handler)
         return reply
 

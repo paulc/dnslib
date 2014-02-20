@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import copy
 
-from dnslib import RR,QTYPE
+from dnslib import RR,QTYPE,RCODE
 from dnslib.server import DNSServer,BaseResolver
 
 class ZoneResolver(BaseResolver):
@@ -48,6 +48,8 @@ class ZoneResolver(BaseResolver):
                     for a_name,a_rtype,a_rr in self.zone:
                         if a_name == rr.rdata.label and a_rtype in ['A','AAAA']:
                             reply.add_ar(a_rr)
+        if not reply.rr:
+            reply.header.rcode = RCODE.NXDOMAIN
         self.log_reply(reply,handler)
         return reply
 
