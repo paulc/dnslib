@@ -347,7 +347,8 @@ class DNSHeader(object):
                     f1, self.q, f2, self.a, f3, self.auth, f4, self.ar )
 
     def toZone(self):
-        f = [ self.aa and 'aa', 
+        f = [ self.qr and 'qr',
+              self.aa and 'aa', 
               self.tc and 'tc', 
               self.rd and 'rd', 
               self.ra and 'ra' ] 
@@ -886,7 +887,7 @@ class NAPTR(RD):
         >>> a = q.replyZone('sip2sip.info 3600 IN NAPTR 20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info')
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-        ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;sip2sip.info.                  IN      NAPTR
         ;; ANSWER SECTION
@@ -898,7 +899,7 @@ class NAPTR(RD):
         >>> a = q.replyZone('sip2sip.info 3600 IN NAPTR 20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info sip2sip.info')
         >>> print(DNSRecord.parse(a.pack()))
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-        ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;sip2sip.info.                  IN      NAPTR
         ;; ANSWER SECTION

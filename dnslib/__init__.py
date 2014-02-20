@@ -47,7 +47,7 @@
 
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
-    ;; flags: rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+    ;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
     ;www.google.com.                IN      A
     ;; ANSWER SECTION
@@ -97,7 +97,7 @@
 
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-    ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+    ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
     ;abc.com.                       IN      A
     ;; ANSWER SECTION
@@ -136,7 +136,7 @@
     True
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-    ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+    ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
     ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
@@ -150,7 +150,7 @@
     True
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-    ;; flags: aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
+    ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
     ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
@@ -165,7 +165,7 @@
     >>> a = q.replyZone("abc.com 60 IN CNAME xxx.abc.com")
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-    ;; flags: aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+    ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
     ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
@@ -178,7 +178,7 @@
     >>> a = q.replyZone(textwrap.dedent(z))
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-    ;; flags: aa rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
+    ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
     ;; QUESTION SECTION
     ;abc.com.                       IN      ANY
     ;; ANSWER SECTION
