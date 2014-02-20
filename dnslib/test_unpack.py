@@ -48,7 +48,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
-        ;; flags: rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;www.google.com.                IN      A
         ;; ANSWER SECTION
@@ -84,7 +84,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38199
-        ;; flags: rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;google.com.                    IN      MX
         ;; ANSWER SECTION
@@ -116,7 +116,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 45952
-        ;; flags: rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;103.91.249.66.in-addr.arpa.    IN      PTR
         ;; ANSWER SECTION
@@ -145,7 +145,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 51359
-        ;; flags: rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;google.com.                    IN      TXT
         ;; ANSWER SECTION
@@ -174,7 +174,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10491
-        ;; flags: rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;google.com.                    IN      SOA
         ;; ANSWER SECTION
@@ -192,7 +192,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 29700
-        ;; flags: rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;sip2sip.info.                  IN      NAPTR
         ;; ANSWER SECTION
@@ -210,7 +210,7 @@ def test_unpack(s):
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44784
-        ;; flags: rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
         ;; QUESTION SECTION
         ;0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org. IN      NAPTR
         ;; ANSWER SECTION
