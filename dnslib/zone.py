@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+from collections import namedtuple
+
 from dnslib.lex import WordLexer
 from dnslib.label import DNSLabel
 
@@ -13,6 +15,8 @@ def parse_time(s):
     else:
         return int(s)
 
+parsed_rr = namedtuple("rr","rname,ttl,rclass,rtype,rdata")
+
 class ZoneParser:
 
     """
@@ -21,22 +25,22 @@ class ZoneParser:
         >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
         >>> rr,origin = z.next()
         >>> rr
-        (<DNSLabel: 'www.example.com.'>, 60, 'IN', 'A', ['1.2.3.4'])
+        rr(rname=<DNSLabel: 'www.example.com.'>, ttl=60, rclass='IN', rtype='A', rdata=['1.2.3.4'])
         >>> origin
         <DNSLabel: '.'>
 
         >>> z = ZoneParser(zone)
         >>> for rr,origin in z:
         ...     print(rr)
-        (<DNSLabel: 'example.com.'>, 5400, 'IN', 'SOA', ['ns1.example.com.', 'admin.example.com.', '2014020901', '10800', '1800', '604800', '86400'])
-        (<DNSLabel: 'example.com.'>, 1800, 'IN', 'NS', ['ns1.example.com.'])
-        (<DNSLabel: 'example.com.'>, 5400, 'IN', 'MX', ['10', 'mail.example.com.'])
-        (<DNSLabel: 'abc.example.com.'>, 5400, 'IN', 'A', ['1.2.3.4'])
-        (<DNSLabel: 'abc.example.com.'>, 5400, 'IN', 'TXT', ['A B C'])
-        (<DNSLabel: 'ns1.example.com.'>, 60, 'IN', 'A', ['6.7.8.9'])
-        (<DNSLabel: 'ipv6.example.com.'>, 5400, 'IN', 'AAAA', ['1234:5678::1'])
-        (<DNSLabel: 'www.example.com.'>, 5400, 'IN', 'CNAME', ['abc'])
-        (<DNSLabel: '4.3.2.1.5.5.5.0.0.8.1.e164.arpa.'>, 300, 'IN', 'NAPTR', ['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
+        rr(rname=<DNSLabel: 'example.com.'>, ttl=5400, rclass='IN', rtype='SOA', rdata=['ns1.example.com.', 'admin.example.com.', '2014020901', '10800', '1800', '604800', '86400'])
+        rr(rname=<DNSLabel: 'example.com.'>, ttl=1800, rclass='IN', rtype='NS', rdata=['ns1.example.com.'])
+        rr(rname=<DNSLabel: 'example.com.'>, ttl=5400, rclass='IN', rtype='MX', rdata=['10', 'mail.example.com.'])
+        rr(rname=<DNSLabel: 'abc.example.com.'>, ttl=5400, rclass='IN', rtype='A', rdata=['1.2.3.4'])
+        rr(rname=<DNSLabel: 'abc.example.com.'>, ttl=5400, rclass='IN', rtype='TXT', rdata=['A B C'])
+        rr(rname=<DNSLabel: 'ns1.example.com.'>, ttl=60, rclass='IN', rtype='A', rdata=['6.7.8.9'])
+        rr(rname=<DNSLabel: 'ipv6.example.com.'>, ttl=5400, rclass='IN', rtype='AAAA', rdata=['1234:5678::1'])
+        rr(rname=<DNSLabel: 'www.example.com.'>, ttl=5400, rclass='IN', rtype='CNAME', rdata=['abc'])
+        rr(rname=<DNSLabel: '4.3.2.1.5.5.5.0.0.8.1.e164.arpa.'>, ttl=300, rclass='IN', rtype='NAPTR', rdata=['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
 
     """
 
@@ -71,7 +75,7 @@ class ZoneParser:
         cl = rr.pop(0) if rr[0] in ('IN','CH','HS') else 'IN'
         rtype = rr.pop(0)
         rdata = rr
-        return (label,ttl,cl,rtype,rdata)
+        return parsed_rr(label,ttl,cl,rtype,rdata)
 
     def __iter__(self):
         return self.parse()

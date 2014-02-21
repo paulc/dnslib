@@ -457,11 +457,11 @@ class RR(object):
 
     @classmethod
     def fromZone(cls,zone):
-        return [ cls(rname=rr[0],
-                     ttl=rr[1], 
-                     rclass=getattr(CLASS,rr[2]),
-                     rtype=getattr(QTYPE,rr[3]),
-                     rdata=RDMAP.get(rr[3],RD).fromZone(rr[4],origin)) 
+        return [ cls(rname=rr.rname,
+                     ttl=rr.ttl, 
+                     rclass=getattr(CLASS,rr.rclass),
+                     rtype=getattr(QTYPE,rr.rtype),
+                     rdata=RDMAP.get(rr.rtype,RD).fromZone(rr.rdata,origin)) 
                  for rr,origin in ZoneParser(zone) ]
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
