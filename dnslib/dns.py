@@ -40,6 +40,12 @@ OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE'},
 def append_flat(a,b):
     a.extend(b) if (type(b) in (tuple,list)) else a.append(b)
 
+def label(label,origin=None):
+    if label.endswith("."):
+        return DNSLabel(label)
+    else:
+        return (origin if isinstance(origin,DNSLabel) else DNSLabel(origin)).add(label)
+
 class DNSRecord(object):
 
     """
@@ -455,8 +461,8 @@ class RR(object):
                      ttl=rr[1], 
                      rclass=getattr(CLASS,rr[2]),
                      rtype=getattr(QTYPE,rr[3]),
-                     rdata=RDMAP.get(rr[3],RD).fromZone(rr[4])) 
-                 for rr in ZoneParser(zone) ]
+                     rdata=RDMAP.get(rr[3],RD).fromZone(rr[4],origin)) 
+                 for rr,origin in ZoneParser(zone) ]
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname
@@ -541,7 +547,7 @@ class RD(object):
                                     (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
+    def fromZone(cls,rd,origin=None):
         return cls(rd)
 
     def __init__(self,data=b""):
@@ -580,7 +586,7 @@ class TXT(RD):
                                         (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
+    def fromZone(cls,rd,origin=None):
         return cls(rd[0])
 
     def pack(self,buffer):
@@ -604,7 +610,7 @@ class A(RD):
                                 (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
+    def fromZone(cls,rd,origin=None):
         return cls(rd[0])
 
     def __init__(self,data):
@@ -691,7 +697,7 @@ class AAAA(RD):
                                         (buffer.offset,e))
  
     @classmethod
-    def fromZone(cls,rd):
+    def fromZone(cls,rd,origin=None):
         return cls(rd[0])
 
     def __init__(self,data):
@@ -719,8 +725,8 @@ class MX(RD):
                                         (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
-        return cls(rd[1],int(rd[0]))
+    def fromZone(cls,rd,origin=None):
+        return cls(label(rd[1],origin),int(rd[0]))
 
     def __init__(self,label=None,preference=10):
         self.label = label
@@ -756,8 +762,8 @@ class CNAME(RD):
                                         (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
-        return cls(rd[0])
+    def fromZone(cls,rd,origin=None):
+        return cls(label(rd[0],origin))
 
     def __init__(self,label=None):
         self.label = label
@@ -799,8 +805,8 @@ class SOA(RD):
                                         (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
-        return cls(rd[0],rd[1],[int(t) for t in rd[2:]])
+    def fromZone(cls,rd,origin=None):
+        return cls(label(rd[0],origin),label(rd[1],origin),[int(t) for t in rd[2:]])
 
     def __init__(self,mname=None,rname=None,times=None):
         self.mname = mname
@@ -851,7 +857,7 @@ class SRV(RD):
                                         (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
+    def fromZone(cls,rd,origin=None):
         return cls(int(rd[0]),int(rd[1]),int(rd[2]),rd[3])
 
     def __init__(self,priority=0,weight=0,port=0,target=None):
@@ -924,10 +930,10 @@ class NAPTR(RD):
                                     (buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,rd):
+    def fromZone(cls,rd,origin=None):
         encode = lambda s : s.encode()
-        label = lambda s : DNSLabel(s)
-        m = (int,int,encode,encode,encode,label)
+        _label = lambda s : label(s,origin)
+        m = (int,int,encode,encode,encode,_label)
         return cls(*[ f(v) for f,v in zip(m,rd)])
 
     def __init__(self,order,preference,flags,service,regexp,replacement=None):

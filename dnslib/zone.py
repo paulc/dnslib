@@ -18,8 +18,15 @@ class ZoneParser:
     """
         Zone file parser
 
+        >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
+        >>> rr,origin = z.next()
+        >>> rr
+        (<DNSLabel: 'www.example.com.'>, 60, 'IN', 'A', ['1.2.3.4'])
+        >>> origin
+        <DNSLabel: '.'>
+
         >>> z = ZoneParser(zone)
-        >>> for rr in z:
+        >>> for rr,origin in z:
         ...     print(rr)
         (<DNSLabel: 'example.com.'>, 5400, 'IN', 'SOA', ['ns1.example.com.', 'admin.example.com.', '2014020901', '10800', '1800', '604800', '86400'])
         (<DNSLabel: 'example.com.'>, 1800, 'IN', 'NS', ['ns1.example.com.'])
@@ -31,9 +38,6 @@ class ZoneParser:
         (<DNSLabel: 'www.example.com.'>, 5400, 'IN', 'CNAME', ['abc'])
         (<DNSLabel: '4.3.2.1.5.5.5.0.0.8.1.e164.arpa.'>, 300, 'IN', 'NAPTR', ['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
 
-        >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
-        >>> z.next()
-        (<DNSLabel: 'www.example.com.'>, 60, 'IN', 'A', ['1.2.3.4'])
     """
 
     def __init__(self,zone,origin="",ttl=0):
@@ -67,7 +71,7 @@ class ZoneParser:
         cl = rr.pop(0) if rr[0] in ('IN','CH','HS') else 'IN'
         rtype = rr.pop(0)
         rdata = rr
-        return((label,ttl,cl,rtype,rdata))
+        return (label,ttl,cl,rtype,rdata)
 
     def __iter__(self):
         return self.parse()
@@ -85,7 +89,7 @@ class ZoneParser:
                 if tok[0] == 'NL':
                     if not paren and rr:
                         self.prev = tok[0]
-                        return self.parse_rr(rr)
+                        return self.parse_rr(rr), self.origin
                 elif tok[0] == 'SPACE' and self.prev == 'NL' and not paren:
                     rr.append('')
                 elif tok[0] == 'ATOM':
@@ -104,7 +108,7 @@ class ZoneParser:
                 self.prev = tok[0]
         except StopIteration:
             if rr:
-                return self.parse_rr(rr)
+                return self.parse_rr(rr), self.origin
             else:
                 raise StopIteration
 
