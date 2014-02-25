@@ -116,37 +116,99 @@ class ZoneParser:
             else:
                 raise StopIteration
 
+class DigParser:
+
+    def __init__(self,dig):
+        self.l = WordLexer(dig)
+        self.l.commentchars = ';'
+        self.i = iter(self.l)
+        self.header = None
+        self.q = []
+        self.a = []
+        self.auth = []
+        self.ar = []
+        self.section = None
+        
+    def parse(self):
+        rr = []
+        try:
+            while True:
+                tok = next(self.i)
+                if tok[0] == 'COMMENT':
+                    if tok[1].startswith('; ->>HEADER<<-'):
+                        self.header = (tok[1],next(self.i)[1])
+                    elif tok[1].startswith('; QUESTION'):
+                        self.section = self.q
+                    elif tok[1].startswith('; ANSWER'):
+                        self.section = self.a
+                    elif tok[1].startswith('; AUTHORITY'):
+                        self.section = self.auth
+                    elif tok[1].startswith('; ADDITIONAL'):
+                        self.section = self.ar
+                    elif tok[1].startswith(';') or tok[1].startswith('<<>>'):
+                        pass
+                    elif self.section == self.q:
+                        self.q.append(tok[1].split())
+                if tok[0] == 'NL' and rr:
+                    self.section.append(rr)
+                    rr = []
+                elif tok[0] == 'ATOM':
+                    rr.append(tok[1])
+        except StopIteration:
+            if rr:
+                self.section.append(rr)
+            return
+
 if __name__ == '__main__':
 
-    import doctest,textwrap
-    zone = textwrap.dedent("""
-        $ORIGIN example.com.        ; Comment
-        $TTL 90m
+    import argparse,sys
 
-        @           IN  SOA     ns1.example.com. admin.example.com. (
-                                    2014020901  ; Serial
-                                    10800   ; Refresh
-                                    1800    ; Retry
-                                    604800  ; Expire
-                                    86400 ) ; Minimum TTL
+    p = argparse.ArgumentParser(description="Zone Parser")
+    p.add_argument("--dig","-d",action='store_true',default=False)
+    p.add_argument("--zone","-z",action='store_true',default=False)
+    args = p.parse_args()
+    if args.dig:
+        d = DigParser(sys.stdin)
+        d.parse()
+        print(d.header)
+        print(d.q)
+        print(d.a)
+        print(d.auth)
+        print(d.ar)
+    elif args.zone:
+        z = ZoneParser(sys.stdin)
+        for rr,origin in z:
+            print(rr)
+    else:
+        import doctest,textwrap
+        zone = textwrap.dedent("""
+            $ORIGIN example.com.        ; Comment
+            $TTL 90m
 
-             1800   IN  NS      ns1.example.com.
-                    IN  MX      ( 10  mail.example.com. )
+            @           IN  SOA     ns1.example.com. admin.example.com. (
+                                        2014020901  ; Serial
+                                        10800   ; Refresh
+                                        1800    ; Retry
+                                        604800  ; Expire
+                                        86400 ) ; Minimum TTL
 
-        abc         IN  A       1.2.3.4
-                    IN  TXT     "A B C"
+                 1800   IN  NS      ns1.example.com.
+                        IN  MX      ( 10  mail.example.com. )
 
-        ns1   60    IN  A       6.7.8.9
-        ipv6        IN  AAAA    1234:5678::1
-        www         IN  CNAME   abc
+            abc         IN  A       1.2.3.4
+                        IN  TXT     "A B C"
 
-        $TTL 5m
-        $ORIGIN 4.3.2.1.5.5.5.0.0.8.1.e164.arpa.
-                    IN  NAPTR   ( 100 10 "U" "E2U+sip" 
-                                  "!^.*$!sip:customer-service@example.com!" 
-                                  . )
+            ns1   60    IN  A       6.7.8.9
+            ipv6        IN  AAAA    1234:5678::1
+            www         IN  CNAME   abc
 
-    """)
+            $TTL 5m
+            $ORIGIN 4.3.2.1.5.5.5.0.0.8.1.e164.arpa.
+                        IN  NAPTR   ( 100 10 "U" "E2U+sip" 
+                                      "!^.*$!sip:customer-service@example.com!" 
+                                      . )
 
-    doctest.testmod()
+        """)
+
+        doctest.testmod()
 
