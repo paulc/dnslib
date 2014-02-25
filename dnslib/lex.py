@@ -307,5 +307,43 @@ class RandomLexer(Lexer):
             return (None,self.lexRandom)
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+
+    import argparse,doctest,sys
+
+    p = argparse.ArgumentParser(description="Lex Tester")
+    p.add_argument("--lex","-l",action='store_true',default=False,
+                    help="Lex input (stdin)")
+    p.add_argument("--nl",action='store_true',default=False,
+                    help="Output NL tokens")
+    p.add_argument("--space",action='store_true',default=False,
+                    help="Output Whitespace tokens")
+    p.add_argument("--wordchars",help="Wordchars")
+    p.add_argument("--quotechars",help="Quotechars")
+    p.add_argument("--commentchars",help="Commentchars")
+    p.add_argument("--spacechars",help="Spacechars")
+    p.add_argument("--nlchars",help="NLchars")
+
+    args = p.parse_args()
+
+    if args.lex:
+        l = WordLexer(sys.stdin)
+        if args.wordchars:
+            l.wordchars = set(args.wordchars)
+        if args.quotechars:
+            l.quotechars = set(args.quotechars)
+        if args.commentchars:
+            l.commentchars = set(args.commentchars)
+        if args.spacechars:
+            l.spacechars = set(args.spacechars)
+        if args.nlchars:
+            l.nlchars = set(args.nlchars)
+        if args.space:
+            l.spacetok = ('SPACE',)
+        if args.nl:
+            l.nltok = ('NL',)
+
+        for tok in l:
+            print(tok)
+
+    else:
+        doctest.testmod()
