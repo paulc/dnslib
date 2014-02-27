@@ -48,9 +48,9 @@
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
     ;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;www.google.com.                IN      A
-    ;; ANSWER SECTION
+    ;; ANSWER SECTION:
     www.google.com.         5       IN      CNAME   www.l.google.com.
     www.l.google.com.       5       IN      A       66.249.91.104
     www.l.google.com.       5       IN      A       66.249.91.99
@@ -70,7 +70,7 @@
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;google.com.                    IN      A
 
     >>> d = DNSRecord(q=DNSQuestion("google.com",QTYPE.MX))
@@ -80,7 +80,7 @@
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;google.com.                    IN      MX
 
     To create a DNS Response Packet:
@@ -98,9 +98,9 @@
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;abc.com.                       IN      A
-    ;; ANSWER SECTION
+    ;; ANSWER SECTION:
     abc.com.                0       IN      A       1.2.3.4
 
     It is also possible to create RRs from a string in zone file format
@@ -137,9 +137,9 @@
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;abc.com.                       IN      ANY
-    ;; ANSWER SECTION
+    ;; ANSWER SECTION:
     abc.com.                60      IN      A       1.2.3.4
 
     Add additional RRs:
@@ -151,9 +151,9 @@
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;abc.com.                       IN      ANY
-    ;; ANSWER SECTION
+    ;; ANSWER SECTION:
     abc.com.                60      IN      A       1.2.3.4
     xxx.abc.com.            0       IN      A       1.2.3.4
     xxx.abc.com.            0       IN      AAAA    1234:5678::1
@@ -166,9 +166,9 @@
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;abc.com.                       IN      ANY
-    ;; ANSWER SECTION
+    ;; ANSWER SECTION:
     abc.com.                60      IN      CNAME   xxx.abc.com.
 
     >>> str(DNSRecord.parse(a.pack())) == str(a)
@@ -179,9 +179,9 @@
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
-    ;; QUESTION SECTION
+    ;; QUESTION SECTION:
     ;abc.com.                       IN      ANY
-    ;; ANSWER SECTION
+    ;; ANSWER SECTION:
     abc.com.                300     IN      MX      10 mail.abc.com.
     www.abc.com.            300     IN      A       1.2.3.4
     www.abc.com.            300     IN      TXT     "Some Text"
