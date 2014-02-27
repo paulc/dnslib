@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from collections import namedtuple
 
+import dnslib #import RR,CLASS,RDMAP
 from dnslib.lex import WordLexer
 from dnslib.label import DNSLabel
 
@@ -15,32 +16,28 @@ def parse_time(s):
     else:
         return int(s)
 
-parsed_rr = namedtuple("rr","rname,ttl,rclass,rtype,rdata")
-
 class ZoneParser:
 
     """
         Zone file parser
 
         >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
-        >>> rr,origin = z.next()
+        >>> rr = z.next()
         >>> rr
-        rr(rname=<DNSLabel: 'www.example.com.'>, ttl=60, rclass='IN', rtype='A', rdata=['1.2.3.4'])
-        >>> origin
-        <DNSLabel: '.'>
+        <DNS RR: 'www.example.com.' rtype=A rclass=IN ttl=60 rdata='1.2.3.4'>
 
         >>> z = ZoneParser(zone)
-        >>> for rr,origin in z:
+        >>> for rr in z:
         ...     print(rr)
-        rr(rname=<DNSLabel: 'example.com.'>, ttl=5400, rclass='IN', rtype='SOA', rdata=['ns1.example.com.', 'admin.example.com.', '2014020901', '10800', '1800', '604800', '86400'])
-        rr(rname=<DNSLabel: 'example.com.'>, ttl=1800, rclass='IN', rtype='NS', rdata=['ns1.example.com.'])
-        rr(rname=<DNSLabel: 'example.com.'>, ttl=5400, rclass='IN', rtype='MX', rdata=['10', 'mail.example.com.'])
-        rr(rname=<DNSLabel: 'abc.example.com.'>, ttl=5400, rclass='IN', rtype='A', rdata=['1.2.3.4'])
-        rr(rname=<DNSLabel: 'abc.example.com.'>, ttl=5400, rclass='IN', rtype='TXT', rdata=['A B C'])
-        rr(rname=<DNSLabel: 'ns1.example.com.'>, ttl=60, rclass='IN', rtype='A', rdata=['6.7.8.9'])
-        rr(rname=<DNSLabel: 'ipv6.example.com.'>, ttl=5400, rclass='IN', rtype='AAAA', rdata=['1234:5678::1'])
-        rr(rname=<DNSLabel: 'www.example.com.'>, ttl=5400, rclass='IN', rtype='CNAME', rdata=['abc'])
-        rr(rname=<DNSLabel: '4.3.2.1.5.5.5.0.0.8.1.e164.arpa.'>, ttl=300, rclass='IN', rtype='NAPTR', rdata=['100', '10', 'U', 'E2U+sip', '!^.*$!sip:customer-service@example.com!', '.'])
+        example.com.            5400    IN      SOA     ns1.example.com. admin.example.com. 2014020901 10800 1800 604800 86400
+        example.com.            1800    IN      NS      ns1.example.com.
+        example.com.            5400    IN      MX      10 mail.example.com.
+        abc.example.com.        5400    IN      A       1.2.3.4
+        abc.example.com.        5400    IN      TXT     "A B C"
+        ns1.example.com.        60      IN      A       6.7.8.9
+        ipv6.example.com.       5400    IN      AAAA    1234:5678::1
+        www.example.com.        5400    IN      CNAME   abc.example.com.
+        4.3.2.1.5.5.5.0.0.8.1.e164.arpa. 300     IN      NAPTR   100 10 "U" "E2U+sip" "!^.*$!sip:customer-service@example.com!" .
 
     """
 
@@ -72,10 +69,15 @@ class ZoneParser:
     def parse_rr(self,rr):
         label = self.parse_label(rr.pop(0))
         ttl = int(rr.pop(0)) if rr[0].isdigit() else self.ttl
-        cl = rr.pop(0) if rr[0] in ('IN','CH','HS') else 'IN'
+        rclass = rr.pop(0) if rr[0] in ('IN','CH','HS') else 'IN'
         rtype = rr.pop(0)
         rdata = rr
-        return parsed_rr(label,ttl,cl,rtype,rdata)
+        rd = dnslib.RDMAP.get(rtype,dnslib.RD)
+        return dnslib.RR(rname=label,
+                         ttl=ttl,
+                         rclass=getattr(dnslib.CLASS,rclass),
+                         rtype=getattr(dnslib.QTYPE,rtype),
+                         rdata=rd.fromZone(rdata,self.origin))
 
     def __iter__(self):
         return self.parse()
@@ -90,6 +92,73 @@ class ZoneParser:
         try:
             while True:
                 tok = next(self.i)
+                if tok[0] == 'NL':
+                    if not paren and rr:
+                        self.prev = tok[0]
+                        return self.parse_rr(rr)
+                elif tok[0] == 'SPACE' and self.prev == 'NL' and not paren:
+                    rr.append('')
+                elif tok[0] == 'ATOM':
+                    if tok[1] == '(':
+                        paren = True
+                    elif tok[1] == ')':
+                        paren = False
+                    elif tok[1] == '$ORIGIN':
+                        _ = next(self.i) # Skip space
+                        self.origin = self.label = DNSLabel(next(self.i)[1])
+                    elif tok[1] == '$TTL':
+                        _ = next(self.i) # Skip space
+                        self.ttl = parse_time(next(self.i)[1])
+                    else:
+                        rr.append(tok[1])
+                self.prev = tok[0]
+        except StopIteration:
+            if rr:
+                return self.parse_rr(rr)
+            else:
+                raise StopIteration
+
+class DigParser:
+
+    def __init__(self,dig):
+        self.l = WordLexer(dig)
+        self.l.commentchars = ';'
+        self.header = None
+        self.q = []
+        self.a = []
+        self.auth = []
+        self.ar = []
+        self.section = None
+        
+    def __iter__(self):
+        return self.parse()
+
+    def parse(self):
+        while True:
+            yield self.next()
+
+    def next(self):
+        rr = []
+        paren = False
+        try:
+            while True:
+                tok = next(self.i)
+                if tok[0] == 'COMMENT':
+                    if tok[1].startswith('; ->>HEADER<<-'):
+                        self.header = (tok[1],next(self.i)[1])
+                    elif tok[1].startswith('; QUESTION'):
+                        self.section = self.q
+                    elif tok[1].startswith('; ANSWER'):
+                        self.section = self.a
+                    elif tok[1].startswith('; AUTHORITY'):
+                        self.section = self.auth
+                    elif tok[1].startswith('; ADDITIONAL'):
+                        self.section = self.ar
+                    elif tok[1].startswith(';') or tok[1].startswith('<<>>'):
+                        pass
+                    elif self.section == self.q:
+                        self.q.append(tok[1].split())
+                    
                 if tok[0] == 'NL':
                     if not paren and rr:
                         self.prev = tok[0]
@@ -116,99 +185,38 @@ class ZoneParser:
             else:
                 raise StopIteration
 
-class DigParser:
-
-    def __init__(self,dig):
-        self.l = WordLexer(dig)
-        self.l.commentchars = ';'
-        self.i = iter(self.l)
-        self.header = None
-        self.q = []
-        self.a = []
-        self.auth = []
-        self.ar = []
-        self.section = None
-        
-    def parse(self):
-        rr = []
-        try:
-            while True:
-                tok = next(self.i)
-                if tok[0] == 'COMMENT':
-                    if tok[1].startswith('; ->>HEADER<<-'):
-                        self.header = (tok[1],next(self.i)[1])
-                    elif tok[1].startswith('; QUESTION'):
-                        self.section = self.q
-                    elif tok[1].startswith('; ANSWER'):
-                        self.section = self.a
-                    elif tok[1].startswith('; AUTHORITY'):
-                        self.section = self.auth
-                    elif tok[1].startswith('; ADDITIONAL'):
-                        self.section = self.ar
-                    elif tok[1].startswith(';') or tok[1].startswith('<<>>'):
-                        pass
-                    elif self.section == self.q:
-                        self.q.append(tok[1].split())
-                if tok[0] == 'NL' and rr:
-                    self.section.append(rr)
-                    rr = []
-                elif tok[0] == 'ATOM':
-                    rr.append(tok[1])
-        except StopIteration:
-            if rr:
-                self.section.append(rr)
-            return
 
 if __name__ == '__main__':
 
-    import argparse,sys
+    import doctest,textwrap
+    zone = textwrap.dedent("""
+        $ORIGIN example.com.        ; Comment
+        $TTL 90m
 
-    p = argparse.ArgumentParser(description="Zone Parser")
-    p.add_argument("--dig","-d",action='store_true',default=False)
-    p.add_argument("--zone","-z",action='store_true',default=False)
-    args = p.parse_args()
-    if args.dig:
-        d = DigParser(sys.stdin)
-        d.parse()
-        print(d.header)
-        print(d.q)
-        print(d.a)
-        print(d.auth)
-        print(d.ar)
-    elif args.zone:
-        z = ZoneParser(sys.stdin)
-        for rr,origin in z:
-            print(rr)
-    else:
-        import doctest,textwrap
-        zone = textwrap.dedent("""
-            $ORIGIN example.com.        ; Comment
-            $TTL 90m
+        @           IN  SOA     ns1.example.com. admin.example.com. (
+                                    2014020901  ; Serial
+                                    10800   ; Refresh
+                                    1800    ; Retry
+                                    604800  ; Expire
+                                    86400 ) ; Minimum TTL
 
-            @           IN  SOA     ns1.example.com. admin.example.com. (
-                                        2014020901  ; Serial
-                                        10800   ; Refresh
-                                        1800    ; Retry
-                                        604800  ; Expire
-                                        86400 ) ; Minimum TTL
+             1800   IN  NS      ns1.example.com.
+                    IN  MX      ( 10  mail.example.com. )
 
-                 1800   IN  NS      ns1.example.com.
-                        IN  MX      ( 10  mail.example.com. )
+        abc         IN  A       1.2.3.4
+                    IN  TXT     "A B C"
 
-            abc         IN  A       1.2.3.4
-                        IN  TXT     "A B C"
+        ns1   60    IN  A       6.7.8.9
+        ipv6        IN  AAAA    1234:5678::1
+        www         IN  CNAME   abc
 
-            ns1   60    IN  A       6.7.8.9
-            ipv6        IN  AAAA    1234:5678::1
-            www         IN  CNAME   abc
+        $TTL 5m
+        $ORIGIN 4.3.2.1.5.5.5.0.0.8.1.e164.arpa.
+                    IN  NAPTR   ( 100 10 "U" "E2U+sip" 
+                                  "!^.*$!sip:customer-service@example.com!" 
+                                  . )
 
-            $TTL 5m
-            $ORIGIN 4.3.2.1.5.5.5.0.0.8.1.e164.arpa.
-                        IN  NAPTR   ( 100 10 "U" "E2U+sip" 
-                                      "!^.*$!sip:customer-service@example.com!" 
-                                      . )
+    """)
 
-        """)
-
-        doctest.testmod()
+    doctest.testmod()
 

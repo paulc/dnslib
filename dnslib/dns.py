@@ -67,13 +67,13 @@ class DNSRecord(object):
         >>> print(d)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: rd; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;abc.com.                       IN      A
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         abc.com.                60      IN      CNAME   ns.abc.com.
-        ;; AUTHORITY SECTION
+        ;; AUTHORITY SECTION:
         abc.com.                60      IN      SOA     ns.abc.com. admin.abc.com. 20140101 3600 3600 3600 3600
-        ;; ADDITIONAL SECTION
+        ;; ADDITIONAL SECTION:
         ns.abc.com.             60      IN      A       1.2.3.4
         >>> str(d) == str(DNSRecord.parse(d.pack()))
         True
@@ -208,18 +208,21 @@ class DNSRecord(object):
     def toZone(self,prefix=""):
         sections = self.header.toZone()
         if self.questions:
-            sections.append(";; QUESTION SECTION")
+            sections.append(";; QUESTION SECTION:")
             [ append_flat(sections,q.toZone()) for q in self.questions ]
         if self.rr:
-            sections.append(";; ANSWER SECTION")
+            sections.append(";; ANSWER SECTION:")
             [ append_flat(sections,rr.toZone()) for rr in self.rr ]
         if self.auth:
-            sections.append(";; AUTHORITY SECTION")
+            sections.append(";; AUTHORITY SECTION:")
             [ append_flat(sections,rr.toZone()) for rr in self.auth ]
         if self.ar:
-            sections.append(";; ADDITIONAL SECTION")
+            sections.append(";; ADDITIONAL SECTION:")
             [ append_flat(sections,rr.toZone()) for rr in self.ar ]
         return prefix + ("\n" + prefix).join(sections)
+
+    def fromDig(self,dig):
+        pass
 
     def __repr__(self):
         return self.format()
@@ -457,12 +460,7 @@ class RR(object):
 
     @classmethod
     def fromZone(cls,zone):
-        return [ cls(rname=rr.rname,
-                     ttl=rr.ttl, 
-                     rclass=getattr(CLASS,rr.rclass),
-                     rtype=getattr(QTYPE,rr.rtype),
-                     rdata=RDMAP.get(rr.rtype,RD).fromZone(rr.rdata,origin)) 
-                 for rr,origin in ZoneParser(zone) ]
+        return list(ZoneParser(zone))
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname
@@ -894,9 +892,9 @@ class NAPTR(RD):
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;sip2sip.info.                  IN      NAPTR
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         sip2sip.info.           3600    IN      NAPTR   20 100 "s" "SIPS+D2T" "_sips._tcp.sip2sip.info" .
         >>> r = DNSRecord.parse(a.pack())
         >>> str(r) == str(a)
@@ -906,9 +904,9 @@ class NAPTR(RD):
         >>> print(DNSRecord.parse(a.pack()))
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;sip2sip.info.                  IN      NAPTR
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         sip2sip.info.           3600    IN      NAPTR   20 100 "s" "SIPS+D2T" "_sips._tcp.sip2sip.info" sip2sip.info.
 
     """

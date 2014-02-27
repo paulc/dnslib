@@ -31,7 +31,7 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
         ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;www.google.com.                IN      A
 
     Standard query response CNAME www.l.google.com A 66.249.91.104 A 66.249.91.99 A 66.249.91.103 A 66.249.91.147
@@ -49,9 +49,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;www.google.com.                IN      A
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         www.google.com.         5       IN      CNAME   www.l.google.com.
         www.l.google.com.       5       IN      A       66.249.91.104
         www.l.google.com.       5       IN      A       66.249.91.99
@@ -68,7 +68,7 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38199
         ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;google.com.                    IN      MX
 
     Standard query response MX 10 smtp2.google.com MX 10 smtp3.google.com MX 10 smtp4.google.com MX 10 smtp1.google.com
@@ -85,9 +85,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38199
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;google.com.                    IN      MX
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         google.com.             5       IN      MX      10 smtp2.google.com.
         google.com.             5       IN      MX      10 smtp3.google.com.
         google.com.             5       IN      MX      10 smtp4.google.com.
@@ -103,7 +103,7 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 45952
         ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;103.91.249.66.in-addr.arpa.    IN      PTR
 
     Standard query response PTR ik-in-f103.google.com
@@ -117,9 +117,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 45952
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;103.91.249.66.in-addr.arpa.    IN      PTR
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         103.91.249.66.in-addr.arpa. 5       IN      PTR     ik-in-f103.google.com.
 
     Standard query TXT google.com
@@ -132,7 +132,7 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 51359
         ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;google.com.                    IN      TXT
 
     Standard query response TXT
@@ -146,9 +146,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 51359
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;google.com.                    IN      TXT
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         google.com.             5       IN      TXT     "v=spf1 include:_netblocks.google.com ~all"
 
     Standard query SOA google.com
@@ -161,7 +161,7 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10491
         ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;google.com.                    IN      SOA
 
     Standard query response SOA ns1.google.com
@@ -175,9 +175,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10491
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;google.com.                    IN      SOA
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         google.com.             5       IN      SOA     ns1.google.com. dns-admin.google.com. 2008110701 7200 1800 1209600 300
 
     Standard query response NAPTR sip2sip.info
@@ -193,9 +193,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 29700
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;sip2sip.info.                  IN      NAPTR
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         sip2sip.info.           3220    IN      NAPTR   30 100 "s" "SIP+D2U" "" _sip._udp.sip2sip.info.
         sip2sip.info.           3220    IN      NAPTR   10 100 "s" "SIP+D2T" "" _sip._tcp.sip2sip.info.
         sip2sip.info.           3220    IN      NAPTR   20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info.
@@ -211,9 +211,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44784
         ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org. IN      NAPTR
-        ;; ANSWER SECTION
+        ;; ANSWER SECTION:
         0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org. 42659   IN      NAPTR   100 10 "u" "E2U+SIP" "!^\\+?(.*)$!sip:\\\\1@fwd.pulver.com!" .
 
     EDNS0 OPT record 
@@ -230,9 +230,9 @@ def test_unpack(s):
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 35183
         ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
-        ;; QUESTION SECTION
+        ;; QUESTION SECTION:
         ;aa3247.com.                    IN      A
-        ;; ADDITIONAL SECTION
+        ;; ADDITIONAL SECTION:
         ;OPT PSEUDOSECTION
         ;EDNS: version: 0, flags: ; udp: 4096
         ;EDNS: code: 20730; data: 00012000d99f29cf
