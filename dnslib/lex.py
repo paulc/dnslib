@@ -26,7 +26,7 @@ class Lexer(object):
 
         The default start state is 'lexStart'
 
-        INput can either be a string/bytes or file object.
+        Input can either be a string/bytes or file object.
 
         The approach is based loosely on Rob Pike's Go lexer presentation
         (using generators rather than channels).
@@ -142,8 +142,8 @@ class WordLexer(Lexer):
         Example lexer which will split input stream into words (respecting
         quotes)
 
-        To emit SPACE tokens: self.spacetok = ('SPACE',)
-        To emit NL tokens: self.nltok = ('NL',)
+        To emit SPACE tokens: self.spacetok = ('SPACE',None)
+        To emit NL tokens: self.nltok = ('NL',None)
 
         >>> l = WordLexer(r'abc "def\100\x3d\. ghi" jkl')
         >>> list(l)

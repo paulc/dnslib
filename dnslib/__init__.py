@@ -221,6 +221,7 @@
 """
 
 from dnslib.dns import *
+#from dnslib.dns import DNSRecord,DNSHeader,DNSQuestion,RR,CLASS,RDMAP,QR,RCODE
 
 version = "0.9.0"
 
