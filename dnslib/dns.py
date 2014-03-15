@@ -2,14 +2,18 @@
 
 from __future__ import print_function
 
-import binascii,collections,random,socket,struct,textwrap
+import binascii,collections,copy,random,socket,struct,textwrap
 from itertools import chain
+try:
+    from itertools import zip_longest
+except ImportError:
+    from itertools import izip_longest as zip_longest
 
 from dnslib.bit import get_bits,set_bits
 from dnslib.bimap import Bimap, BimapError
 from dnslib.buffer import Buffer, BufferError
 from dnslib.label import DNSLabel,DNSLabelError,DNSBuffer
-from dnslib.zone import ZoneParser
+from dnslib.lex import WordLexer
 
 class DNSError(Exception):
     pass
@@ -21,7 +25,8 @@ QTYPE =  Bimap('QTYPE',
                  41:'OPT', 42:'APL', 43:'DS', 44:'SSHFP', 45:'IPSECKEY',
                  46:'RRSIG', 47:'NSEC', 48:'DNSKEY', 49:'DHCID', 50:'NSEC3',
                  51:'NSEC3PARAM', 55:'HIP', 99:'SPF', 249:'TKEY', 250:'TSIG',
-                 251:'IXFR', 252:'AXFR', 255:'ANY', 32768:'TA', 32769:'DLV'},
+                 251:'IXFR', 252:'AXFR', 255:'ANY', 257:'TYPE257', 
+                 32768:'TA', 32769:'DLV'},
                 DNSError)
 CLASS =  Bimap('CLASS',
                 {1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'},
@@ -190,19 +195,33 @@ class DNSRecord(object):
             ar.pack(buffer)
         return buffer.data
 
-    def send(self,dest,port=53):
-        sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        sock.sendto(self.pack(),(dest,port))
-        response,server = sock.recvfrom(8192)
-        sock.close()
+    def send(self,dest,port=53,tcp=False):
+        data = self.pack()
+        if tcp:
+            data = struct.pack("!H",len(data)) + data
+            sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            sock.connect((dest,port))
+            sock.sendall(data)
+            response = sock.recv(8192)
+            length = struct.unpack("!H",response[:2])[0]
+            while len(response) - 2 < length:
+                response += sock.recv(8192)
+            sock.close()
+            response = response[2:]
+        else:
+            sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            sock.sendto(self.pack(),(dest,port))
+            response,server = sock.recvfrom(8192)
+            sock.close()
         return DNSRecord.parse(response)
         
-    def format(self,prefix=""):
+    def format(self,prefix="",sort=False):
+        s = sorted if sort else lambda x:x
         sections = [ repr(self.header) ]
-        sections.extend([repr(q) for q in self.questions])
-        sections.extend([repr(rr) for rr in self.rr])
-        sections.extend([repr(rr) for rr in self.auth])
-        sections.extend([repr(rr) for rr in self.ar])
+        sections.extend(s([repr(q) for q in self.questions]))
+        sections.extend(s([repr(rr) for rr in self.rr]))
+        sections.extend(s([repr(rr) for rr in self.auth]))
+        sections.extend(s([repr(rr) for rr in self.ar]))
         return prefix + ("\n" + prefix).join(sections)
 
     def toZone(self,prefix=""):
@@ -223,6 +242,31 @@ class DNSRecord(object):
 
     def fromDig(self,dig):
         pass
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            return self.diff(other) == []
+
+    def diff(self,other):
+        err = []
+        if self.header != other.header:
+            err.append((self.header,other.header))
+        for section in ('questions','rr','auth','ar'):
+            if section == 'questions':
+                k = lambda x:list(map(str,(x.qname,x.qtype)))
+            else:
+                k = lambda x:list(map(str,(x.rname,x.rtype,x.rdata)))
+            s = sorted(getattr(self,section),key=k)
+            o = sorted(getattr(other,section),key=k)
+            for x,y in zip_longest(s,o):
+                if x != y:
+                    err.append((x,y))
+        return err
 
     def __repr__(self):
         return self.format()
@@ -371,6 +415,17 @@ class DNSHeader(object):
     def __str__(self):
         return "\n".join(self.toZone())
 
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            # Ignore id
+            attrs = ('qr','aa','tc','rd','ra','opcode','rcode')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+
 class DNSQuestion(object):
     
     @classmethod
@@ -413,6 +468,16 @@ class DNSQuestion(object):
 
     def __str__(self):
         return self.toZone()
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('qname','qtype','qclass')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
             
 class EDNSOption(object):
 
@@ -425,13 +490,25 @@ class EDNSOption(object):
         buffer.append(self.data)
 
     def __repr__(self):
-        return "<EDNS Option: Code=%d Data='%s'>" % (self.code,binascii.hexlify(self.data).decode())
+        return "<EDNS Option: Code=%d Data='%s'>" % (
+                    self.code,binascii.hexlify(self.data).decode())
 
     def toZone(self):
-        return ";EDNS: code: %s; data: %s" % (self.code,binascii.hexlify(self.data).decode())
+        return ";EDNS: code: %s; data: %s" % (
+                    self.code,binascii.hexlify(self.data).decode())
 
     def __str__(self):
         return self.toZone()
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('code','data')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 class RR(object):
 
@@ -533,6 +610,18 @@ class RR(object):
         else:
             return self.toZone()
 
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            # Ignore TTL
+            attrs = ('rname','rclass','rtype','rdata')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+
+
 class RD(object):
 
     @classmethod
@@ -549,7 +638,10 @@ class RD(object):
         return cls(rd)
 
     def __init__(self,data=b""):
-        if type(data) != bytes:
+        if type(data) == list:
+            # Unknown data type from zone
+            self.data = (" ".join(data)).encode()
+        elif type(data) != bytes:
             self.data = data.encode()
         else:
             self.data = data
@@ -565,6 +657,16 @@ class RD(object):
 
     def toZone(self):
         return repr(self)
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('data',)
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 class TXT(RD):
 
@@ -748,6 +850,16 @@ class MX(RD):
     def __repr__(self):
         return "%d %s" % (self.preference,self.label)
 
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('preference','label')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+
 class CNAME(RD):
         
     @classmethod
@@ -783,6 +895,16 @@ class CNAME(RD):
     def __repr__(self):
         return "%s" % (self.label)
 
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('label',)
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+
 class PTR(CNAME):
     pass
 
@@ -809,7 +931,7 @@ class SOA(RD):
     def __init__(self,mname=None,rname=None,times=None):
         self.mname = mname
         self.rname = rname
-        self.times = times or (0,0,0,0,0)
+        self.times = tuple(times) if times else (0,0,0,0,0)
 
     def set_mname(self,mname):
         if isinstance(mname,DNSLabel):
@@ -841,6 +963,16 @@ class SOA(RD):
     def __repr__(self):
         return "%s %s %s" % (self.mname,self.rname,
                              " ".join(map(str,self.times)))
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('mname','rname','times')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 class SRV(RD):
         
@@ -881,6 +1013,16 @@ class SRV(RD):
 
     def __repr__(self):
         return "%d %d %d %s" % (self.priority,self.weight,self.port,self.target)
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('priority','weight','port','target')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 class NAPTR(RD):
 
@@ -970,9 +1112,213 @@ class NAPTR(RD):
             self.replacement or '.'
         )
 
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
+    def __eq__(self,other):
+        if type(other) != type(self):
+            return False
+        else:
+            attrs = ('order','preference','flags','service','regexp','replacement')
+            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
         }
+
+secs = {'s':1,'m':60,'h':3600,'d':86400,'w':604800}
+
+def parse_time(s):
+    if s[-1].lower() in secs:
+        return int(s[:-1]) * secs[s[-1].lower()]
+    else:
+        return int(s)
+
+class ZoneParser:
+
+    """
+        Zone file parser
+
+        >>> z = ZoneParser("www.example.com. 60 IN A 1.2.3.4")
+        >>> list(z.parse())
+        [<DNS RR: 'www.example.com.' rtype=A rclass=IN ttl=60 rdata='1.2.3.4'>]
+    """
+
+    def __init__(self,zone,origin="",ttl=0):
+        self.l = WordLexer(zone)
+        self.l.commentchars = ';'
+        self.l.nltok = ('NL',None)
+        self.l.spacetok = ('SPACE',None)
+        self.i = iter(self.l)
+        if type(origin) is DNSLabel:
+            self.origin = origin
+        else:
+            self.origin= DNSLabel(origin)
+        self.ttl = ttl
+        self.label = DNSLabel("")
+        self.prev = None
+
+    def expect(self,expect):
+        t,val = next(self.i)
+        if t != expect:
+            raise ValueError("Invalid Token: %s (expecting: %s)" % (t,expect))
+        return val
+
+    def parse_label(self,label):
+        if label.endswith("."):
+            self.label = DNSLabel(label)
+        elif label == "@":
+            self.label = self.origin
+        elif label == '':
+            pass
+        else:
+            self.label = self.origin.add(label)
+        return self.label
+
+    def parse_rr(self,rr):
+        label = self.parse_label(rr.pop(0))
+        ttl = int(rr.pop(0)) if rr[0].isdigit() else self.ttl
+        rclass = rr.pop(0) if rr[0] in ('IN','CH','HS') else 'IN'
+        rtype = rr.pop(0)
+        rdata = rr
+        rd = RDMAP.get(rtype,RD)
+        return RR(rname=label,
+                         ttl=ttl,
+                         rclass=getattr(CLASS,rclass),
+                         rtype=getattr(QTYPE,rtype),
+                         rdata=rd.fromZone(rdata,self.origin))
+
+    def __iter__(self):
+        return self.parse()
+
+    def parse(self):
+        rr = []
+        paren = False
+        try:
+            while True:
+                tok,val = next(self.i)
+                if tok == 'NL':
+                    if not paren and rr:
+                        self.prev = tok
+                        yield self.parse_rr(rr)
+                        rr = []
+                elif tok == 'SPACE' and self.prev == 'NL' and not paren:
+                    rr.append('')
+                elif tok == 'ATOM':
+                    if val == '(':
+                        paren = True
+                    elif val == ')':
+                        paren = False
+                    elif val == '$ORIGIN':
+                        self.expect('SPACE')
+                        origin = self.expect('ATOM')
+                        self.origin = self.label = DNSLabel(origin)
+                    elif val == '$TTL':
+                        self.expect('SPACE')
+                        ttl = self.expect('ATOM')
+                        self.ttl = parse_time(ttl)
+                    else:
+                        rr.append(val)
+                self.prev = tok
+        except StopIteration:
+            if rr:
+                yield self.parse_rr(rr)
+
+class DigParser:
+
+    def __init__(self,dig):
+        self.l = WordLexer(dig)
+        self.l.commentchars = ';'
+        self.l.nltok = ('NL',None)
+        self.i = iter(self.l)
+        
+    def parseHeader(self,l1,l2):
+        _,_,_,opcode,_,status,_,_id = l1.split()
+        _,flags,_ = l2.split(';')
+        header = DNSHeader(id=int(_id),bitmap=0)
+        header.opcode = getattr(QR,opcode.rstrip(','))
+        header.rcode = getattr(RCODE,status.rstrip(','))
+        for f in ('qr','aa','tc','rd','ra'):
+            if f in flags:
+                setattr(header,f,1)
+        return header
+
+    def expect(self,expect):
+        t,val = next(self.i)
+        if t != expect:
+            raise ValueError("Invalid Token: %s (expecting: %s)" % (t,expect))
+        return val
+
+    def parseQuestions(self,q,dns):
+        for qname,qclass,qtype in q:
+            dns.add_question(DNSQuestion(qname,
+                                                getattr(QTYPE,qtype),
+                                                getattr(CLASS,qclass)))
+
+    def parseAnswers(self,a,auth,ar,dns):
+        sect_map = {'a':'add_answer','auth':'add_auth','ar':'add_ar'}
+        for sect in 'a','auth','ar':
+            f = getattr(dns,sect_map[sect])
+            for rr in locals()[sect]:
+                rname,ttl,rclass,rtype = rr[:4]
+                rdata = rr[4:]
+                rd = RDMAP.get(rtype,RD)
+                try:
+                    f(RR(rname=rname,
+                                ttl=int(ttl),
+                                rtype=getattr(QTYPE,rtype),
+                                rclass=getattr(CLASS,rclass),
+                                rdata=rd.fromZone(rdata)))
+                except DNSError:
+                    # Skip records we dont understand
+                    pass
+
+    def __iter__(self):
+        return self.parse()
+
+    def parse(self):
+        dns = None
+        section = None
+        rr = []
+        try:
+            while True:
+                tok,val = next(self.i)
+                if tok == 'COMMENT':
+                    if 'Sending:' in val or 'Got answer:' in val:
+                        if dns:
+                            self.parseQuestions(q,dns)
+                            self.parseAnswers(a,auth,ar,dns)
+                            yield(dns)
+                        dns = DNSRecord()
+                        q,a,auth,ar = [],[],[],[]
+                    elif val.startswith('; ->>HEADER<<-'):
+                        self.expect('NL')
+                        val2 = self.expect('COMMENT')
+                        dns.header = self.parseHeader(val,val2)
+                    elif val.startswith('; QUESTION'):
+                        section = q
+                    elif val.startswith('; ANSWER'):
+                        section = a
+                    elif val.startswith('; AUTHORITY'):
+                        section = auth
+                    elif val.startswith('; ADDITIONAL'):
+                        section = ar
+                    elif val.startswith(';') or tok[1].startswith('<<>>'):
+                        pass
+                    elif dns and section == q:
+                        q.append(val.split())
+                elif tok == 'ATOM':
+                    rr.append(val)
+                elif tok == 'NL' and rr:
+                    section.append(rr)
+                    rr = []
+        except StopIteration:
+            if rr:
+                self.section.append(rr)
+            if dns:
+                self.parseQuestions(q,dns)
+                self.parseAnswers(a,auth,ar,dns)
+                yield(dns)
 
 if __name__ == '__main__':
     import doctest
