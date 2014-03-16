@@ -102,6 +102,9 @@ class Buffer(object):
             raise BufferError("Error unpacking struct '%s' <%s>" % 
                     (fmt,binascii.hexlify(data).decode()))
 
+    def __len__(self):
+        return len(self.data)
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

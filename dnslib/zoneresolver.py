@@ -69,6 +69,9 @@ if __name__ == '__main__':
                         help="Listen address (default:all)")
     p.add_argument("--glob",action='store_true',default=False,
                         help="Glob match against zone file (default: false)")
+    p.add_argument("--udplen","-u",type=int,default=0,
+                    metavar="<udplen>",
+                    help="Max UDP packet length (default:0)")
     p.add_argument("--tcp",action='store_true',default=False,
                         help="TCP server (default: UDP only)")
     args = p.parse_args()
@@ -89,7 +92,9 @@ if __name__ == '__main__':
         print("    | ",rr[2].toZone(),sep="")
     print()
 
-    udp_server = DNSServer(resolver,port=args.port,address=args.address)
+    udp_server = DNSServer(resolver,port=args.port,
+                                    address=args.address,
+                                    udplen=args.udplen)
     udp_server.start_thread()
 
     if args.tcp:

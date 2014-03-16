@@ -7,10 +7,9 @@ try:
 except ImportError:
     from commands import getoutput
 
-from dnslib import RR,QTYPE,RCODE,TXT
+from dnslib import RR,QTYPE,RCODE,TXT,parse_time
 from dnslib.label import DNSLabel
 from dnslib.server import DNSServer,BaseResolver
-from dnslib.zone import parse_time
 
 class ShellResolver(BaseResolver):
     """
@@ -41,7 +40,7 @@ class ShellResolver(BaseResolver):
                                 rdata=TXT(output[:254])))
         else:
             reply.header.rcode = RCODE.NXDOMAIN
-        self.log_request(reply,handler)
+        self.log_reply(reply,handler)
         return reply
 
 if __name__ == '__main__':
@@ -64,6 +63,9 @@ if __name__ == '__main__':
     p.add_argument("--address","-a",default="",
                     metavar="<address>",
                     help="Listen address (default:all)")
+    p.add_argument("--udplen","-u",type=int,default=0,
+                    metavar="<udplen>",
+                    help="Max UDP packet length (default:0)")
     p.add_argument("--tcp",action='store_true',default=False,
                     help="TCP server (default: UDP only)")
     args = p.parse_args()
@@ -79,7 +81,9 @@ if __name__ == '__main__':
         print("    | ",route,"-->",cmd)
     print()
 
-    udp_server = DNSServer(resolver,port=args.port,address=args.address)
+    udp_server = DNSServer(resolver,port=args.port,
+                                    address=args.address,
+                                    udplen=args.udplen)
     udp_server.start_thread()
 
     if args.tcp:

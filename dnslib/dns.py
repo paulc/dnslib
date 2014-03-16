@@ -181,7 +181,7 @@ class DNSRecord(object):
         return self.rr[0]
     a = property(get_a)
 
-    def pack(self):
+    def pack(self,maxlen=0):
         self.set_header_qa()
         buffer = DNSBuffer()
         self.header.pack(buffer)
@@ -193,7 +193,12 @@ class DNSRecord(object):
             auth.pack(buffer)
         for ar in self.ar:
             ar.pack(buffer)
-        return buffer.data
+        if maxlen and len(buffer) > maxlen:
+            return DNSRecord(DNSHeader(id=self.header.id,
+                                       bitmap=self.header.bitmap,
+                                       tc=1)).pack()
+        else:
+            return buffer.data
 
     def send(self,dest,port=53,tcp=False):
         data = self.pack()
