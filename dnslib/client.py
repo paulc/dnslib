@@ -7,7 +7,7 @@ try:
 except ImportError:
     from commands import getoutput
 
-import code,pprint
+import binascii,code,pprint
 
 from dnslib import DNSRecord,DNSQuestion,QTYPE,DigParser
 
@@ -24,6 +24,8 @@ if __name__ == '__main__':
                     help="Server port (default:53)")
     p.add_argument("--query",action='store_true',default=False,
                     help="Show query (default: False)")
+    p.add_argument("--hex",action='store_true',default=False,
+                    help="Dump packet in hex (default: False)")
     p.add_argument("--tcp",action='store_true',default=False,
                     help="TCP (default: UDP)")
     p.add_argument("--dig",action='store_true',default=False,
@@ -40,16 +42,22 @@ if __name__ == '__main__':
 
     if args.query:
         print(";; Sending%s:" % (" (TCP)" if args.tcp else ""))
+        if args.hex:
+            print(";; QUERY:",binascii.hexlify(q.pack()).decode())
         print(q)
         print()
 
-    a = q.send(args.address,args.port,tcp=args.tcp)
+    a_pkt = q.send(args.address,args.port,tcp=args.tcp)
+    a = DNSRecord.parse(a_pkt)
 
     if a.header.tc:
         print(";; Truncated - trying TCP:")
-        a = q.send(args.address,args.port,tcp=True)
+        a_pkt = q.send(args.address,args.port,tcp=True)
+        a = DNSRecord.parse(a_pkt)
 
     print(";; Got answer:")
+    if args.hex:
+        print(";; RESPONSE:",binascii.hexlify(a_pkt).decode())
     print(a)
     print()
 
@@ -61,10 +69,10 @@ if __name__ == '__main__':
         q_dig = dig_reply[-2]
         a_dig = dig_reply[-1]
         if q != q_dig:
-            print(">>> ERROR: DiG Question differs")
+            print(";;; ERROR: DiG Question differs")
             pprint.pprint(q.diff(q_dig))
         if a != a_dig:
-            print(">>> ERROR: DiG Response differs")
+            print(";;; ERROR: DiG Response differs")
             pprint.pprint(a.diff(a_dig))
 
     if args.debug:
