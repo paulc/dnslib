@@ -49,7 +49,8 @@ def label(label,origin=None):
     if label.endswith("."):
         return DNSLabel(label)
     else:
-        return (origin if isinstance(origin,DNSLabel) else DNSLabel(origin)).add(label)
+        return (origin if isinstance(origin,DNSLabel) 
+                       else DNSLabel(origin)).add(label)
 
 class DNSRecord(object):
 
