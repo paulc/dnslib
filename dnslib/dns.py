@@ -213,7 +213,7 @@ class DNSRecord(object):
             sock.sendto(self.pack(),(dest,port))
             response,server = sock.recvfrom(8192)
             sock.close()
-        return DNSRecord.parse(response)
+        return response
         
     def format(self,prefix="",sort=False):
         s = sorted if sort else lambda x:x
