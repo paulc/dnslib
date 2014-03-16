@@ -27,7 +27,9 @@ if __name__ == '__main__':
     p.add_argument("--hex",action='store_true',default=False,
                     help="Dump packet in hex (default: False)")
     p.add_argument("--tcp",action='store_true',default=False,
-                    help="TCP (default: UDP)")
+                    help="Use TCP (default: UDP)")
+    p.add_argument("--noretry",action='store_true',default=False,
+                    help="Don't retry query using TCP if truncated (default: false)")
     p.add_argument("--dig",action='store_true',default=False,
                     help="Run query with DiG and compare result (default: false)")
     p.add_argument("--debug",action='store_true',default=False,
@@ -50,7 +52,7 @@ if __name__ == '__main__':
     a_pkt = q.send(args.address,args.port,tcp=args.tcp)
     a = DNSRecord.parse(a_pkt)
 
-    if a.header.tc:
+    if a.header.tc and args.noretry == False:
         print(";; Truncated - trying TCP:")
         a_pkt = q.send(args.address,args.port,tcp=True)
         a = DNSRecord.parse(a_pkt)
