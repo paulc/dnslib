@@ -37,14 +37,22 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     q = DNSRecord(q=DNSQuestion(args.domain,getattr(QTYPE,args.qtype)))
+
     if args.query:
-        print(";; Sending:\n")
+        print(";; Sending%s:" % (" (TCP)" if args.tcp else ""))
         print(q)
         print()
-    a = q.send(args.address,args.port)
+
+    a = q.send(args.address,args.port,tcp=args.tcp)
+
     if a.header.tc:
-        print(";; Truncated - trying TCP:\n")
+        print(";; Truncated - trying TCP:")
         a = q.send(args.address,args.port,tcp=True)
+
+    print(";; Got answer:")
+    print(a)
+    print()
+
     if args.dig:
         dig = getoutput("dig +qr -p %d %s %s @%s" % (
                             args.port, args.domain, args.qtype, args.address))
@@ -53,19 +61,11 @@ if __name__ == '__main__':
         q_dig = dig_reply[-2]
         a_dig = dig_reply[-1]
         if q != q_dig:
-            print(">>> ERROR: Question differs")
+            print(">>> ERROR: DiG Question differs")
             pprint.pprint(q.diff(q_dig))
         if a != a_dig:
-            print(">>> ERROR: Response differs")
+            print(">>> ERROR: DiG Response differs")
             pprint.pprint(a.diff(a_dig))
-        else:
-            print(";; Got answer:")
-            print(a)
-            print()
-    else:
-        print(";; Got answer:")
-        print(a)
-        print()
 
     if args.debug:
         code.interact(local=locals())
