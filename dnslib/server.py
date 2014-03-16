@@ -82,7 +82,10 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
             resolver = self.server.resolver
             reply = resolver.resolve(request,self)
-            data = reply.pack()
+            if self.protocol == 'udp':
+                data = reply.pack(self.server.udplen)
+            else:
+                data = reply.pack()
 
             if self.protocol == 'tcp':
                 data = struct.pack("!H",len(data)) + data
@@ -112,6 +115,7 @@ class DNSServer(object):
                       address="",
                       port=53,
                       tcp=False,
+                      udplen=None,
                       server=None,
                       handler=DNSHandler):
         """
@@ -120,6 +124,7 @@ class DNSServer(object):
             @port:       listen port
             @handler:    handler class
             @tcp:        UDP (false) / TCP (true)
+            @udplen:     Max UDP packet length
             @server:     custom socketserver class
         """
         if not server:
@@ -128,6 +133,7 @@ class DNSServer(object):
             else:
                 server = UDPServer
         self.server = server((address,port),handler)
+        self.server.udplen = udplen
         self.server.resolver = resolver
     
     def start(self):
