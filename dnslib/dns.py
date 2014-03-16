@@ -742,7 +742,7 @@ def _parse_ipv6(a):
     l_groups = list(chain(*[divmod(int(x,16),256) for x in l.split(":") if x]))
     r_groups = list(chain(*[divmod(int(x,16),256) for x in r.split(":") if x]))
     zeros = [0] * (16 - len(l_groups) - len(r_groups))
-    return l_groups + zeros + r_groups 
+    return tuple(l_groups + zeros + r_groups) 
 
 def _format_ipv6(a):
     """
