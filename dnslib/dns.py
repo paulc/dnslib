@@ -732,10 +732,10 @@ def _parse_ipv6(a):
 
         Does not handle dotted-quad addresses or subnet prefix
 
-        >>> _parse_ipv6("::") == [0] * 16
+        >>> _parse_ipv6("::") == (0,) * 16
         True
         >>> _parse_ipv6("1234:5678::abcd:0:ff00")
-        [18, 52, 86, 120, 0, 0, 0, 0, 0, 0, 171, 205, 0, 0, 255, 0]
+        (18, 52, 86, 120, 0, 0, 0, 0, 0, 0, 171, 205, 0, 0, 255, 0)
 
     """
     l,_,r = a.partition("::")
