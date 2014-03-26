@@ -228,7 +228,7 @@ class DNSRecord(object):
         return prefix + ("\n" + prefix).join(sections)
 
     def toZone(self,prefix=""):
-        z = [self.header.toZone()]
+        z = self.header.toZone().split("\n")
         if self.questions:
             z.append(";; QUESTION SECTION:")
             [ z.extend(q.toZone().split("\n")) for q in self.questions ]
@@ -242,9 +242,6 @@ class DNSRecord(object):
             z.append(";; ADDITIONAL SECTION:")
             [ z.extend(rr.toZone().split("\n")) for rr in self.ar ]
         return prefix + ("\n" + prefix).join(z)
-
-    def fromDig(self,dig):
-        pass
 
     def __ne__(self,other):
         return not(self.__eq__(other))
@@ -658,6 +655,9 @@ class RD(object):
     def toZone(self):
         return repr(self)
 
+    # Attributes for __eq__/__ne__ - override in subclass
+    attrs = ('data',)
+
     def __ne__(self,other):
         return not(self.__eq__(other))
 
@@ -665,8 +665,7 @@ class RD(object):
         if type(other) != type(self):
             return False
         else:
-            attrs = ('data',)
-            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+            return all([getattr(self,x) == getattr(other,x) for x in self.attrs])
 
 class TXT(RD):
 
@@ -850,15 +849,7 @@ class MX(RD):
     def __repr__(self):
         return "%d %s" % (self.preference,self.label)
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
-
-    def __eq__(self,other):
-        if type(other) != type(self):
-            return False
-        else:
-            attrs = ('preference','label')
-            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+    attrs = ('preference','label')
 
 class CNAME(RD):
         
@@ -895,15 +886,7 @@ class CNAME(RD):
     def __repr__(self):
         return "%s" % (self.label)
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
-
-    def __eq__(self,other):
-        if type(other) != type(self):
-            return False
-        else:
-            attrs = ('label',)
-            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+    attrs = ('label',)
 
 class PTR(CNAME):
     pass
@@ -964,15 +947,7 @@ class SOA(RD):
         return "%s %s %s" % (self.mname,self.rname,
                              " ".join(map(str,self.times)))
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
-
-    def __eq__(self,other):
-        if type(other) != type(self):
-            return False
-        else:
-            attrs = ('mname','rname','times')
-            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+    attrs = ('mname','rname','times')
 
 class SRV(RD):
         
@@ -1014,15 +989,7 @@ class SRV(RD):
     def __repr__(self):
         return "%d %d %d %s" % (self.priority,self.weight,self.port,self.target)
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
-
-    def __eq__(self,other):
-        if type(other) != type(self):
-            return False
-        else:
-            attrs = ('priority','weight','port','target')
-            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+    attrs = ('priority','weight','port','target')
 
 class NAPTR(RD):
 
@@ -1112,15 +1079,7 @@ class NAPTR(RD):
             self.replacement or '.'
         )
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
-
-    def __eq__(self,other):
-        if type(other) != type(self):
-            return False
-        else:
-            attrs = ('order','preference','flags','service','regexp','replacement')
-            return all([getattr(self,x) == getattr(other,x) for x in attrs])
+    attrs = ('order','preference','flags','service','regexp','replacement')
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
