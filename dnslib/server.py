@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import socket,struct,threading
+import binascii,socket,struct,threading
 
 try:
     import socketserver
@@ -35,6 +35,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
         Handler for socketserver. Handles both TCP/UDP requests (TCP requests
         have length prepended) and hands off lookup to resolver instance
         specified in <SocketServer>.resolver 
+
     """
     def handle(self):
         if self.server.socket_type == socket.SOCK_STREAM:
@@ -43,13 +44,15 @@ class DNSHandler(socketserver.BaseRequestHandler):
             length = struct.unpack("!H",data[:2])[0]
             while len(data) - 2 < length:
                 data += self.request.recv(8192)
-            self.data = data[2:]
+            data = data[2:]
         else:
             self.protocol = 'udp'
-            self.data,connection = self.request
+            data,connection = self.request
+
+        self.log_recv(data)
 
         try:
-            request = DNSRecord.parse(self.data)
+            request = DNSRecord.parse(data)
             self.log_request(request)
 
             resolver = self.server.resolver
@@ -65,6 +68,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
             else:
                 rdata = reply.pack()
 
+            self.log_send(rdata)
+
             if self.protocol == 'tcp':
                 rdata = struct.pack("!H",len(data)) + rdata
                 self.request.sendall(rdata)
@@ -74,41 +79,55 @@ class DNSHandler(socketserver.BaseRequestHandler):
         except DNSError as e:
             self.log_error(e)
 
+    def log_recv(self,data):
+        print("<<< Received: [%s:%d] (%s) : %s" % (
+                    self.client_address[0],
+                    self.client_address[1],
+                    self.protocol,
+                    binascii.hexlify(data)))
+
+    def log_send(self,data):
+        print(">>> Sent: [%s:%d] (%s) : %s" % (
+                    self.client_address[0],
+                    self.client_address[1],
+                    self.protocol,
+                    binascii.hexlify(data)))
+
     def log_request(self,request):
         print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
-                  self.client_address[0],
-                  self.client_address[1],
-                  self.protocol,
-                  request.q.qname,
-                  QTYPE[request.q.qtype]))
+                    self.client_address[0],
+                    self.client_address[1],
+                    self.protocol,
+                    request.q.qname,
+                    QTYPE[request.q.qtype]))
         print("\n",request.toZone("    "),"\n",sep="")
 
     def log_reply(self,reply):
         print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
-                  self.client_address[0],
-                  self.client_address[1],
-                  self.protocol,
-                  reply.q.qname,
-                  QTYPE[reply.q.qtype],
-                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
+                    self.client_address[0],
+                    self.client_address[1],
+                    self.protocol,
+                    reply.q.qname,
+                    QTYPE[reply.q.qtype],
+                    ",".join([QTYPE[a.rtype] for a in reply.rr])))
         print("\n",reply.toZone("    "),"\n",sep="")
 
     def log_truncated(self,reply):
         print(">>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
-                  self.client_address[0],
-                  self.client_address[1],
-                  self.protocol,
-                  reply.q.qname,
-                  QTYPE[reply.q.qtype],
-                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
+                    self.client_address[0],
+                    self.client_address[1],
+                    self.protocol,
+                    reply.q.qname,
+                    QTYPE[reply.q.qtype],
+                    ",".join([QTYPE[a.rtype] for a in reply.rr])))
         print("\n",reply.toZone("    "),"\n",sep="")
 
     def log_error(self,e):
         print("--- Invalid Request: [%s:%d] (%s) :: %s" % (
-                  self.client_address[0],
-                  self.client_address[1],
-                  self.protocol,
-                  e))
+                    self.client_address[0],
+                    self.client_address[1],
+                    self.protocol,
+                    e))
 
 class UDPServer(socketserver.UDPServer):
     allow_reuse_address = True
