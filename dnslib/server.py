@@ -22,41 +22,12 @@ class BaseResolver(object):
         Note that a single instance is used by all DNSHandler instances so need
         to consider thread safety.
     """
-    def log_request(self,request,handler):
-        """
-            Utility function to log request. Call from resolve
-            method if needed
-        """
-        print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
-                  handler.client_address[0],
-                  handler.client_address[1],
-                  handler.protocol,
-                  request.q.qname,
-                  QTYPE[request.q.qtype]))
-        print("\n",request.toZone("    "),"\n",sep="")
-
-    def log_reply(self,reply,handler):
-        """
-            Utility function to log reply. Call from resolve
-            method if needed
-        """
-        print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
-                  handler.client_address[0],
-                  handler.client_address[1],
-                  handler.protocol,
-                  reply.q.qname,
-                  QTYPE[reply.q.qtype],
-                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
-        print("\n",reply.toZone("    "),"\n",sep="")
-
     def resolve(self,request,handler):
         """
             Respond to all requests with NOTIMP rcode
         """
-        self.log_request(request,handler)
         reply = request.reply()
         reply.header.rcode = getattr(RCODE,'Not Implemented')
-        self.log_reply(reply,handler)
         return reply
 
 class DNSHandler(socketserver.BaseRequestHandler):
@@ -72,32 +43,72 @@ class DNSHandler(socketserver.BaseRequestHandler):
             length = struct.unpack("!H",data[:2])[0]
             while len(data) - 2 < length:
                 data += self.request.recv(8192)
-            data = data[2:]
+            self.data = data[2:]
         else:
             self.protocol = 'udp'
-            data,connection = self.request
+            self.data,connection = self.request
 
         try:
-            request = DNSRecord.parse(data)
+            request = DNSRecord.parse(self.data)
+            self.log_request(request)
 
             resolver = self.server.resolver
             reply = resolver.resolve(request,self)
+            self.log_reply(reply)
+
             if self.protocol == 'udp':
-                data = reply.pack(self.server.udplen)
+                rdata = reply.pack()
+                if self.server.udplen and len(rdata) > self.server.udplen:
+                    truncated_reply = reply.truncate()
+                    rdata = truncated_reply.pack()
+                    self.log_truncated(truncated_reply)
             else:
-                data = reply.pack()
+                rdata = reply.pack()
 
             if self.protocol == 'tcp':
-                data = struct.pack("!H",len(data)) + data
-                self.request.sendall(data)
+                rdata = struct.pack("!H",len(data)) + rdata
+                self.request.sendall(rdata)
             else:
-                connection.sendto(data,self.client_address)
+                connection.sendto(rdata,self.client_address)
 
         except DNSError as e:
-            self.handle_error(e)
+            self.log_error(e)
 
-    def handle_error(self,e):
-        print("Invalid Request:",e)
+    def log_request(self,request):
+        print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
+                  self.client_address[0],
+                  self.client_address[1],
+                  self.protocol,
+                  request.q.qname,
+                  QTYPE[request.q.qtype]))
+        print("\n",request.toZone("    "),"\n",sep="")
+
+    def log_reply(self,reply):
+        print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+                  self.client_address[0],
+                  self.client_address[1],
+                  self.protocol,
+                  reply.q.qname,
+                  QTYPE[reply.q.qtype],
+                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
+        print("\n",reply.toZone("    "),"\n",sep="")
+
+    def log_truncated(self,reply):
+        print(">>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+                  self.client_address[0],
+                  self.client_address[1],
+                  self.protocol,
+                  reply.q.qname,
+                  QTYPE[reply.q.qtype],
+                  ",".join([QTYPE[a.rtype] for a in reply.rr])))
+        print("\n",reply.toZone("    "),"\n",sep="")
+
+    def log_error(self,e):
+        print("--- Invalid Request: [%s:%d] (%s) :: %s" % (
+                  self.client_address[0],
+                  self.client_address[1],
+                  self.protocol,
+                  e))
 
 class UDPServer(socketserver.UDPServer):
     allow_reuse_address = True

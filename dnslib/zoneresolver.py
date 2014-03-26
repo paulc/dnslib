@@ -27,7 +27,6 @@ class ZoneResolver(BaseResolver):
             Respond to DNS request - parameters are request packet & handler.
             Method is expected to return DNS response
         """
-        self.log_request(request,handler)
         reply = request.reply()
         qname = request.q.qname
         qtype = QTYPE[request.q.qtype]
@@ -50,7 +49,6 @@ class ZoneResolver(BaseResolver):
                             reply.add_ar(a_rr)
         if not reply.rr:
             reply.header.rcode = RCODE.NXDOMAIN
-        self.log_reply(reply,handler)
         return reply
 
 if __name__ == '__main__':
