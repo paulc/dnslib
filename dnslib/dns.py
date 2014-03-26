@@ -42,9 +42,6 @@ RCODE =  Bimap('RCODE',
 OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE'},
                 DNSError)
 
-def append_flat(a,b):
-    a.extend(b) if (type(b) in (tuple,list)) else a.append(b)
-
 def label(label,origin=None):
     if label.endswith("."):
         return DNSLabel(label)
@@ -150,20 +147,20 @@ class DNSRecord(object):
                                        qr=1,ra=ra,aa=aa),
                              q=self.q)
 
-    def add_question(self,q):
-        append_flat(self.questions,q)
+    def add_question(self,*q):
+        self.questions.extend(q)
         self.set_header_qa()
 
-    def add_answer(self,rr):
-        append_flat(self.rr,rr)
+    def add_answer(self,*rr):
+        self.rr.extend(rr)
         self.set_header_qa()
 
-    def add_auth(self,auth):
-        append_flat(self.auth,auth)
+    def add_auth(self,*auth):
+        self.auth.extend(auth)
         self.set_header_qa()
 
-    def add_ar(self,ar):
-        append_flat(self.ar,ar)
+    def add_ar(self,*ar):
+        self.ar.extend(ar)
         self.set_header_qa()
 
     def set_header_qa(self):
@@ -174,15 +171,15 @@ class DNSRecord(object):
 
     # Shortcut to get first question
     def get_q(self):
-        return self.questions[0]
+        return self.questions[0] if self.questions else DNSQuestion()
     q = property(get_q)
 
     # Shortcut to get first answer
     def get_a(self):
-        return self.rr[0]
+        return self.rr[0] if self.rr else RR()
     a = property(get_a)
 
-    def pack(self,maxlen=0):
+    def pack(self):
         self.set_header_qa()
         buffer = DNSBuffer()
         self.header.pack(buffer)
@@ -194,12 +191,12 @@ class DNSRecord(object):
             auth.pack(buffer)
         for ar in self.ar:
             ar.pack(buffer)
-        if maxlen and len(buffer) > maxlen:
-            return DNSRecord(DNSHeader(id=self.header.id,
-                                       bitmap=self.header.bitmap,
-                                       tc=1)).pack()
-        else:
-            return buffer.data
+        return buffer.data
+
+    def truncate(self):
+        return DNSRecord(DNSHeader(id=self.header.id,
+                                   bitmap=self.header.bitmap,
+                                   tc=1))
 
     def send(self,dest,port=53,tcp=False):
         data = self.pack()
@@ -231,20 +228,20 @@ class DNSRecord(object):
         return prefix + ("\n" + prefix).join(sections)
 
     def toZone(self,prefix=""):
-        sections = self.header.toZone()
+        z = [self.header.toZone()]
         if self.questions:
-            sections.append(";; QUESTION SECTION:")
-            [ append_flat(sections,q.toZone()) for q in self.questions ]
+            z.append(";; QUESTION SECTION:")
+            [ z.extend(q.toZone().split("\n")) for q in self.questions ]
         if self.rr:
-            sections.append(";; ANSWER SECTION:")
-            [ append_flat(sections,rr.toZone()) for rr in self.rr ]
+            z.append(";; ANSWER SECTION:")
+            [ z.extend(rr.toZone().split("\n")) for rr in self.rr ]
         if self.auth:
-            sections.append(";; AUTHORITY SECTION:")
-            [ append_flat(sections,rr.toZone()) for rr in self.auth ]
+            z.append(";; AUTHORITY SECTION:")
+            [ z.extend(rr.toZone().split("\n")) for rr in self.auth ]
         if self.ar:
-            sections.append(";; ADDITIONAL SECTION:")
-            [ append_flat(sections,rr.toZone()) for rr in self.ar ]
-        return prefix + ("\n" + prefix).join(sections)
+            z.append(";; ADDITIONAL SECTION:")
+            [ z.extend(rr.toZone().split("\n")) for rr in self.ar ]
+        return prefix + ("\n" + prefix).join(z)
 
     def fromDig(self,dig):
         pass
@@ -416,10 +413,10 @@ class DNSHeader(object):
         z2 = ';; flags: %s; QUERY: %d, ANSWER: %d, AUTHORITY: %d, ADDITIONAL: %d' % (
                       " ".join(filter(None,f)),
                       self.q,self.a,self.auth,self.ar)
-        return [z1,z2]
+        return z1 + "\n" + z2
 
     def __str__(self):
-        return "\n".join(self.toZone())
+        return self.toZone()
 
     def __ne__(self,other):
         return not(self.__eq__(other))
@@ -603,7 +600,7 @@ class RR(object):
                              self.edns_len)
                     ]
             edns.extend([str(opt) for opt in self.rdata])
-            return edns
+            return "\n".join(edns)
         else:
             return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
                                                 CLASS[self.rclass],
@@ -611,10 +608,7 @@ class RR(object):
                                                 self.rdata.toZone())
 
     def __str__(self):
-        if self.rtype == QTYPE.OPT:
-            return "\n".join(self.toZone())
-        else:
-            return self.toZone()
+        return self.toZone()
 
     def __ne__(self,other):
         return not(self.__eq__(other))
