@@ -15,7 +15,6 @@ class FixedResolver(BaseResolver):
         self.rrs = RR.fromZone(zone)
 
     def resolve(self,request,handler):
-        self.log_request(request,handler)
         reply = request.reply()
         qname = request.q.qname
         # Replace labels with request label
@@ -23,7 +22,6 @@ class FixedResolver(BaseResolver):
             a = copy.copy(rr)
             a.rname = qname
             reply.add_answer(a)
-        self.log_reply(reply,handler)
         return reply
 
 if __name__ == '__main__':

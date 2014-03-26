@@ -30,7 +30,6 @@ class ShellResolver(BaseResolver):
             self.routes[route] = cmd
 
     def resolve(self,request,handler):
-        self.log_request(request,handler)
         reply = request.reply()
         qname = request.q.qname
         cmd = self.routes.get(qname)
@@ -40,7 +39,6 @@ class ShellResolver(BaseResolver):
                                 rdata=TXT(output[:254])))
         else:
             reply.header.rcode = RCODE.NXDOMAIN
-        self.log_reply(reply,handler)
         return reply
 
 if __name__ == '__main__':
