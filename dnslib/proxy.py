@@ -14,10 +14,8 @@ class ProxyResolver(BaseResolver):
         self.port = port
 
     def resolve(self,request,handler):
-        self.log_request(request,handler)
         proxy_r = request.send(self.address,self.port)
         reply = DNSRecord.parse(proxy_r)
-        self.log_reply(reply,handler)
         return reply
 
 if __name__ == '__main__':
@@ -28,19 +26,25 @@ if __name__ == '__main__':
     p.add_argument("--port","-p",type=int,default=53,
                     metavar="<port>",
                     help="Proxy port (default:53)")
+    p.add_argument("--dns","-d",default="8.8.8.8",
+                    metavar="<dns server>",
+                    help="DNS server (default:8.8.8.8)")
+    p.add_argument("--dns-port",type=int,default=53,
+                    metavar="<dns port>",
+                    help="DNS server port (default:53)")
     p.add_argument("--address","-a",default="",
                     metavar="<address>",
                     help="Proxy listen address (default:all)")
     p.add_argument("--tcp",action='store_true',default=False,
                     help="TCP proxy (default: UDP only)")
     args = p.parse_args()
-    
-    resolver = ProxyResolver('8.8.8.8',53)
 
-    print("Starting Proxy Resolver (%s:%d -> %s:%d [%s]" % (
-                        args.address or "*",args.port,'8.8.8.8',53,
+    print("Starting Proxy Resolver (%s:%d -> %s:%d) [%s]" % (
+                        args.address or "*",args.port,
+                        args.dns,args.dns_port,
                         "UDP/TCP" if args.tcp else "UDP"))
 
+    resolver = ProxyResolver(args.dns,args.dns_port)
     udp_server = DNSServer(resolver,port=args.port,
                                     address=args.address)
     udp_server.start_thread()
