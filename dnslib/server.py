@@ -83,17 +83,19 @@ class DNSHandler(socketserver.BaseRequestHandler):
         return rdata
 
     def log_recv(self,data):
-        print("<<< Received: [%s:%d] (%s) : %s" % (
+        print("<<< Received: [%s:%d] (%s) <%d> : %s" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
+                    len(data),
                     binascii.hexlify(data)))
 
     def log_send(self,data):
-        print(">>> Sent: [%s:%d] (%s) : %s" % (
+        print(">>> Sent: [%s:%d] (%s) <%d> : %s" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
+                    len(data),
                     binascii.hexlify(data)))
 
     def log_request(self,request):

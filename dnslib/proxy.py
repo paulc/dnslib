@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import socket,struct
+import binascii,socket,struct
 
 from dnslib import DNSRecord
 from dnslib.server import DNSServer,DNSHandler,BaseResolver
@@ -25,6 +25,10 @@ class PassthroughDNSHandler(DNSHandler):
 
     def get_reply(self,data):
         host,port = self.server.resolver.address,self.server.resolver.port
+
+        request = DNSRecord.parse(data)
+        self.log_request(request)
+
         if self.protocol == 'tcp':
             data = struct.pack("!H",len(data)) + data
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -41,6 +45,12 @@ class PassthroughDNSHandler(DNSHandler):
             sock.sendto(data,(host,port))
             response,server = sock.recvfrom(8192)
             sock.close()
+
+        reply = DNSRecord.parse(response)
+        self.log_reply(reply)
+        print(binascii.hexlify(reply.pack()))
+        print(binascii.hexlify(response))
+
         return response
 
 if __name__ == '__main__':
