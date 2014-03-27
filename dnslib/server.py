@@ -35,7 +35,6 @@ class DNSHandler(socketserver.BaseRequestHandler):
         Handler for socketserver. Handles both TCP/UDP requests (TCP requests
         have length prepended) and hands off lookup to resolver instance
         specified in <SocketServer>.resolver 
-
     """
     def handle(self):
         if self.server.socket_type == socket.SOCK_STREAM:
@@ -52,22 +51,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
         self.log_recv(data)
 
         try:
-            request = DNSRecord.parse(data)
-            self.log_request(request)
-
-            resolver = self.server.resolver
-            reply = resolver.resolve(request,self)
-            self.log_reply(reply)
-
-            if self.protocol == 'udp':
-                rdata = reply.pack()
-                if self.server.udplen and len(rdata) > self.server.udplen:
-                    truncated_reply = reply.truncate()
-                    rdata = truncated_reply.pack()
-                    self.log_truncated(truncated_reply)
-            else:
-                rdata = reply.pack()
-
+            rdata = self.get_reply(data)
             self.log_send(rdata)
 
             if self.protocol == 'tcp':
@@ -78,6 +62,25 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
         except DNSError as e:
             self.log_error(e)
+
+    def get_reply(self,data):
+        request = DNSRecord.parse(data)
+        self.log_request(request)
+
+        resolver = self.server.resolver
+        reply = resolver.resolve(request,self)
+        self.log_reply(reply)
+
+        if self.protocol == 'udp':
+            rdata = reply.pack()
+            if self.server.udplen and len(rdata) > self.server.udplen:
+                truncated_reply = reply.truncate()
+                rdata = truncated_reply.pack()
+                self.log_truncated(truncated_reply)
+        else:
+            rdata = reply.pack()
+
+        return rdata
 
     def log_recv(self,data):
         print("<<< Received: [%s:%d] (%s) : %s" % (
