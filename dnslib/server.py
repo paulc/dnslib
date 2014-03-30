@@ -55,7 +55,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
             self.log_send(rdata)
 
             if self.protocol == 'tcp':
-                rdata = struct.pack("!H",len(data)) + rdata
+                rdata = struct.pack("!H",len(rdata)) + rdata
                 self.request.sendall(rdata)
             else:
                 connection.sendto(rdata,self.client_address)
