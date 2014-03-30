@@ -55,15 +55,8 @@ if __name__ == '__main__':
     a = DNSRecord.parse(a_pkt)
 
     if a.header.tc and args.noretry == False:
-        print(";; Truncated - trying TCP:")
         a_pkt = q.send(address,port,tcp=True)
         a = DNSRecord.parse(a_pkt)
-
-    print(";; Got answer:")
-    if args.hex:
-        print(";; RESPONSE:",binascii.hexlify(a_pkt).decode())
-    print(a)
-    print()
 
     if args.dig or args.diff:
         if args.diff:
@@ -78,15 +71,27 @@ if __name__ == '__main__':
             q_diff = dig_reply[-2]
             a_diff = dig_reply[-1]
         else:
-            q_diff = DNSRecord(q=DNSQuestion(args.domain,
-                                             getattr(QTYPE,args.qtype)))
+            #q_diff = DNSRecord(q=DNSQuestion(args.domain,
+            #                                 getattr(QTYPE,args.qtype)))
+            q_diff = q
             diff = q_diff.send(address,port,tcp=args.tcp)
             a_diff = DNSRecord.parse(diff)
 
+            print(address,port)
             if a_diff.header.tc and args.noretry == False:
                 diff = q_diff.send(address,port,tcp=True)
                 a_diff = DNSRecord.parse(diff)
 
+    print(";; Got answer:")
+    if args.hex:
+        print(";; RESPONSE:",binascii.hexlify(a_pkt).decode())
+        if args.diff and not args.dig:
+            print(";; DIFF    :",binascii.hexlify(diff).decode())
+
+    print(a)
+    print()
+
+    if args.dig or args.diff:
         if q != q_diff:
             print(";;; ERROR: Diff Question differs")
             pprint.pprint(q.diff(q_diff))

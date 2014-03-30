@@ -21,6 +21,24 @@ class ProxyResolver(BaseResolver):
         reply = DNSRecord.parse(proxy_r)
         return reply
 
+def send_tcp(data,host,port):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((host,port))
+    sock.sendall(data)
+    response = sock.recv(8192)
+    length = struct.unpack("!H",response[:2])[0]
+    while len(response) - 2 < length:
+        response += sock.recv(8192)
+    sock.close()
+    return response
+
+def send_udp(data,host,port):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    sock.sendto(data,(host,port))
+    response,server = sock.recvfrom(8192)
+    sock.close()
+    return response
+
 class PassthroughDNSHandler(DNSHandler):
 
     def get_reply(self,data):
@@ -31,25 +49,13 @@ class PassthroughDNSHandler(DNSHandler):
 
         if self.protocol == 'tcp':
             data = struct.pack("!H",len(data)) + data
-            sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            sock.connect((host,port))
-            sock.sendall(data)
-            response = sock.recv(8192)
-            length = struct.unpack("!H",response[:2])[0]
-            while len(response) - 2 < length:
-                response += sock.recv(8192)
-            sock.close()
+            response = send_tcp(data,host,port)
             response = response[2:]
         else:
-            sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-            sock.sendto(data,(host,port))
-            response,server = sock.recvfrom(8192)
-            sock.close()
+            response = send_udp(data,host,port)
 
         reply = DNSRecord.parse(response)
         self.log_reply(reply)
-        print(binascii.hexlify(reply.pack()))
-        print(binascii.hexlify(response))
 
         return response
 
