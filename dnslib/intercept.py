@@ -10,10 +10,11 @@ from dnslib.label import DNSLabel
 
 class InterceptResolver(BaseResolver):
 
-    def __init__(self,address,port,ttl,intercept):
+    def __init__(self,address,port,ttl,intercept,skip):
         self.address = address
         self.port = port
         self.ttl = parse_time(ttl)
+        self.skip = skip
         self.zone = []
         for i in intercept:
             if i == '-':
@@ -22,15 +23,16 @@ class InterceptResolver(BaseResolver):
                 self.zone.append((rr.rname,QTYPE[rr.rtype],rr))
 
     def resolve(self,request,handler):
-        # Try to resolve locally
         reply = request.reply()
         qname = request.q.qname
         qtype = QTYPE[request.q.qtype]
-        for name,rtype,rr in self.zone:
-            if qname.matchGlob(name) and (qtype in (rtype,'ANY','CNAME')):
-                a = copy.copy(rr)
-                a.rname = qname
-                reply.add_answer(a)
+        # Try to resolve locally unless on skip list
+        if not any([qname.matchGlob(s) for s in self.skip]):
+            for name,rtype,rr in self.zone:
+                if qname.matchGlob(name) and (qtype in (rtype,'ANY','CNAME')):
+                    a = copy.copy(rr)
+                    a.rname = qname
+                    reply.add_answer(a)
         # Otherwise proxy
         if not reply.rr:
             if handler.protocol == 'udp':
@@ -59,6 +61,9 @@ if __name__ == '__main__':
     p.add_argument("--intercept","-i",action="append",
                     metavar="<zone record>",
                     help="Intercept requests matching zone record (glob) ('-' for stdin)")
+    p.add_argument("--skip","-s",action="append",
+                    metavar="<label>",
+                    help="Don't intercept matching label (glob)")
     p.add_argument("--ttl","-t",default="60s",
                     metavar="<ttl>",
                     help="Intercept TTL (default: 60s)")
@@ -67,8 +72,11 @@ if __name__ == '__main__':
     args.dns,_,args.dns_port = args.upstream.partition(':')
     args.dns_port = int(args.dns_port or 53)
 
-    resolver = InterceptResolver(args.dns,args.dns_port,
-                                 args.ttl,args.intercept or [])
+    resolver = InterceptResolver(args.dns,
+                                 args.dns_port,
+                                 args.ttl,
+                                 args.intercept or [],
+                                 args.skip or [])
 
     print("Starting Intercept Proxy (%s:%d -> %s:%d) [%s]" % (
                         args.address or "*",args.port,
@@ -77,6 +85,8 @@ if __name__ == '__main__':
 
     for rr in resolver.zone:
         print("    | ",rr[2].toZone(),sep="")
+    if resolver.skip:
+        print("    Skipping:",", ".join(resolver.skip))
     print()
 
     udp_server = DNSServer(resolver,
