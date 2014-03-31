@@ -26,7 +26,7 @@ def send_tcp(data,host,port):
     sock.connect((host,port))
     sock.sendall(data)
     response = sock.recv(8192)
-    length = struct.unpack("!H",response[:2])[0]
+    length = struct.unpack("!H",bytes(response[:2]))[0]
     while len(response) - 2 < length:
         response += sock.recv(8192)
     sock.close()
@@ -63,24 +63,24 @@ if __name__ == '__main__':
 
     import argparse,sys,time
 
-    p = argparse.ArgumentParser(description="Fixed DNS Resolver")
+    p = argparse.ArgumentParser(description="DNS Proxy")
     p.add_argument("--port","-p",type=int,default=53,
                     metavar="<port>",
-                    help="Proxy port (default:53)")
-    p.add_argument("--dns","-d",default="8.8.8.8",
-                    metavar="<dns server>",
-                    help="DNS server (default:8.8.8.8)")
-    p.add_argument("--dns-port",type=int,default=53,
-                    metavar="<dns port>",
-                    help="DNS server port (default:53)")
+                    help="Local proxy port (default:53)")
     p.add_argument("--address","-a",default="",
                     metavar="<address>",
-                    help="Proxy listen address (default:all)")
+                    help="Local proxy listen address (default:all)")
+    p.add_argument("--upstream","-u",default="8.8.8.8:53",
+            metavar="<dns server:port>",
+                    help="Upstream DNS server:port (default:8.8.8.8:53)")
     p.add_argument("--tcp",action='store_true',default=False,
                     help="TCP proxy (default: UDP only)")
     p.add_argument("--passthrough",action='store_true',default=False,
-                    help="Dont decode/re-encode requesr/response (default: off)")
+                    help="Dont decode/re-encode request/response (default: off)")
     args = p.parse_args()
+
+    args.dns,_,args.dns_port = args.upstream.partition(':')
+    args.dns_port = int(args.dns_port or 53)
 
     print("Starting Proxy Resolver (%s:%d -> %s:%d) [%s]" % (
                         args.address or "*",args.port,
