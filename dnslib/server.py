@@ -40,7 +40,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
         if self.server.socket_type == socket.SOCK_STREAM:
             self.protocol = 'tcp'
             data = self.request.recv(8192)
-            length = struct.unpack("!H",data[:2])[0]
+            length = struct.unpack("!H",bytes(data[:2]))[0]
             while len(data) - 2 < length:
                 data += self.request.recv(8192)
             data = data[2:]

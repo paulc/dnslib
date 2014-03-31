@@ -206,7 +206,7 @@ class DNSRecord(object):
             sock.connect((dest,port))
             sock.sendall(data)
             response = sock.recv(8192)
-            length = struct.unpack("!H",response[:2])[0]
+            length = struct.unpack("!H",bytes(response[:2]))[0]
             while len(response) - 2 < length:
                 response += sock.recv(8192)
             sock.close()
@@ -536,8 +536,8 @@ class RR(object):
                                 buffer.offset,e))
 
     @classmethod
-    def fromZone(cls,zone):
-        return list(ZoneParser(zone))
+    def fromZone(cls,zone,origin="",ttl=0):
+        return list(ZoneParser(zone,origin=origin,ttl=ttl))
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
         self.rname = rname
