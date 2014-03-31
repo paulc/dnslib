@@ -1,11 +1,9 @@
 
 from __future__ import print_function
 
-import difflib,os,traceback
+import argparse,binascii,os,pprint,traceback,sys
 from random import randrange
-from dnslib import *
-
-packet = bytearray(binascii.unhexlify(b'd5ad818000010005000000000377777706676f6f676c6503636f6d0000010001c00c0005000100000005000803777777016cc010c02c0001000100000005000442f95b68c02c0001000100000005000442f95b63c02c0001000100000005000442f95b67c02c0001000100000005000442f95b93'))
+from dnslib import DNSRecord,DNSQuestion,QTYPE,DNSError
 
 def fuzz_delete(b):
     """ Delete byte """
@@ -31,29 +29,60 @@ def fname(f):
     except AttributeError:
         return f.__name__
 
-uncaught = 0
+if __name__ == '__main__':
 
-def p(*args):
-    if 'DEBUG' in os.environ:
-        print(*args)
+    a = argparse.ArgumentParser(description="DNS Fuzzer")
+    a.add_argument("--server","-s",default="8.8.8.8",
+                    help="DNS server address[:port] (default:8.8.8.8:53)")
+    a.add_argument("--query","-q",default="google.com",
+                   help="DNS query (default:google.com)")
+    a.add_argument("--type","-t",default="A",
+                   help="DNS query type (default:A)")
+    a.add_argument("--debug","-d",action='store_true',default=False,
+                   help="Print debug output")
+    a.add_argument("--number","-n",type=int,default=100,
+                   help="Number of iterations")
+    a.add_argument("--tcp",action='store_true',default=False,
+                    help="Use TCP (default: UDP)")
+    args = a.parse_args()
 
-for f in (fuzz_delete,fuzz_add,fuzz_change):
-    for i in range(100):
-        try:
-            original = DNSRecord.parse(packet)
-            fuzzed = DNSRecord.parse(f(packet))
-            diff = difflib.ndiff(original.toZone().split("\n"),
-                                 fuzzed.toZone().split("\n"))
-            diff = [ l.rstrip() for l in diff if l[0] in ('-','+','?') ]
-            print("[%s:parsed ok] >>> %d Diff Errors" % (fname(f),len(diff)))
-            if diff:
-                p("  " + "\n  ".join(diff))
-        except DNSError as e:
-            print("[%s:exception] >>> %s" % (fname(f),str(e)))
-        except Exception as e:
-            uncaught += 1
-            print(traceback.format_exc())
+    def p(*s):
+        if args.debug:
+            print(*s)
 
-print("-----------------------")
-print("Uncaught Exceptions: %d" % uncaught)
+    uncaught = 0
+    exceptions = []
+
+    address,_,port = args.server.partition(':')
+    port = int(port or 53)
+
+    question = DNSRecord(q=DNSQuestion(args.query,getattr(QTYPE,args.type)))
+    packet = bytearray(question.send(address,port,tcp=args.tcp))
+    original = DNSRecord.parse(packet)
+
+    p("Original:")
+    p(original.toZone(prefix="  | "))
+
+    for f in (fuzz_delete,fuzz_add,fuzz_change):
+        for i in range(args.number):
+            try:
+                fuzzed_pkt = f(packet)
+                fuzzed = DNSRecord.parse(fuzzed_pkt)
+                if original != fuzzed:
+                    diff = original.diff(fuzzed)
+                    p("[%s:parsed ok] >>> %d Diff Errors" % (fname(f),len(diff)))
+                    p(pprint.pformat(diff))
+            except DNSError as e:
+                p("[%s:exception] >>> %s" % (fname(f),str(e)))
+            except Exception as e:
+                raise
+                uncaught += 1
+                exceptions.append((binascii.hexlify(fuzzed_pkt),traceback.format_exc(limit=1)))
+                p(traceback.format_exc())
+
+    p("-----------------------")
+    print("Uncaught Exceptions: %d" % uncaught)
+
+    if exceptions:
+        pprint.pprint(exceptions)
 
