@@ -5,7 +5,7 @@ from __future__ import print_function
 import copy
 
 from dnslib import RR
-from dnslib.server import DNSServer,BaseResolver
+from dnslib.server import DNSServer,DNSHandler,BaseResolver
 
 class FixedResolver(BaseResolver):
     """
@@ -65,9 +65,10 @@ if __name__ == '__main__':
         print("    | ",rr.toZone().strip(),sep="")
     print()
 
-    udp_server = DNSServer(resolver,port=args.port,
-                                    address=args.address,
-                                    udplen=args.udplen)
+    if args.udplen:
+        DNSHandler.udplen = args.udplen
+
+    udp_server = DNSServer(resolver,port=args.port,address=args.address)
     udp_server.start_thread()
 
     if args.tcp:
