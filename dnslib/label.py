@@ -182,13 +182,14 @@ class DNSBuffer(Buffer):
                 pointer = get_bits(self.unpack("!H")[0],0,14)
                 save = self.offset
                 if last == save:
-                    raise BufferError("Recursive pointer in DNSLabel [pointer=%d,length=%d]" % 
-                            (pointer,len(self.data)))
-                if pointer < len(self.data):
+                    raise BufferError("Recursive pointer in DNSLabel [offset=%d,pointer=%d,length=%d]" % 
+                            (self.offset,pointer,len(self.data)))
+                if pointer < self.offset:
                     self.offset = pointer
                 else:
-                    raise BufferError("Invalid pointer in DNSLabel [pointer=%d,length=%d]" % 
-                            (pointer,len(self.data)))
+                    # Pointer can't point forwards
+                    raise BufferError("Invalid pointer in DNSLabel [offset=%d,pointer=%d,length=%d]" % 
+                            (self.offset,pointer,len(self.data)))
                 label.extend(self.decode_name(save).label)
                 self.offset = save
                 done = True
