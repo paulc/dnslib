@@ -40,8 +40,8 @@ if __name__ == '__main__':
                    help="DNS query type (default:A)")
     a.add_argument("--debug","-d",action='store_true',default=False,
                    help="Print debug output")
-    a.add_argument("--number","-n",type=int,default=100,
-                   help="Number of iterations")
+    a.add_argument("--number","-n",type=int,default=1000,
+            help="Number of iterations (default:1000)")
     a.add_argument("--tcp",action='store_true',default=False,
                     help="Use TCP (default: UDP)")
     args = a.parse_args()
