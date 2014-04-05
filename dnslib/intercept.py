@@ -10,11 +10,12 @@ from dnslib.label import DNSLabel
 
 class InterceptResolver(BaseResolver):
 
-    def __init__(self,address,port,ttl,intercept,skip):
+    def __init__(self,address,port,ttl,intercept,skip,nxdomain):
         self.address = address
         self.port = port
         self.ttl = parse_time(ttl)
         self.skip = skip
+        self.nxdomain = nxdomain
         self.zone = []
         for i in intercept:
             if i == '-':
@@ -33,6 +34,10 @@ class InterceptResolver(BaseResolver):
                     a = copy.copy(rr)
                     a.rname = qname
                     reply.add_answer(a)
+        # Check for NXDOMAIN
+        if any([qname.matchGlob(s) for s in self.nxdomain]):
+            reply.header.rcode = getattr(RCODE,'NXDOMAIN')
+            return reply
         # Otherwise proxy
         if not reply.rr:
             if handler.protocol == 'udp':
@@ -64,6 +69,9 @@ if __name__ == '__main__':
     p.add_argument("--skip","-s",action="append",
                     metavar="<label>",
                     help="Don't intercept matching label (glob)")
+    p.add_argument("--nxdomain","-x",action="append",
+                    metavar="<label>",
+                    help="Return NXDOMAIN (glob)")
     p.add_argument("--ttl","-t",default="60s",
                     metavar="<ttl>",
                     help="Intercept TTL (default: 60s)")
@@ -76,7 +84,8 @@ if __name__ == '__main__':
                                  args.dns_port,
                                  args.ttl,
                                  args.intercept or [],
-                                 args.skip or [])
+                                 args.skip or [],
+                                 args.nxdomain or [])
 
     print("Starting Intercept Proxy (%s:%d -> %s:%d) [%s]" % (
                         args.address or "*",args.port,
@@ -85,9 +94,19 @@ if __name__ == '__main__':
 
     for rr in resolver.zone:
         print("    | ",rr[2].toZone(),sep="")
+    if resolver.nxdomain:
+        print("    NXDOMAIN:",", ".join(resolver.nxdomain))
     if resolver.skip:
         print("    Skipping:",", ".join(resolver.skip))
     print()
+
+
+    DNSHandler.log = { 
+        'log_request',      # DNS Request
+        'log_reply',        # DNS Response
+        'log_truncated',    # Truncated
+        'log_error',        # Decoding error
+    }
 
     udp_server = DNSServer(resolver,
                            port=args.port,
