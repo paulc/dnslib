@@ -14,28 +14,43 @@ from dnslib import DNSRecord,DNSError,QTYPE,RCODE,RR
 class BaseResolver(object):
     """
         Base resolver implementation. Provides 'resolve' method which is
-        called by DNSHandler and returns answer.
+        called by DNSHandler with the decode request (DNSRecord instance) 
+        and returns a DNSRecord instance as reply.
 
-        Subclass is expected to replace resolve method with appropriate
-        resolver code for application.
+        In most cases you should be able to create a custom resolver by
+        just replacing the resolve method with appropriate resolver code for
+        application (see fixedresolver/zoneresolver/shellresolver for
+        examples)
 
-        Note that a single instance is used by all DNSHandler instances so need
-        to consider thread safety.
+        Note that a single instance is used by all DNSHandler instances so 
+        need to consider blocking & thread safety.
     """
     def resolve(self,request,handler):
         """
-            Respond to all requests with NOTIMP rcode
+            Example resolver - respond to all requests with NXDOMAIN
         """
         reply = request.reply()
-        reply.header.rcode = getattr(RCODE,'Not Implemented')
+        reply.header.rcode = getattr(RCODE,'NXDOMAIN')
         return reply
 
 class DNSHandler(socketserver.BaseRequestHandler):
     """
-        Handler for socketserver. Handles both TCP/UDP requests (TCP requests
-        have length prepended) and hands off lookup to resolver instance
-        specified in <SocketServer>.resolver 
+        Handler for socketserver. Transparently handles both TCP/UDP requests
+        (TCP requests have length prepended) and hands off lookup to resolver
+        instance specified in <SocketServer>.resolver 
     """
+
+    log = { 'log_recv',         # Raw packet received
+            'log_send',         # Raw packet sent
+            'log_request',      # DNS Request
+            'log_reply',        # DNS Response
+            'log_truncated',    # Truncated
+            'log_error',        # Decoding error
+            'log_data'          # Dump full request/response
+          }
+
+    udplen = 0                  # Max udp packet length (0 = ignore)
+
     def handle(self):
         if self.server.socket_type == socket.SOCK_STREAM:
             self.protocol = 'tcp'
@@ -73,7 +88,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
         if self.protocol == 'udp':
             rdata = reply.pack()
-            if self.server.udplen and len(rdata) > self.server.udplen:
+            if self.udplen and len(rdata) > self.udplen:
                 truncated_reply = reply.truncate()
                 rdata = truncated_reply.pack()
                 self.log_truncated(truncated_reply)
@@ -83,7 +98,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
         return rdata
 
     def log_recv(self,data):
-        print("<<< Received: [%s:%d] (%s) <%d> : %s" % (
+        if 'log_recv' in self.log:
+            print("<<< Received: [%s:%d] (%s) <%d> : %s" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -91,7 +107,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
                     binascii.hexlify(data)))
 
     def log_send(self,data):
-        print(">>> Sent: [%s:%d] (%s) <%d> : %s" % (
+        if 'log_send' in self.log:
+            print(">>> Sent: [%s:%d] (%s) <%d> : %s" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -99,33 +116,39 @@ class DNSHandler(socketserver.BaseRequestHandler):
                     binascii.hexlify(data)))
 
     def log_request(self,request):
-        print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
+        if 'log_request' in self.log:
+            print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
                     request.q.qname,
                     QTYPE[request.q.qtype]))
-        print("\n",request.toZone("    "),"\n",sep="")
+        if 'log_data' in self.log:
+            print("\n",request.toZone("    "),"\n",sep="")
 
     def log_reply(self,reply):
-        print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+        if 'log_reply' in self.log:
+            print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
                     reply.q.qname,
                     QTYPE[reply.q.qtype],
                     ",".join([QTYPE[a.rtype] for a in reply.rr])))
-        print("\n",reply.toZone("    "),"\n",sep="")
+        if 'log_data' in self.log:
+            print("\n",reply.toZone("    "),"\n",sep="")
 
     def log_truncated(self,reply):
-        print(">>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+        if 'log_reply' in self.log:
+            print(">>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
                     reply.q.qname,
                     QTYPE[reply.q.qtype],
                     ",".join([QTYPE[a.rtype] for a in reply.rr])))
-        print("\n",reply.toZone("    "),"\n",sep="")
+        if 'log_data' in self.log:
+            print("\n",reply.toZone("    "),"\n",sep="")
 
     def log_error(self,e):
         print("--- Invalid Request: [%s:%d] (%s) :: %s" % (
@@ -144,13 +167,13 @@ class DNSServer(object):
 
     """
         Convenience wrapper for socketserver instance allowing
-        server to be started in blocking or threaded mode
+        either UDP/TCP server to be started in blocking more
+        or as a background thread
     """
     def __init__(self,resolver,
                       address="",
                       port=53,
                       tcp=False,
-                      udplen=None,
                       server=None,
                       handler=DNSHandler):
         """
@@ -159,7 +182,6 @@ class DNSServer(object):
             @port:       listen port
             @handler:    handler class
             @tcp:        UDP (false) / TCP (true)
-            @udplen:     Max UDP packet length
             @server:     custom socketserver class
         """
         if not server:
@@ -168,7 +190,6 @@ class DNSServer(object):
             else:
                 server = UDPServer
         self.server = server((address,port),handler)
-        self.server.udplen = udplen
         self.server.resolver = resolver
     
     def start(self):
