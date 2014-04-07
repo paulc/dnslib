@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import binascii,socket,struct,threading
+import binascii,socket,struct,threading,time
 
 try:
     import socketserver
@@ -38,6 +38,13 @@ class DNSHandler(socketserver.BaseRequestHandler):
         Handler for socketserver. Transparently handles both TCP/UDP requests
         (TCP requests have length prepended) and hands off lookup to resolver
         instance specified in <SocketServer>.resolver 
+
+        The class provides a default set of logging functions for the various
+        stages of the request which are enabled/disabled by flags in the 'log'
+        class variable.
+
+        To customise logging subclass DNSHandler with appropriate functions
+        (or patch the global DNSHandler class)
     """
 
     log = { 'log_recv',         # Raw packet received
@@ -97,9 +104,15 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
         return rdata
 
+    def log_prefix(self):
+        return "%s [%s:%s]" % (time.strftime("%Y-%M-%d %X"),
+                                self.__class__.__name__,
+                                self.server.resolver.__class__.__name__)
+
     def log_recv(self,data):
         if 'log_recv' in self.log:
-            print("<<< Received: [%s:%d] (%s) <%d> : %s" % (
+            print("%s <<< Received: [%s:%d] (%s) <%d> : %s" % (
+                    self.log_prefix(),
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -108,7 +121,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
     def log_send(self,data):
         if 'log_send' in self.log:
-            print(">>> Sent: [%s:%d] (%s) <%d> : %s" % (
+            print("%s >>> Sent: [%s:%d] (%s) <%d> : %s" % (
+                    self.log_prefix(),
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -117,7 +131,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
     def log_request(self,request):
         if 'log_request' in self.log:
-            print("<<< Request: [%s:%d] (%s) / '%s' (%s)" % (
+            print("%s <<< Request: [%s:%d] (%s) / '%s' (%s)" % (
+                    self.log_prefix(),
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -128,7 +143,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
     def log_reply(self,reply):
         if 'log_reply' in self.log:
-            print(">>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+            print("%s >>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+                    self.log_prefix(),
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -140,7 +156,8 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
     def log_truncated(self,reply):
         if 'log_reply' in self.log:
-            print(">>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+            print("%s >>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+                    self.log_prefix(),
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
@@ -151,7 +168,9 @@ class DNSHandler(socketserver.BaseRequestHandler):
             print("\n",reply.toZone("    "),"\n",sep="")
 
     def log_error(self,e):
-        print("--- Invalid Request: [%s:%d] (%s) :: %s" % (
+        if 'log_error' in self.log:
+            print("%s --- Invalid Request: [%s:%d] (%s) :: %s" % (
+                    self.log_prefix(),
                     self.client_address[0],
                     self.client_address[1],
                     self.protocol,
