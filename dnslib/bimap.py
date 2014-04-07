@@ -7,7 +7,7 @@ class Bimap(object):
 
     """
 
-    Automatic bi-directional mapping between value and text. 
+    Bi-directional mapping between value and text. 
 
         >>> class TestError(Exception):
         ...     pass

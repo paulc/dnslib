@@ -10,13 +10,15 @@ except ImportError:
     from itertools import izip_longest as zip_longest
 
 from dnslib.bit import get_bits,set_bits
-from dnslib.bimap import Bimap, BimapError
-from dnslib.buffer import Buffer, BufferError
+from dnslib.bimap import Bimap,BimapError
+from dnslib.buffer import Buffer,BufferError
 from dnslib.label import DNSLabel,DNSLabelError,DNSBuffer
 from dnslib.lex import WordLexer
 
 class DNSError(Exception):
     pass
+
+# DNS codes
 
 QTYPE =  Bimap('QTYPE', 
                 {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
@@ -52,15 +54,8 @@ def label(label,origin=None):
 class DNSRecord(object):
 
     """
-        Main DNSRecord class
-
-        Comprises following sections
-
-            header      : DNSHeader
-            question    : DNSQuestion x n
-            answer      : RR x n
-            ns          : RR x n
-            ar          : RR x n
+        Main DNS class - corresponds to DNS packet & comprises DNSHeader, 
+        DNSQuestion and RR sections (answer,ns,ar)
 
         >>> d = DNSRecord()
         >>> d.add_question(DNSQuestion("abc.com"))
@@ -86,6 +81,7 @@ class DNSRecord(object):
     def parse(cls,packet):
         """
             Parse DNS packet data and return DNSRecord instance
+            Recursively parses sections (calling appropriate parse method)
         """
         buffer = DNSBuffer(packet)
         try:
@@ -109,10 +105,33 @@ class DNSRecord(object):
             raise DNSError("Error unpacking DNSRecord [offset=%d]: %s" % (
                                     buffer.offset,e))
 
+    @classmethod
+    def question(cls,qname,qtype="A",qclass="IN"):
+        """
+            Shortcut to create question
+
+            >>> q = DNSRecord.question("www.google.com")
+            >>> print(q)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;www.google.com.                IN      A
+
+            >>> q = DNSRecord.question("www.google.com","NS")
+            >>> print(q)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;www.google.com.                IN      NS
+        """
+        return DNSRecord(q=DNSQuestion(qname,getattr(QTYPE,qtype),
+                                             getattr(CLASS,qclass)))
+
+
     def __init__(self,header=None,questions=None,
                       rr=None,q=None,a=None,auth=None,ar=None):
         """
-            Create DNSRecord
+            Create new DNSRecord
         """
         self.header = header or DNSHeader()
         self.questions = questions or []
@@ -126,44 +145,127 @@ class DNSRecord(object):
             self.rr.append(a)
         self.set_header_qa()
 
+    def reply(self,ra=1,aa=1):
+        """
+            Create skeleton reply packet
+
+            >>> q = DNSRecord.question("abc.com")
+            >>> a = q.reply()
+            >>> a.add_answer(RR("abc.com",QTYPE.A,rdata=A("1.2.3.4"),ttl=60))
+            >>> print(a)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;; ANSWER SECTION:
+            abc.com.                60      IN      A       1.2.3.4
+        """
+        return DNSRecord(DNSHeader(id=self.header.id,
+                                   bitmap=self.header.bitmap,
+                                   qr=1,ra=ra,aa=aa),
+                         q=self.q)
+
     def replyZone(self,zone,ra=1,aa=1):
+        """
+            Create reply with response data in zone-file format
+            >>> q = DNSRecord.question("abc.com")
+            >>> a = q.replyZone("abc.com 60 A 1.2.3.4")
+            >>> print(a)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;; ANSWER SECTION:
+            abc.com.                60      IN      A       1.2.3.4
+        """
         return DNSRecord(DNSHeader(id=self.header.id,
                                    bitmap=self.header.bitmap,
                                    qr=1,ra=ra,aa=aa),
                          q=self.q,
                          rr=RR.fromZone(zone))
 
-    def reply(self,data=None,ra=1,aa=1):
-        if data:
-            answer = RDMAP.get(QTYPE[self.q.qtype],RD)(data)
-            return DNSRecord(DNSHeader(id=self.header.id,
-                                       bitmap=self.header.bitmap,
-                                       qr=1,ra=ra,aa=aa),
-                             q=self.q,
-                             a=RR(self.q.qname,self.q.qtype,rdata=answer))
-        else:
-            return DNSRecord(DNSHeader(id=self.header.id,
-                                       bitmap=self.header.bitmap,
-                                       qr=1,ra=ra,aa=aa),
-                             q=self.q)
-
     def add_question(self,*q):
+        """ 
+            Add question(s)
+
+            >>> q = DNSRecord()
+            >>> q.add_question(DNSQuestion("abc.com"),
+            ...                DNSQuestion("abc.com",QTYPE.MX))
+            >>> print(q)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: rd; QUERY: 2, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;abc.com.                       IN      MX
+        """
         self.questions.extend(q)
         self.set_header_qa()
 
     def add_answer(self,*rr):
+        """
+            Add answer(s)
+
+            >>> q = DNSRecord.question("abc.com")
+            >>> a = q.reply()
+            >>> a.add_answer(*RR.fromZone("abc.com A 1.2.3.4"))
+            >>> print(a)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;; ANSWER SECTION:
+            abc.com.                0       IN      A       1.2.3.4
+        """
         self.rr.extend(rr)
         self.set_header_qa()
 
     def add_auth(self,*auth):
+        """
+            Add authority records
+
+            >>> q = DNSRecord.question("abc.com")
+            >>> a = q.reply()
+            >>> a.add_answer(*RR.fromZone("abc.com 60 A 1.2.3.4"))
+            >>> a.add_auth(*RR.fromZone("abc.com 3600 NS nsa.abc.com"))
+            >>> print(a)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;; ANSWER SECTION:
+            abc.com.                60      IN      A       1.2.3.4
+            ;; AUTHORITY SECTION:
+            abc.com.                3600    IN      NS      nsa.abc.com.
+        """
         self.auth.extend(auth)
         self.set_header_qa()
 
     def add_ar(self,*ar):
+        """
+            Add additional records
+
+            >>> q = DNSRecord.question("abc.com")
+            >>> a = q.reply()
+            >>> a.add_answer(*RR.fromZone("abc.com 60 CNAME x.abc.com"))
+            >>> a.add_ar(*RR.fromZone("x.abc.com 3600 A 1.2.3.4"))
+            >>> print(a)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;; ANSWER SECTION:
+            abc.com.                60      IN      CNAME   x.abc.com.
+            ;; ADDITIONAL SECTION:
+            x.abc.com.              3600    IN      A       1.2.3.4
+        """
         self.ar.extend(ar)
         self.set_header_qa()
 
     def set_header_qa(self):
+        """
+            Reset header q/a/auth/ar counts to match numver of records
+            (normally done transparently)
+        """
         self.header.q = len(self.questions)
         self.header.a = len(self.rr)
         self.header.auth = len(self.auth)
@@ -180,6 +282,23 @@ class DNSRecord(object):
     a = property(get_a)
 
     def pack(self):
+        """
+            Pack record into binary packet
+            (recursively packs each section into buffer)
+
+            >>> q = DNSRecord.question("abc.com")
+            >>> q.header.id = 1234
+            >>> a = q.replyZone("abc.com A 1.2.3.4")
+            >>> a.header.aa = 0
+            >>> pkt = a.pack()
+            >>> print(DNSRecord.parse(pkt))
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1234
+            ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+            ;; QUESTION SECTION:
+            ;abc.com.                       IN      A
+            ;; ANSWER SECTION:
+            abc.com.                0       IN      A       1.2.3.4
+        """
         self.set_header_qa()
         buffer = DNSBuffer()
         self.header.pack(buffer)
@@ -194,11 +313,31 @@ class DNSRecord(object):
         return buffer.data
 
     def truncate(self):
+        """
+            Return truncated copy of DNSRecord (with TC flag set)
+            (removes all Questions & RRs and just returns header)
+            
+            >>> q = DNSRecord.question("abc.com")
+            >>> a = q.reply()
+            >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
+            >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
+            >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
+            >>> len(a.pack())
+            829
+            >>> t = a.truncate()
+            >>> print(t)
+            ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+            ;; flags: qr aa tc rd ra; QUERY: 0, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+
+        """
         return DNSRecord(DNSHeader(id=self.header.id,
                                    bitmap=self.header.bitmap,
                                    tc=1))
 
     def send(self,dest,port=53,tcp=False):
+        """
+            Send packet to nameserver and return response
+        """
         data = self.pack()
         if tcp:
             data = struct.pack("!H",len(data)) + data
@@ -219,6 +358,10 @@ class DNSRecord(object):
         return response
         
     def format(self,prefix="",sort=False):
+        """
+            Formatted 'repr'-style representation of record
+            (optionally with prefix and/or sorted RRs)
+        """
         s = sorted if sort else lambda x:x
         sections = [ repr(self.header) ]
         sections.extend(s([repr(q) for q in self.questions]))
@@ -228,6 +371,10 @@ class DNSRecord(object):
         return prefix + ("\n" + prefix).join(sections)
 
     def toZone(self,prefix=""):
+        """
+            Formatted 'DiG' (zone) style output 
+            (with optional prefix)
+        """
         z = self.header.toZone().split("\n")
         if self.questions:
             z.append(";; QUESTION SECTION:")
@@ -243,16 +390,22 @@ class DNSRecord(object):
             [ z.extend(rr.toZone().split("\n")) for rr in self.ar ]
         return prefix + ("\n" + prefix).join(z)
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
-
     def __eq__(self,other):
+        """
+            Test for equality by diffing records
+        """
         if type(other) != type(self):
             return False
         else:
             return self.diff(other) == []
 
+    def __ne__(self,other):
+        return not(self.__eq__(other))
+
     def diff(self,other):
+        """
+            Diff records - recursively diff sections (sorting RRs)
+        """
         err = []
         if self.header != other.header:
             err.append((self.header,other.header))
@@ -276,8 +429,15 @@ class DNSRecord(object):
 
 class DNSHeader(object):
 
+    """
+        DNSHeader section
+    """
+
     @classmethod
     def parse(cls,buffer):
+        """
+            Implements parse interface 
+        """
         try:
             (id,bitmap,q,a,auth,ar) = buffer.unpack("!HHHHHH")
             return cls(id,bitmap,q,a,auth,ar)
@@ -315,6 +475,8 @@ class DNSHeader(object):
             elif k.lower() == "rcode":
                 self.rcode = v
     
+    # Accessors for header properties (automatically pack/unpack
+    # into bitmap)
     def get_qr(self):
         return get_bits(self.bitmap,15)
 
@@ -428,6 +590,10 @@ class DNSHeader(object):
 
 class DNSQuestion(object):
     
+    """
+        DNSQuestion section
+    """
+        
     @classmethod
     def parse(cls,buffer):
         try:
@@ -476,11 +642,17 @@ class DNSQuestion(object):
         if type(other) != type(self):
             return False
         else:
+            # List of attributes to compare when diffing
             attrs = ('qname','qtype','qclass')
             return all([getattr(self,x) == getattr(other,x) for x in attrs])
             
 class EDNSOption(object):
 
+    """
+        EDNSOption pseudo-section
+
+        *** Not particularly tested ***
+    """
     def __init__(self,code,data):
         self.code = code
         self.data = data
@@ -507,11 +679,16 @@ class EDNSOption(object):
         if type(other) != type(self):
             return False
         else:
+            # List of attributes to compare when diffing
             attrs = ('code','data')
             return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 class RR(object):
 
+    """
+        DNS Resource Record 
+        Contains RR header and RD (resource data) instance
+    """
     @classmethod
     def parse(cls,buffer):
         try:
@@ -537,6 +714,9 @@ class RR(object):
 
     @classmethod
     def fromZone(cls,zone,origin="",ttl=0):
+        """
+            Parse RR data from zone file and return list of RRs
+        """
         return list(ZoneParser(zone,origin=origin,ttl=ttl))
 
     def __init__(self,rname=None,rtype=1,rclass=1,ttl=0,rdata=None):
@@ -614,15 +794,23 @@ class RR(object):
         if type(other) != type(self):
             return False
         else:
-            # Ignore TTL
+            # List of attributes to compare when diffing (ignore ttl)
             attrs = ('rname','rclass','rtype','rdata')
             return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 
 class RD(object):
+    """
+        Base RD object - also used as placeholder for unknown RD types
+
+        To create a new RD type subclass this and add to RDMAP (below)
+    """
 
     @classmethod
     def parse(cls,buffer,length):
+        """
+            Unpack from buffer
+        """
         try:
             data = buffer.get(length)
             return cls(data)
@@ -632,6 +820,9 @@ class RD(object):
 
     @classmethod
     def fromZone(cls,rd,origin=None):
+        """
+            Create new record from zone format data
+        """
         return cls(rd)
 
     def __init__(self,data=b""):
@@ -644,9 +835,15 @@ class RD(object):
             self.data = data
 
     def pack(self,buffer):
+        """
+            Pack record into buffer
+        """
         buffer.append(self.data)
 
     def __repr__(self):
+        """
+            Default 'repr' format should be equivalent to RD zone format
+        """
         try:
             return self.data.decode()
         except UnicodeDecodeError:
@@ -746,7 +943,7 @@ def _parse_ipv6(a):
 def _format_ipv6(a):
     """
         Format IPv6 address (from tuple of 16 bytes) compressing sequence of
-        sero bytes to '::'. Ideally we would use the ipaddress module in
+        zero bytes to '::'. Ideally we would use the ipaddress module in
         Python3.3 but can't rely on having this.
 
         >>> _format_ipv6([0]*16)
@@ -993,33 +1190,6 @@ class SRV(RD):
 
 class NAPTR(RD):
 
-    """
-        NAPTR Record
-
-        >>> q = DNSRecord(q=DNSQuestion("sip2sip.info",QTYPE.NAPTR))
-        >>> a = q.replyZone('sip2sip.info 3600 IN NAPTR 20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info')
-        >>> print(a)
-        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION:
-        ;sip2sip.info.                  IN      NAPTR
-        ;; ANSWER SECTION:
-        sip2sip.info.           3600    IN      NAPTR   20 100 "s" "SIPS+D2T" "_sips._tcp.sip2sip.info" .
-        >>> r = DNSRecord.parse(a.pack())
-        >>> str(r) == str(a)
-        True
-
-        >>> a = q.replyZone('sip2sip.info 3600 IN NAPTR 20 100 "s" "SIPS+D2T" "" _sips._tcp.sip2sip.info sip2sip.info')
-        >>> print(DNSRecord.parse(a.pack()))
-        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
-        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
-        ;; QUESTION SECTION:
-        ;sip2sip.info.                  IN      NAPTR
-        ;; ANSWER SECTION:
-        sip2sip.info.           3600    IN      NAPTR   20 100 "s" "SIPS+D2T" "_sips._tcp.sip2sip.info" sip2sip.info.
-
-    """
-
     @classmethod
     def parse(cls, buffer, length):
         try:
@@ -1081,13 +1251,25 @@ class NAPTR(RD):
 
     attrs = ('order','preference','flags','service','regexp','replacement')
 
+# Map from RD type to class (used to pack/unpack records)
+# If you add a new RD class you must add to RDMAP
+
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
         }
 
+##
+## Zone/DiG parsers
+## TODO  - ideally these would be in a separate file but have to deal 
+##         with circular dependencies 
+##
+
 secs = {'s':1,'m':60,'h':3600,'d':86400,'w':604800}
 
 def parse_time(s):
+    """
+        Parse time spec with optional s/m/h/d/w suffix
+    """
     if s[-1].lower() in secs:
         return int(s[:-1]) * secs[s[-1].lower()]
     else:
@@ -1185,6 +1367,10 @@ class ZoneParser:
 
 class DigParser:
 
+    """
+        Parse Dig output
+    """
+
     def __init__(self,dig):
         self.l = WordLexer(dig)
         self.l.commentchars = ';'
@@ -1211,8 +1397,8 @@ class DigParser:
     def parseQuestions(self,q,dns):
         for qname,qclass,qtype in q:
             dns.add_question(DNSQuestion(qname,
-                                                getattr(QTYPE,qtype),
-                                                getattr(CLASS,qclass)))
+                                         getattr(QTYPE,qtype),
+                                         getattr(CLASS,qclass)))
 
     def parseAnswers(self,a,auth,ar,dns):
         sect_map = {'a':'add_answer','auth':'add_auth','ar':'add_ar'}
