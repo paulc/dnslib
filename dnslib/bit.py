@@ -32,7 +32,8 @@ def hexdump(src, length=16, prefix=''):
         hexb = "%-*s" % (right*3,' '.join(["%02x"%x for x in r]))
         lf = l.translate(FILTER)
         rf = r.translate(FILTER)
-        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb, lf.decode(), rf.decode()))
+        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb, 
+                                               lf.decode(), rf.decode()))
         n += length
     return "\n".join(result)
 

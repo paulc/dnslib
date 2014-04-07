@@ -9,9 +9,16 @@ except ImportError:
 
 import binascii,code,pprint
 
-from dnslib import DNSRecord,DNSQuestion,QTYPE,DigParser
+from dnslib import DNSRecord,DNSHeader,DNSQuestion,QTYPE,DigParser
 
 if __name__ == '__main__':
+
+    """
+        DNS Client - mostly useful for testing
+
+        Can optionally compare results from two nameservers (--diff) or
+        compare results against DiG (--dig)
+    """
 
     import argparse,sys,time
 
@@ -28,9 +35,9 @@ if __name__ == '__main__':
     p.add_argument("--noretry",action='store_true',default=False,
                     help="Don't retry query using TCP if truncated (default: false)")
     p.add_argument("--diff",default="",
-            help="Compare response from alternate nameserver (format: address:port / default: false)")
+                    help="Compare response from alternate nameserver (format: address:port / default: false)")
     p.add_argument("--dig",action='store_true',default=False,
-                    help="Compare result with DiG (default: false)")
+                    help="Compare result with DiG - if ---diff also specified use alternative nameserver for DiG request (default: false)")
     p.add_argument("--debug",action='store_true',default=False,
                     help="Drop into CLI after request (default: false)")
     p.add_argument("domain",metavar="<domain>",
@@ -39,6 +46,7 @@ if __name__ == '__main__':
                     help="Query type (default: A)")
     args = p.parse_args()
 
+    # Construct request
     q = DNSRecord(q=DNSQuestion(args.domain,getattr(QTYPE,args.qtype)))
 
     address,_,port = args.address.partition(':')
@@ -55,6 +63,7 @@ if __name__ == '__main__':
     a = DNSRecord.parse(a_pkt)
 
     if a.header.tc and args.noretry == False:
+        # Truncated - retry in TCP mode
         a_pkt = q.send(address,port,tcp=True)
         a = DNSRecord.parse(a_pkt)
 
@@ -71,8 +80,9 @@ if __name__ == '__main__':
             q_diff = dig_reply[-2]
             a_diff = dig_reply[-1]
         else:
-            #q_diff = DNSRecord(q=DNSQuestion(args.domain,
-            #                                 getattr(QTYPE,args.qtype)))
+            q_diff = DNSRecord(header=DNSHeader(id=q.header.id),
+                               q=DNSQuestion(args.domain,
+                                             getattr(QTYPE,args.qtype)))
             q_diff = q
             diff = q_diff.send(address,port,tcp=args.tcp)
             a_diff = DNSRecord.parse(diff)
@@ -94,10 +104,16 @@ if __name__ == '__main__':
     if args.dig or args.diff:
         if q != q_diff:
             print(";;; ERROR: Diff Question differs")
-            pprint.pprint(q.diff(q_diff))
+            for (d1,d2) in q.diff(q_diff):
+                print(";; - %s" % d1)
+                if d2:
+                    print(";; + %s" % d2)
         if a != a_diff:
             print(";;; ERROR: Diff Response differs")
-            pprint.pprint(a.diff(a_diff))
+            for (d1,d2) in a.diff(a_diff):
+                print(";; - %s" % d1)
+                if d2:
+                    print(";; + %s" % d2)
 
     if args.debug:
         code.interact(local=locals())
