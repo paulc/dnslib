@@ -31,6 +31,7 @@ class ZoneResolver(BaseResolver):
         qname = request.q.qname
         qtype = QTYPE[request.q.qtype]
         for name,rtype,rr in self.zone:
+            # Check if label & type match
             if getattr(qname,self.eq)(name) and (qtype == rtype or 
                                                  qtype == 'ANY' or 
                                                  rtype == 'CNAME'):
