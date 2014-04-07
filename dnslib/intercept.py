@@ -10,7 +10,21 @@ from dnslib.label import DNSLabel
 
 class InterceptResolver(BaseResolver):
 
+    """
+        Intercepting resolver 
+        
+        Proxy requests to upstream server optionally intercepting requests
+        matching local records
+    """
+
     def __init__(self,address,port,ttl,intercept,skip,nxdomain):
+        """
+            address/port    - upstream server
+            ttl             - default ttl for intercept records
+            intercept       - list of wildcard RRs to respond to (zone format)
+            skip            - list of wildcard labels to skip 
+            nxdomain        - list of wildcard labels to retudn NXDOMAIN
+        """
         self.address = address
         self.port = port
         self.ttl = parse_time(ttl)

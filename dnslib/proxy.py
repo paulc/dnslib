@@ -8,6 +8,26 @@ from dnslib import DNSRecord
 from dnslib.server import DNSServer,DNSHandler,BaseResolver
 
 class ProxyResolver(BaseResolver):
+    """
+        Proxy resolver - passes all requests to upstream DNS server and
+        returns response
+
+        Note that the request/response will be each be decoded/re-encoded 
+        twice:
+
+        a) Request packet received by DNSHandler and parsed into DNSRecord 
+        b) DNSRecord passed to ProxyResolver, serialised back into packet 
+           and sent to upstream DNS server
+        c) Upstream DNS server returns response packet which is parsed into
+           DNSRecord
+        d) ProxyResolver returns DNSRecord to DNSHandler which re-serialises
+           this into packet and returns to client
+
+        In practice this is actually fairly useful for testing but for a
+        'real' transparent proxy option the DNSHandler logic needs to be
+        modified (see PassthroughDNSHandler)
+
+    """
 
     def __init__(self,address,port):
         self.address = address
@@ -21,26 +41,13 @@ class ProxyResolver(BaseResolver):
         reply = DNSRecord.parse(proxy_r)
         return reply
 
-def send_tcp(data,host,port):
-    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    sock.connect((host,port))
-    sock.sendall(data)
-    response = sock.recv(8192)
-    length = struct.unpack("!H",bytes(response[:2]))[0]
-    while len(response) - 2 < length:
-        response += sock.recv(8192)
-    sock.close()
-    return response
-
-def send_udp(data,host,port):
-    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    sock.sendto(data,(host,port))
-    response,server = sock.recvfrom(8192)
-    sock.close()
-    return response
-
 class PassthroughDNSHandler(DNSHandler):
-
+    """
+        Modify DNSHandler logic (get_reply method) to send directly to 
+        upstream DNS server rather then decoding/encoding packet and
+        passing to Resolver (The request/response packets are still
+        parsed and logged but this is not inline)
+    """
     def get_reply(self,data):
         host,port = self.server.resolver.address,self.server.resolver.port
 
@@ -58,6 +65,31 @@ class PassthroughDNSHandler(DNSHandler):
         self.log_reply(reply)
 
         return response
+
+def send_tcp(data,host,port):
+    """
+        Helper function to send/receive DNS TCP request
+        (in/out packets will have prepended TCP length header)
+    """
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((host,port))
+    sock.sendall(data)
+    response = sock.recv(8192)
+    length = struct.unpack("!H",bytes(response[:2]))[0]
+    while len(response) - 2 < length:
+        response += sock.recv(8192)
+    sock.close()
+    return response
+
+def send_udp(data,host,port):
+    """
+        Helper function to send/receive DNS UDP request
+    """
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    sock.sendto(data,(host,port))
+    response,server = sock.recvfrom(8192)
+    sock.close()
+    return response
 
 if __name__ == '__main__':
 
