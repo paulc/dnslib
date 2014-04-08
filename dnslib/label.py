@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""
+    DNSLabel/DNSBuffer - DNS label handling & encoding/decoding
+"""
+
 from __future__ import print_function
 
 import fnmatch
@@ -13,7 +17,7 @@ class DNSLabelError(Exception):
 class DNSLabel(object):
 
     """
-    Container for DNS label 
+    Container for DNS label
 
     Supports IDNA encoding for unicode domain names
 

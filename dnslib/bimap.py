@@ -1,13 +1,28 @@
 # -*- coding: utf-8 -*-
 
+"""
+    Bimap - bidirectional mapping between code/value
+"""
+
 class BimapError(Exception):
     pass
 
 class Bimap(object):
 
     """
+        Bi-directional mapping between code/value. 
 
-    Bi-directional mapping between value and text. 
+        Initialised using:
+
+            name:   Used for exceptions
+            dict:   Dict mapping from value (numeric) to code (text)
+            error:  Error type to raise if key not found
+
+        The class creates a 'forward' map (value->text) and a 'reverse' map
+        (text->value). 
+        
+        __getitem__ lookups (map[value]) use the forward dictionary 
+        __getattr__ lookups (map.text) use the reverse dictionary.
 
         >>> class TestError(Exception):
         ...     pass

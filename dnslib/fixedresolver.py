@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+"""
+    FixedResolver - example resolver which responds with fixed response
+                    to all requests
+"""
+
 from __future__ import print_function
 
 import copy
@@ -12,6 +17,7 @@ class FixedResolver(BaseResolver):
         Respond with fixed response to all requests
     """
     def __init__(self,zone):
+        # Parse RRs
         self.rrs = RR.fromZone(zone)
 
     def resolve(self,request,handler):

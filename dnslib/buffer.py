@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""
+    Buffer - simple data buffer
+"""
+
 import binascii,struct
 
 class BufferError(Exception):
