@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+"""
+    InterceptResolver - proxy requests to upstream server 
+                        (optionally intercepting)
+        
+"""
 from __future__ import print_function
 
 import binascii,copy,socket,struct,sys

@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+    DNS - main dnslib module 
+"""
 
 from __future__ import print_function
 
@@ -852,17 +855,20 @@ class RD(object):
     def toZone(self):
         return repr(self)
 
-    # Attributes for __eq__/__ne__ - override in subclass
-    attrs = ('data',)
+    # Comparison operations - in most cases only need to override 'attrs'
+    # in subclass (__eq__ will automatically compare defined atttrs)
 
-    def __ne__(self,other):
-        return not(self.__eq__(other))
+    # Attributes for comparison
+    attrs = ('data',)
 
     def __eq__(self,other):
         if type(other) != type(self):
             return False
         else:
             return all([getattr(self,x) == getattr(other,x) for x in self.attrs])
+
+    def __ne__(self,other):
+        return not(self.__eq__(other))
 
 class TXT(RD):
 

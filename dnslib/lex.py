@@ -344,6 +344,13 @@ if __name__ == '__main__':
 
         for tok in l:
             print(tok)
-
     else:
-        doctest.testmod()
+        try:
+            # Test if we have /dev/urandom
+            open("/dev/urandom")
+            doctest.testmod()
+        except IOError:
+            # Don't run stream test
+            doctest.run_docstring_examples(Lexer, globals())
+            doctest.run_docstring_examples(WordLexer, globals())
+

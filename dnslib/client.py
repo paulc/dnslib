@@ -1,5 +1,16 @@
 # -*- coding: utf-8 -*-
 
+"""
+    DNS Client - DiG-like CLI utility. 
+    
+    Mostly useful for testing. Can optionally compare results from two
+    nameservers (--diff) or compare results against DiG (--dig).
+
+    Usage: python -m dnslib.client [options|--help]
+    
+    See --help for usage.
+"""
+
 from __future__ import print_function
 
 try:
@@ -12,13 +23,6 @@ import binascii,code,pprint
 from dnslib import DNSRecord,DNSHeader,DNSQuestion,QTYPE,DigParser
 
 if __name__ == '__main__':
-
-    """
-        DNS Client - mostly useful for testing
-
-        Can optionally compare results from two nameservers (--diff) or
-        compare results against DiG (--dig)
-    """
 
     import argparse,sys,time
 
