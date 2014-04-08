@@ -5,7 +5,7 @@ from __future__ import print_function
 import binascii,socket,struct
 
 from dnslib import DNSRecord
-from dnslib.server import DNSServer,DNSHandler,BaseResolver
+from dnslib.server import DNSServer,DNSHandler,BaseResolver,DNSLogger
 
 class ProxyResolver(BaseResolver):
     """
@@ -109,6 +109,10 @@ if __name__ == '__main__':
                     help="TCP proxy (default: UDP only)")
     p.add_argument("--passthrough",action='store_true',default=False,
                     help="Dont decode/re-encode request/response (default: off)")
+    p.add_argument("--log",default="request,reply,truncated,error",
+                    help="Log hooks to enable (default: +request,+reply,+truncated,+error,-recv,-send,-data)")
+    p.add_argument("--log-prefix",action='store_true',default=False,
+                    help="Log prefix (timestamp/handler/resolver) (default: False)")
     args = p.parse_args()
 
     args.dns,_,args.dns_port = args.upstream.partition(':')
@@ -120,10 +124,12 @@ if __name__ == '__main__':
                         "UDP/TCP" if args.tcp else "UDP"))
 
     resolver = ProxyResolver(args.dns,args.dns_port)
-    handler=PassthroughDNSHandler if args.passthrough else DNSHandler
+    handler = PassthroughDNSHandler if args.passthrough else DNSHandler
+    logger = DNSLogger(args.log,args.log_prefix)
     udp_server = DNSServer(resolver,
                            port=args.port,
                            address=args.address,
+                           logger=logger,
                            handler=handler)
     udp_server.start_thread()
 
@@ -132,6 +138,7 @@ if __name__ == '__main__':
                                port=args.port,
                                address=args.address,
                                tcp=True,
+                               logger=logger,
                                handler=handler)
         tcp_server.start_thread()
 
