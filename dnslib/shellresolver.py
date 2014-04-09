@@ -9,7 +9,7 @@ except ImportError:
 
 from dnslib import RR,QTYPE,RCODE,TXT,parse_time
 from dnslib.label import DNSLabel
-from dnslib.server import DNSServer,DNSHandler,BaseResolver
+from dnslib.server import DNSServer,DNSHandler,BaseResolver,DNSLogger
 
 class ShellResolver(BaseResolver):
     """
@@ -66,9 +66,14 @@ if __name__ == '__main__':
                     help="Max UDP packet length (default:0)")
     p.add_argument("--tcp",action='store_true',default=False,
                     help="TCP server (default: UDP only)")
+    p.add_argument("--log",default="request,reply,truncated,error",
+                    help="Log hooks to enable (default: +request,+reply,+truncated,+error,-recv,-send,-data)")
+    p.add_argument("--log-prefix",action='store_true',default=False,
+                    help="Log prefix (timestamp/handler/resolver) (default: False)")
     args = p.parse_args()
 
     resolver = ShellResolver(args.map,args.origin,args.ttl)
+    logger = DNSLogger(args.log,args.log_prefix)
 
     print("Starting Shell Resolver (%s:%d) [%s]" % (
                         args.address or "*",
@@ -82,12 +87,18 @@ if __name__ == '__main__':
     if args.udplen:
         DNSHandler.udplen = args.udplen
 
-    udp_server = DNSServer(resolver,port=args.port,address=args.address)
+    udp_server = DNSServer(resolver,
+                           port=args.port,
+                           address=args.address,
+                           logger=logger)
     udp_server.start_thread()
 
     if args.tcp:
-        tcp_server = DNSServer(resolver,port=args.port,address=args.address,
-                                        tcp=True)
+        tcp_server = DNSServer(resolver,
+                               port=args.port,
+                               address=args.address,
+                               tcp=True,
+                               logger=logger)
         tcp_server.start_thread()
 
     while udp_server.isAlive():

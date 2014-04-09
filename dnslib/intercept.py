@@ -10,7 +10,7 @@ from __future__ import print_function
 import binascii,copy,socket,struct,sys
 
 from dnslib import DNSRecord,RR,QTYPE,RCODE,parse_time
-from dnslib.server import DNSServer,DNSHandler,BaseResolver
+from dnslib.server import DNSServer,DNSHandler,BaseResolver,DNSLogger
 from dnslib.label import DNSLabel
 
 class InterceptResolver(BaseResolver):
@@ -94,6 +94,10 @@ if __name__ == '__main__':
     p.add_argument("--ttl","-t",default="60s",
                     metavar="<ttl>",
                     help="Intercept TTL (default: 60s)")
+    p.add_argument("--log",default="request,reply,truncated,error",
+                    help="Log hooks to enable (default: +request,+reply,+truncated,+error,-recv,-send,-data)")
+    p.add_argument("--log-prefix",action='store_true',default=False,
+                    help="Log prefix (timestamp/handler/resolver) (default: False)")
     args = p.parse_args()
 
     args.dns,_,args.dns_port = args.upstream.partition(':')
@@ -105,6 +109,7 @@ if __name__ == '__main__':
                                  args.intercept or [],
                                  args.skip or [],
                                  args.nxdomain or [])
+    logger = DNSLogger(args.log,args.log_prefix)
 
     print("Starting Intercept Proxy (%s:%d -> %s:%d) [%s]" % (
                         args.address or "*",args.port,
@@ -129,14 +134,16 @@ if __name__ == '__main__':
 
     udp_server = DNSServer(resolver,
                            port=args.port,
-                           address=args.address)
+                           address=args.address,
+                           logger=logger)
     udp_server.start_thread()
 
     if args.tcp:
         tcp_server = DNSServer(resolver,
                                port=args.port,
                                address=args.address,
-                               tcp=True)
+                               tcp=True,
+                               logger=logger)
         tcp_server.start_thread()
 
     while udp_server.isAlive():
