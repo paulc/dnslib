@@ -20,7 +20,8 @@ except ImportError:
 
 import binascii,code,pprint
 
-from dnslib import DNSRecord,DNSHeader,DNSQuestion,QTYPE,DigParser
+from dnslib.dns import DNSRecord,DNSHeader,DNSQuestion,QTYPE
+from dnslib.digparser import DigParser
 
 if __name__ == '__main__':
 
