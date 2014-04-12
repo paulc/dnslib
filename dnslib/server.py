@@ -163,7 +163,7 @@ class DNSLogger:
         """
         default = ["request","reply","truncated","error"]
         log = log.split(",") if log else []
-        enabled = set(filter(lambda s:s[0] not in '+-',log) or default)
+        enabled = set([ s for s in log if s[0] not in '+-'] or default)
         [ enabled.add(l[1:]) for l in log if l.startswith('+') ]
         [ enabled.discard(l[1:]) for l in log if l.startswith('-') ]
         for l in ['log_recv','log_send','log_request','log_reply',
