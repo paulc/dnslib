@@ -4,31 +4,29 @@
     dnslib
     ------
 
-    A simple library to encode/decode DNS wire-format packets. This was
-    originally written for a custom nameserver.
+    A simple library to encode/decode DNS wire-format packets. Now 
+    additionally provides framework for building custom resolvers.
+    
+    The key DNS packet handling classes are:
 
-    The key classes are:
-
-        * DNSRecord (contains a DNSHeader and one or more DNSQuestion/
-                     DNSRR records)
+        * DNSRecord - container for DNS packet. Contains a DNSHeader and one 
+          or more DNSQuestion/DNSRR records)
         * DNSHeader 
         * DNSQuestion
         * RR (resource records)
-        * RD (resource data - superclass for TXT,A,AAAA,MX,CNAME,PRT,SOA,NAPTR)
+        * RD (resource data - superclass for spcific RD types)
         * DNSLabel (envelope for a DNS label)
+
+    Version 0.9 of the library was a major rewrite to support Python 3.2+ 
+    (retaining support for Python 2.7+). As part of the Py3 changes a 
+    number of other significant changes were intrtoduced:
+
+    - Much better error handling (packet decoding errors should be 
+      caught and DNSError raised)
 
     The library has (in theory) very rudimentary support for EDNS0 options
     however this has not been tested due to a lack of data (anyone wanting
     to improve support or provide test data please raise an issue)
-
-    Note: In version 0.3 the library was modified to use the DNSLabel class to
-    support arbirary DNS labels (as specified in RFC2181) - and specifically
-    to allow embedded '.'s. In most cases this is transparent (DNSLabel will
-    automatically convert a domain label presented as a dot separated string &
-    convert pack to this format when converted to a string) however to get the
-    underlying label data (as a tuple) you need to access the DNSLabel.label
-    attribute. To specifiy a label to the DNSRecord classes you can either pass
-    a DNSLabel object or pass the elements as a list/tuple.
 
     To decode a DNS packet:
 

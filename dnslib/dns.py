@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
     DNS - main dnslib module 
+
+    Contains core DNS packet handling code
 """
 
 from __future__ import print_function
