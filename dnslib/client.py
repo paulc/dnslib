@@ -43,6 +43,8 @@ if __name__ == '__main__':
                     help="Compare response from alternate nameserver (format: address:port / default: false)")
     p.add_argument("--dig",action='store_true',default=False,
                     help="Compare result with DiG - if ---diff also specified use alternative nameserver for DiG request (default: false)")
+    p.add_argument("--short",action='store_true',default=False,
+                    help="Short output - rdata only (default: false)")
     p.add_argument("--debug",action='store_true',default=False,
                     help="Drop into CLI after request (default: false)")
     p.add_argument("domain",metavar="<domain>",
@@ -91,34 +93,34 @@ if __name__ == '__main__':
             q_diff = q
             diff = q_diff.send(address,port,tcp=args.tcp)
             a_diff = DNSRecord.parse(diff)
-
-            print(address,port)
             if a_diff.header.tc and args.noretry == False:
                 diff = q_diff.send(address,port,tcp=True)
                 a_diff = DNSRecord.parse(diff)
 
-    print(";; Got answer:")
-    if args.hex:
-        print(";; RESPONSE:",binascii.hexlify(a_pkt).decode())
-        if args.diff and not args.dig:
-            print(";; DIFF    :",binascii.hexlify(diff).decode())
+    if args.short:
+        print(a.short())
+    else:
+        print(";; Got answer:")
+        if args.hex:
+            print(";; RESPONSE:",binascii.hexlify(a_pkt).decode())
+            if args.diff and not args.dig:
+                print(";; DIFF    :",binascii.hexlify(diff).decode())
+        print(a)
+        print()
 
-    print(a)
-    print()
-
-    if args.dig or args.diff:
-        if q != q_diff:
-            print(";;; ERROR: Diff Question differs")
-            for (d1,d2) in q.diff(q_diff):
-                print(";; - %s" % d1)
-                if d2:
-                    print(";; + %s" % d2)
-        if a != a_diff:
-            print(";;; ERROR: Diff Response differs")
-            for (d1,d2) in a.diff(a_diff):
-                print(";; - %s" % d1)
-                if d2:
-                    print(";; + %s" % d2)
+        if args.dig or args.diff:
+            if q != q_diff:
+                print(";;; ERROR: Diff Question differs")
+                for (d1,d2) in q.diff(q_diff):
+                    print(";; - %s" % d1)
+                    if d2:
+                        print(";; + %s" % d2)
+            if a != a_diff:
+                print(";;; ERROR: Diff Response differs")
+                for (d1,d2) in a.diff(a_diff):
+                    print(";; - %s" % d1)
+                    if d2:
+                        print(";; + %s" % d2)
 
     if args.debug:
         code.interact(local=locals())
