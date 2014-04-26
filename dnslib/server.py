@@ -44,6 +44,42 @@
             proxy.py            - DNS proxy
             intercept.py        - Intercepting DNS proxy
 
+        >>> resolver = BaseResolver()
+        >>> logger = DNSLogger(prefix=False)
+        >>> server = DNSServer(resolver,port=8053,address="127.0.0.1",logger=logger)
+        >>> server.start_thread()
+        >>> q = DNSRecord.question("abc.def")
+        >>> a = q.send("127.0.0.1",8053)
+        Request: [127.0.0.1:...] (udp) / 'abc.def.' (A)
+        Reply: [127.0.0.1:...] (udp) / 'abc.def.' (A) / RRs: 
+        >>> print(DNSRecord.parse(a))
+        ;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: ...
+        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+        ;; QUESTION SECTION:
+        ;abc.def.                       IN      A
+        >>> server.stop()
+
+        >>> class TestResolver:
+        ...     def resolve(self,request,handler):
+        ...         reply = request.reply()
+        ...         reply.add_answer(*RR.fromZone("abc.def. 60 A 1.2.3.4"))
+        ...         return reply
+        >>> resolver = TestResolver()
+        >>> server = DNSServer(resolver,port=8053,address="127.0.0.1",logger=logger,tcp=True)
+        >>> server.start_thread()
+        >>> a = q.send("127.0.0.1",8053,tcp=True)
+        Request: [127.0.0.1:...] (tcp) / 'abc.def.' (A)
+        Reply: [127.0.0.1:...] (tcp) / 'abc.def.' (A) / RRs: A
+        >>> print(DNSRecord.parse(a))
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+        ;; QUESTION SECTION:
+        ;abc.def.                       IN      A
+        ;; ANSWER SECTION:
+        abc.def.                60      IN      A       1.2.3.4
+        >>> server.stop()
+
+
 """
 from __future__ import print_function
 
@@ -182,14 +218,14 @@ class DNSLogger:
 
     def log_prefix(self,handler):
         if self.prefix:
-            return "%s [%s:%s]" % (time.strftime("%Y-%M-%d %X"),
+            return "%s [%s:%s] " % (time.strftime("%Y-%M-%d %X"),
                                handler.__class__.__name__,
                                handler.server.resolver.__class__.__name__)
         else:
             return ""
 
     def log_recv(self,handler,data):
-        print("%s <<< Received: [%s:%d] (%s) <%d> : %s" % (
+        print("%sReceived: [%s:%d] (%s) <%d> : %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -198,7 +234,7 @@ class DNSLogger:
                     binascii.hexlify(data)))
 
     def log_send(self,handler,data):
-        print("%s >>> Sent: [%s:%d] (%s) <%d> : %s" % (
+        print("%sSent: [%s:%d] (%s) <%d> : %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -207,7 +243,7 @@ class DNSLogger:
                     binascii.hexlify(data)))
 
     def log_request(self,handler,request):
-        print("%s <<< Request: [%s:%d] (%s) / '%s' (%s)" % (
+        print("%sRequest: [%s:%d] (%s) / '%s' (%s)" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -217,7 +253,7 @@ class DNSLogger:
         self.log_data(request)
 
     def log_reply(self,handler,reply):
-        print("%s >>> Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+        print("%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -228,7 +264,7 @@ class DNSLogger:
         self.log_data(reply)
 
     def log_truncated(self,handler,reply):
-        print("%s >>> Truncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+        print("%sTruncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -239,7 +275,7 @@ class DNSLogger:
         self.log_data(reply)
 
     def log_error(self,handler,e):
-        print("%s --- Invalid Request: [%s:%d] (%s) :: %s" % (
+        print("%sInvalid Request: [%s:%d] (%s) :: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -310,5 +346,5 @@ class DNSServer(object):
         return self.thread.isAlive()
 
 if __name__ == "__main__":
-
-    pass
+    import doctest
+    doctest.testmod(optionflags=doctest.ELLIPSIS)
