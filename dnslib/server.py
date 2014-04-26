@@ -1,26 +1,31 @@
 # -*- coding: utf-8 -*-
 
 """
-    DNS server framework - intended to simplify creation of custom resolver.
+    DNS server framework - intended to simplify creation of custom resolvers.
 
     Comprises the following components:
 
         DNSServer   - socketserver wrapper (in most cases you should just
                       need to pass this an appropriate resolver instance
-                      and start in either foreground/background
+                      and start in either foreground/background)
 
         DNSHandler  - handler instantiated by DNSServer to handle requests
                       The 'handle' method deals with the sending/receiving
                       packets (handling TCP length prefix) and delegates
                       the protocol handling to 'get_reply'. This decodes
-                      packet, hands off DNSRecord to the Resolver instance, 
+                      packet, hands off a DNSRecord to the Resolver instance, 
                       and encodes the returned DNSRecord. 
                       
                       In most cases you dont need to change DNSHandler unless
                       you need to get hold of the raw protocol data in the
-                      Resolver or need to customise logging
+                      Resolver
 
-        Resolver    - instance implementing a 'resolve' method that receives 
+        DNSLogger   - The class provides a default set of logging functions for
+                      the various stages of the request handled by a DNSServer
+                      instance which are enabled/disabled by flags in the 'log'
+                      class variable. 
+
+        Resolver    - Instance implementing a 'resolve' method that receives 
                       the decodes request packet and returns a response. 
                         
                       To implement a custom resolver in most cases all you need
@@ -159,7 +164,7 @@ class DNSLogger:
             - If entry starts with '-' (eg. -data) disable hook
             - If entry doesn't start with +/- replace defaults
 
-            Prefix argument enables/disables prefix
+            Prefix argument enables/disables log prefix
         """
         default = ["request","reply","truncated","error"]
         log = log.split(",") if log else []
@@ -297,6 +302,9 @@ class DNSServer(object):
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.daemon = True
         self.thread.start()
+
+    def stop(self):
+        self.server.shutdown()
 
     def isAlive(self):
         return self.thread.isAlive()
