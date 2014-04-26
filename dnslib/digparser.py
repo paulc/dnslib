@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
 
 from dnslib.lex import WordLexer
-from dnslib.dns import (DNSRecord,DNSHeader,DNSQuestion,RR,RD,RDMAP,
-                        QR,RCODE,CLASS,QTYPE)
+from dnslib.dns import (DNSRecord,DNSHeader,DNSQuestion,DNSError,
+                        RR,RD,RDMAP,QR,RCODE,CLASS,QTYPE)
 
 class DigParser:
 
@@ -9,7 +11,8 @@ class DigParser:
         Parse Dig output
     """
 
-    def __init__(self,dig):
+    def __init__(self,dig,debug=False):
+        self.debug = debug
         self.l = WordLexer(dig)
         self.l.commentchars = ';'
         self.l.nltok = ('NL',None)
@@ -52,9 +55,12 @@ class DigParser:
                                 rtype=getattr(QTYPE,rtype),
                                 rclass=getattr(CLASS,rclass),
                                 rdata=rd.fromZone(rdata)))
-                except DNSError:
-                    # Skip records we dont understand
-                    pass
+                except DNSError as e:
+                    if self.debug:
+                        print("DNSError:",e,rr)
+                    else:
+                        # Skip records we dont understand
+                        pass
 
     def __iter__(self):
         return self.parse()
@@ -62,6 +68,7 @@ class DigParser:
     def parse(self):
         dns = None
         section = None
+        paren = False
         rr = []
         try:
             while True:
@@ -91,8 +98,15 @@ class DigParser:
                     elif dns and section == q:
                         q.append(val.split())
                 elif tok == 'ATOM':
-                    rr.append(val)
-                elif tok == 'NL' and rr:
+                    if val == '(':
+                        paren = True
+                    elif val == ')':
+                        paren = False
+                    else:
+                        rr.append(val)
+                elif tok == 'NL' and not paren and rr:
+                    if self.debug:
+                        print(">>",rr)
                     section.append(rr)
                     rr = []
         except StopIteration:
@@ -110,11 +124,13 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description="DigParser Test")
     p.add_argument("--dig",action='store_true',default=False,
                     help="Parse DiG output (stdin)")
+    p.add_argument("--debug",action='store_true',default=False,
+                    help="Debug output")
 
     args = p.parse_args()
 
     if args.dig:
-        l = DigParser(sys.stdin)
+        l = DigParser(sys.stdin,args.debug)
         for record in l:
             print(repr(record))
     else:
