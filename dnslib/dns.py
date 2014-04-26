@@ -395,6 +395,12 @@ class DNSRecord(object):
             [ z.extend(rr.toZone().split("\n")) for rr in self.ar ]
         return prefix + ("\n" + prefix).join(z)
 
+    def short(self):
+        """
+            Just return RDATA
+        """
+        return "\n".join([rr.rdata.toZone() for rr in self.rr])
+
     def __eq__(self,other):
         """
             Test for equality by diffing records
