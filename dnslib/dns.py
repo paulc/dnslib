@@ -422,14 +422,20 @@ class DNSRecord(object):
             err.append((self.header,other.header))
         for section in ('questions','rr','auth','ar'):
             if section == 'questions':
-                k = lambda x:list(map(str,(x.qname,x.qtype)))
+                k = lambda x:tuple(map(str,(x.qname,x.qtype)))
             else:
-                k = lambda x:list(map(str,(x.rname,x.rtype,x.rdata)))
-            s = sorted(getattr(self,section),key=k)
-            o = sorted(getattr(other,section),key=k)
-            for x,y in zip_longest(s,o):
-                if x != y:
-                    err.append((x,y))
+                k = lambda x:tuple(map(str,(x.rname,x.rtype,x.rdata)))
+            a = dict([(k(rr),rr) for rr in getattr(self,section)])
+            b = dict([(k(rr),rr) for rr in getattr(other,section)])
+            sa = set(a)
+            sb = set(b)
+            for e in sorted(sa.intersection(sb)):
+                if a[e] != b[e]:
+                    err.append((a[e],b[e]))
+            for e in sorted(sa.difference(sb)):
+                err.append((a[e],None))
+            for e in sorted(sb.difference(sa)):
+                err.append((None,b[e]))
         return err
 
     def __repr__(self):
