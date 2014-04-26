@@ -112,13 +112,15 @@ if __name__ == '__main__':
             if q != q_diff:
                 print(";;; ERROR: Diff Question differs")
                 for (d1,d2) in q.diff(q_diff):
-                    print(";; - %s" % d1)
+                    if d1:
+                        print(";; - %s" % d1)
                     if d2:
                         print(";; + %s" % d2)
             if a != a_diff:
                 print(";;; ERROR: Diff Response differs")
                 for (d1,d2) in a.diff(a_diff):
-                    print(";; - %s" % d1)
+                    if d1:
+                        print(";; - %s" % d1)
                     if d2:
                         print(";; + %s" % d2)
 
