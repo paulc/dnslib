@@ -7,7 +7,7 @@ import collections,string
 try:
     from StringIO import StringIO
 except ImportError:
-    from io import (StringIO,BytesIO)
+    from io import StringIO
 
 class Lexer(object):
 
@@ -234,7 +234,7 @@ class WordLexer(Lexer):
 
     def lexQuote(self):
         s = []
-        tok = lambda n : (('ATOM',''.join(s)),n) if s else (None,n) 
+        tok = lambda n : (('ATOM',''.join(s)),n) 
         q = self.read(1)
         while not self.eof:
             c = self.readescaped()

@@ -206,7 +206,7 @@ def test_unpack(s):
         >>> _dump(p)
         <DNS Header: id=0xaef0 type=RESPONSE opcode=QUERY flags=RD,RA rcode='NOERROR' q=1 a=1 ns=0 ar=0>
         <DNS Question: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org.' qtype=NAPTR qclass=IN>
-        <DNS RR: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org.' rtype=NAPTR rclass=IN ttl=42659 rdata='100 10 "u" "E2U+SIP" "!^\+?(.*)$!sip:\\\\1@fwd.pulver.com!" .'>
+        <DNS RR: '0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org.' rtype=NAPTR rclass=IN ttl=42659 rdata='100 10 "u" "E2U+SIP" "!^\\\\+?(.*)$!sip:\\\\\\\\1@fwd.pulver.com!" .'>
 
         >>> _dumpzone(p)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44784
@@ -214,7 +214,7 @@ def test_unpack(s):
         ;; QUESTION SECTION:
         ;0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org. IN      NAPTR
         ;; ANSWER SECTION:
-        0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org. 42659   IN      NAPTR   100 10 "u" "E2U+SIP" "!^\\+?(.*)$!sip:\\\\1@fwd.pulver.com!" .
+        0.0.0.0.1.1.1.3.9.3.0.1.8.7.8.e164.org. 42659   IN      NAPTR   100 10 "u" "E2U+SIP" "!^\\\\+?(.*)$!sip:\\\\\\\\1@fwd.pulver.com!" .
 
     EDNS0 OPT record 
 

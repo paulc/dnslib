@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 
-import binascii,collections,copy,random,socket,struct,textwrap
+import base64,binascii,collections,copy,random,socket,string,struct,textwrap,time
 from itertools import chain
 try:
     from itertools import zip_longest
@@ -821,6 +821,17 @@ class RD(object):
         Base RD object - also used as placeholder for unknown RD types
 
         To create a new RD type subclass this and add to RDMAP (below)
+
+        Subclass should implement (as a mininum):
+
+            parse (parse from packet data)
+            __init__ (create class)
+            __repr__ (return in zone format)
+            fromZone (create from zone format)
+
+            (toZone uses __repr__ by default)
+
+        Unknown rdata types default to RD
     """
 
     @classmethod
@@ -839,17 +850,15 @@ class RD(object):
     def fromZone(cls,rd,origin=None):
         """
             Create new record from zone format data
+            RD is a list of strings parsed from DiG output
         """
-        return cls(rd)
+        # Unknown rata - assume hexdump in zone format
+        # (DiG prepends "\\# <len>" to the hexdump so get last item)
+        return cls(binascii.unhexlify(rd[-1]))
 
     def __init__(self,data=b""):
-        if type(data) == list:
-            # Unknown data type from zone
-            self.data = (" ".join(data)).encode()
-        elif type(data) != bytes:
-            self.data = data.encode()
-        else:
-            self.data = data
+        # Assume raw bytes
+        self.data = bytes(data)
 
     def pack(self,buffer):
         """
@@ -861,10 +870,8 @@ class RD(object):
         """
             Default 'repr' format should be equivalent to RD zone format
         """
-        try:
-            return self.data.decode()
-        except UnicodeDecodeError:
-            return binascii.hexlify(self.data).decode()
+        # For unknown rdata just default to hex
+        return binascii.hexlify(self.data).decode()
 
     def toZone(self):
         return repr(self)
@@ -903,7 +910,7 @@ class TXT(RD):
 
     @classmethod
     def fromZone(cls,rd,origin=None):
-        return cls(rd[0])
+        return cls(rd[0].encode())
 
     def pack(self,buffer):
         if len(self.data) > 255:
@@ -913,6 +920,10 @@ class TXT(RD):
 
     def toZone(self):
         return '"%s"' % repr(self)
+
+    def __repr__(self):
+        # Pyyhon 2/3 hack
+        return self.data if isinstance(self.data,str) else self.data.decode()
 
 class A(RD):
 
@@ -1265,17 +1276,110 @@ class NAPTR(RD):
     def __repr__(self):
         return '%d %d "%s" "%s" "%s" %s' %(
             self.order,self.preference,self.flags.decode(),
-            self.service.decode(),self.regexp.decode(),
+            self.service.decode(),
+            self.regexp.decode().replace('\\','\\\\'),
             self.replacement or '.'
         )
 
     attrs = ('order','preference','flags','service','regexp','replacement')
+
+class DNSKEY(RD):
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            (flags,protocol,algorithm) = buffer.unpack("!HBB")
+            key = buffer.get(length - 4)
+            return cls(flags,protocol,algorithm,key)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking DNSKEY [offset=%d]: %s" % 
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(int(rd[0]),int(rd[1]),int(rd[2]),
+                   base64.b64decode(("".join(rd[3:])).encode('ascii')))
+
+    def __init__(self,flags,protocol,algorithm,key):
+        self.flags = flags
+        self.protocol = protocol
+        self.algorithm = algorithm
+        self.key = key
+
+    def pack(self,buffer):
+        buffer.pack("!HBB",(self.flags,self.protocol,self.algorithm))
+        buffer.append(self.key)
+        
+    def __repr__(self):
+        return "%d %d %d %s" % (self.flags,self.protocol,self.algorithm,
+                                base64.b64encode(self.key).decode())
+
+    attrs = ('flags','protocol','algorithm','key')
+
+class RRSIG(RD):
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            start = buffer.offset
+            (covered,algorithm,labels,
+                orig_ttl,sig_exp,sig_inc,key_tag) = buffer.unpack("!HBBIIIH")
+            name = buffer.decode_name()
+            sig = buffer.get(length - (buffer.offset - start))
+            return cls(covered,algorithm,labels,orig_ttl,sig_exp,sig_inc,key_tag,
+                            name,sig)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking DNSKEY [offset=%d]: %s" % 
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(getattr(QTYPE,rd[0]),int(rd[1]),int(rd[2]),int(rd[3]),
+                        int(time.mktime(time.strptime(rd[4]+'GMT',"%Y%m%d%H%M%S%Z"))),
+                        int(time.mktime(time.strptime(rd[5]+'GMT',"%Y%m%d%H%M%S%Z"))),
+                        int(rd[6]),rd[7],
+                        base64.b64decode(("".join(rd[8:])).encode('ascii')))
+
+    def __init__(self,covered,algorithm,labels,orig_ttl,
+                      sig_exp,sig_inc,key_tag,name,sig):
+        self.covered = covered
+        self.algorithm = algorithm
+        self.labels = labels
+        self.orig_ttl = orig_ttl
+        self.sig_exp = sig_exp
+        self.sig_inc = sig_inc
+        self.key_tag = key_tag
+        self.name = DNSLabel(name)
+        self.sig = sig
+
+    def pack(self,buffer):
+        buffer.pack("!HBBIIIH",(self.covered,self.algorithm,self.labels,
+                                self.orig_ttl,self.sig_exp,self.sig_inc,
+                                self.key_tag))
+        buffer.encode_name_nocompress(self.name)
+        buffer.append(self.sig)
+        
+    def __repr__(self):
+        return "%s %d %d %d %s %s %d %s %s" % (
+                        QTYPE[self.covered],
+                        self.algorithm,
+                        self.labels,
+                        self.orig_ttl,
+                        time.strftime("%Y%m%d%H%M%S",time.gmtime(self.sig_exp)),
+                        time.strftime("%Y%m%d%H%M%S",time.gmtime(self.sig_inc)),
+                        self.key_tag,
+                        self.name,
+                        base64.b64encode(self.sig).decode())
+
+    attrs = ('covered','algorithm','labels','orig_ttl','sig_exp','sig_inc',
+             'key_tag','name','sig')
 
 # Map from RD type to class (used to pack/unpack records)
 # If you add a new RD class you must add to RDMAP
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
+          'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 
         }
 
 ##
