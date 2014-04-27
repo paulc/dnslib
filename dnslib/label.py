@@ -72,10 +72,10 @@ class DNSLabel(object):
             if not label or label in (b'.','.'):
                 self.label = ()
             elif type(label) is not bytes:
-                self.label = tuple(label.encode("idna").lower().\
+                self.label = tuple(label.encode("idna").\
                                 rstrip(b".").split(b"."))
             else:
-                self.label = tuple(label.lower().rstrip(b".").split(b"."))
+                self.label = tuple(label.rstrip(b".").split(b"."))
 
     def add(self,name):
         """
@@ -142,12 +142,23 @@ class DNSBuffer(Buffer):
 
     >>> b = DNSBuffer()
     >>> b.encode_name(b'aaa.bbb.ccc.')
+    >>> len(b)
+    13
+    >>> b.encode_name(b'aaa.bbb.ccc.')
+    >>> len(b)
+    15
     >>> b.encode_name(b'xxx.yyy.zzz')
+    >>> len(b)
+    28
     >>> b.encode_name(b'zzz.xxx.bbb.ccc.')
+    >>> len(b)
+    38
     >>> b.encode_name(b'aaa.xxx.bbb.ccc')
-    >>> p(b.hex())
-    '036161610362626203636363000378787803797979037a7a7a00037a7a7a03787878c00403616161c01e'
+    >>> len(b)
+    44
     >>> b.offset = 0
+    >>> print(b.decode_name())
+    aaa.bbb.ccc.
     >>> print(b.decode_name())
     aaa.bbb.ccc.
     >>> print(b.decode_name())
@@ -162,6 +173,19 @@ class DNSBuffer(Buffer):
     >>> b.offset = 0
     >>> len(b.decode_name().label)
     3
+
+    >>> b = DNSBuffer()
+    >>> b.encode_name_nocompress(b'aaa.bbb.ccc.')
+    >>> len(b)
+    13
+    >>> b.encode_name_nocompress(b'aaa.bbb.ccc.')
+    >>> len(b)
+    26
+    >>> b.offset = 0
+    >>> print(b.decode_name())
+    aaa.bbb.ccc.
+    >>> print(b.decode_name())
+    aaa.bbb.ccc.
     """
 
     def __init__(self,data=b''):
@@ -234,6 +258,24 @@ class DNSBuffer(Buffer):
                     raise DNSLabelError("Label component too long: %r" % element)
                 self.pack("!B",len(element))
                 self.append(element)
+        self.append(b'\x00')
+
+    def encode_name_nocompress(self,name):
+        """
+            Encode and store label with no compression 
+            (needed for RRSIG)
+        """
+        if not isinstance(name,DNSLabel):
+            name = DNSLabel(name)
+        if len(name) > 253:
+            raise DNSLabelError("Domain label too long: %r" % name)
+        name = list(name.label)
+        while name:
+            element = name.pop(0)
+            if len(element) > 63:
+                raise DNSLabelError("Label component too long: %r" % element)
+            self.pack("!B",len(element))
+            self.append(element)
         self.append(b'\x00')
 
 if __name__ == '__main__':
