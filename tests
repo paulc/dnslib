@@ -1,3 +1,0 @@
-dig _sip._udp.sipgate.co.uk SRV 
-dig 1.1.1.6.8.5.9.4.0.6.1.e164.org NAPTR
-dig example.com RRSIG
