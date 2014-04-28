@@ -1,0 +1,43 @@
+;; Sending:
+;; QUERY: 86500100000100000000000006676f6f676c6503636f6d0000ff0001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 34384
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;google.com.                    IN      ANY
+
+;; Got answer:
+;; RESPONSE: 865081800001001c0000000006676f6f676c6503636f6d0000ff0001c00c000100010000012b00043efca9bbc00c000100010000012b00043efca9b7c00c000100010000012b00043efca9a3c00c000100010000012b00043efca9a2c00c000100010000012b00043efca9adc00c000100010000012b00043efca994c00c000100010000012b00043efca999c00c000100010000012b00043efca9a8c00c000100010000012b00043efca9a7c00c000100010000012b00043efca998c00c000100010000012b00043efca99dc00c000100010000012b00043efca99ec00c000100010000012b00043efca9acc00c000100010000012b00043efca9b1c00c000100010000012b00043efca9b6c00c000100010000012b00043efca9b2c00c000200010000545f0006036e7331c00cc00c000f000100000257000c000a056173706d78016cc00cc00c000600010000545f0022c12809646e732d61646d696ec00c780b88a800001c2000000708001275000000012cc00c000f0001000002570009002804616c7433c13cc00c000f0001000002570009001404616c7431c13cc00c000f0001000002570009003204616c7434c13cc00c000200010000545f0006036e7332c00cc00c000200010000545f0006036e7334c00cc00c000200010000545f0006036e7333c00cc00c010100010000545f00130005697373756573796d616e7465632e636f6dc00c000f0001000002570009001e04616c7432c13cc00c0010000100000e0f004c4b763d7370663120696e636c7564653a5f7370662e676f6f676c652e636f6d206970343a3231362e37332e39332e37302f3331206970343a3231362e37332e39332e37322f3331207e616c6c
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 34384
+;; flags: qr rd ra; QUERY: 1, ANSWER: 28, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;google.com.                    IN      ANY
+;; ANSWER SECTION:
+google.com.             299     IN      A       62.252.169.187
+google.com.             299     IN      A       62.252.169.183
+google.com.             299     IN      A       62.252.169.163
+google.com.             299     IN      A       62.252.169.162
+google.com.             299     IN      A       62.252.169.173
+google.com.             299     IN      A       62.252.169.148
+google.com.             299     IN      A       62.252.169.153
+google.com.             299     IN      A       62.252.169.168
+google.com.             299     IN      A       62.252.169.167
+google.com.             299     IN      A       62.252.169.152
+google.com.             299     IN      A       62.252.169.157
+google.com.             299     IN      A       62.252.169.158
+google.com.             299     IN      A       62.252.169.172
+google.com.             299     IN      A       62.252.169.177
+google.com.             299     IN      A       62.252.169.182
+google.com.             299     IN      A       62.252.169.178
+google.com.             21599   IN      NS      ns1.google.com.
+google.com.             599     IN      MX      10 aspmx.l.google.com.
+google.com.             21599   IN      SOA     ns1.google.com. dns-admin.google.com. 2014021800 7200 1800 1209600 300
+google.com.             599     IN      MX      40 alt3.aspmx.l.google.com.
+google.com.             599     IN      MX      20 alt1.aspmx.l.google.com.
+google.com.             599     IN      MX      50 alt4.aspmx.l.google.com.
+google.com.             21599   IN      NS      ns2.google.com.
+google.com.             21599   IN      NS      ns4.google.com.
+google.com.             21599   IN      NS      ns3.google.com.
+google.com.             21599   IN      TYPE257 0005697373756573796d616e7465632e636f6d
+google.com.             599     IN      MX      30 alt2.aspmx.l.google.com.
+google.com.             3599    IN      TXT     "v=spf1 include:_spf.google.com ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all"
+

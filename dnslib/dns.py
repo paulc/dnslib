@@ -1307,7 +1307,7 @@ class DNSKEY(RD):
         self.key = key
 
     def pack(self,buffer):
-        buffer.pack("!HBB",(self.flags,self.protocol,self.algorithm))
+        buffer.pack("!HBB",self.flags,self.protocol,self.algorithm)
         buffer.append(self.key)
         
     def __repr__(self):
@@ -1353,9 +1353,9 @@ class RRSIG(RD):
         self.sig = sig
 
     def pack(self,buffer):
-        buffer.pack("!HBBIIIH",(self.covered,self.algorithm,self.labels,
-                                self.orig_ttl,self.sig_exp,self.sig_inc,
-                                self.key_tag))
+        buffer.pack("!HBBIIIH",self.covered,self.algorithm,self.labels,
+                               self.orig_ttl,self.sig_exp,self.sig_inc,
+                               self.key_tag)
         buffer.encode_name_nocompress(self.name)
         buffer.append(self.sig)
         
