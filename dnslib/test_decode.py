@@ -7,6 +7,11 @@ from dnslib.digparser import DigParser
 
 import argparse,binascii,code,glob,os,os.path
 
+try: 
+    input = raw_input
+except NameError: 
+    pass
+
 def new_test(domain,qtype,address="8.8.8.8",port=53):
     tcp = False
     q = DNSRecord.question(domain,qtype)
@@ -108,7 +113,7 @@ if __name__ == '__main__':
 
             if errors == 0:
                 print("OK")
-            #elif raw_input("Inspect [y/n]?").lower().startswith('y'):
-            #    code.interact(local=locals())
+            elif input("Inspect [y/n]?").lower().startswith('y'):
+                code.interact(local=locals())
 
 
