@@ -854,7 +854,7 @@ class RD(object):
         """
         # Unknown rata - assume hexdump in zone format
         # (DiG prepends "\\# <len>" to the hexdump so get last item)
-        return cls(binascii.unhexlify(rd[-1]))
+        return cls(binascii.unhexlify(rd[-1].encode('ascii')))
 
     def __init__(self,data=b""):
         # Assume raw bytes

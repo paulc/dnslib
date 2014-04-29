@@ -25,6 +25,11 @@ class DNSLabel(object):
     >>> l2 = DNSLabel([b"aaa",b"bbb",b"ccc"])
     >>> l1 == l2
     True
+    >>> l3 = DNSLabel("AAA.BBB.CCC")
+    >>> l1 == l3
+    True
+    >>> l1 == 'AAA.BBB.CCC'
+    True
     >>> x = { l1 : 1 }
     >>> x[l1]
     1
@@ -120,11 +125,15 @@ class DNSLabel(object):
     def __hash__(self):
         return hash(self.label)
 
+    def __ne__(self,other):
+        return not self == other
+
     def __eq__(self,other):
         if type(other) != DNSLabel:
-            return self.label == DNSLabel(other).label
+            return self.__eq__(DNSLabel(other))
         else:
-            return self.label == other.label
+            return [ l.lower() for l in self.label ] == \
+                   [ l.lower() for l in other.label ]
 
     def __len__(self):
         return len(b'.'.join(self.label))
