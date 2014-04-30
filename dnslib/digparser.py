@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import string
+
 from dnslib.lex import WordLexer
 from dnslib.dns import (DNSRecord,DNSHeader,DNSQuestion,DNSError,
                         RR,RD,RDMAP,QR,RCODE,CLASS,QTYPE)
@@ -50,7 +52,12 @@ class DigParser:
                 rdata = rr[4:]
                 rd = RDMAP.get(rtype,RD)
                 try:
-                    f(RR(rname=rname,
+                    if rd == RD and \
+                       any([ x not in string.hexdigits for x in rdata[-1]]):
+                        # Only support hex encoded data for fallback RD
+                        pass
+                    else:
+                        f(RR(rname=rname,
                                 ttl=int(ttl),
                                 rtype=getattr(QTYPE,rtype),
                                 rclass=getattr(CLASS,rclass),
