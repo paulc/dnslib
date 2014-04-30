@@ -13,9 +13,9 @@
     associated record types.
 
     The original parsed output is created using dnslib by default so systematic
-    encode/decode errors will not be found. The test data is normally checked
-    against 'dig' to ensure that it is correct when generated using the --new
-    option. 
+    encode/decode errors will not be found. By default the test data is
+    checked against 'dig' to ensure that it is correct when generated
+    using the --new option. 
 
     By default the module runs in 'unittest' mode (and supports unittest
     --verbose/--failfast options)
@@ -37,6 +37,9 @@
     RDATA type which dnslib will output in hex rather then parsing contents).
     The roundtrip tests will still work in this case (the unknown RDATA is
     handled as an opaque blob). 
+
+    In some cases the tests will fail as a result of the zone file parser
+    being more fragile than the packet parser (especially with broken data)
 
     Note - unittests are dynamically generated from the test directory contents
     (matched against the --glob parameter) 
@@ -63,7 +66,7 @@ except NameError:
 class TestContainer(unittest.TestCase):
     pass
 
-def new_test(domain,qtype,address="8.8.8.8",port=53):
+def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False):
     tcp = False
     q = DNSRecord.question(domain,qtype)
     a_pkt = q.send(address,port)
@@ -73,39 +76,41 @@ def new_test(domain,qtype,address="8.8.8.8",port=53):
         a_pkt = q.send(address,port,tcp)
         a = DNSRecord.parse(a_pkt)
 
-    dig = getoutput("dig +qr -p %d %s %s @%s" % (
-                        port, domain, qtype, address))
-    dig_reply = list(iter(DigParser(dig)))
-    # DiG might have retried in TCP mode so get last q/a
-    q_dig = dig_reply[-2]
-    a_dig = dig_reply[-1]
+    if not nodig:
+        dig = getoutput("dig +qr -p %d %s %s @%s" % (
+                            port, domain, qtype, address))
+        dig_reply = list(iter(DigParser(dig)))
+        # DiG might have retried in TCP mode so get last q/a
+        q_dig = dig_reply[-2]
+        a_dig = dig_reply[-1]
 
-    if q != q_dig or a != a_dig:
-        if q != q_dig:
-            print(";;; ERROR: Diff Question differs")
-            for (d1,d2) in q.diff(q_dig):
-                if d1:
-                    print(";; - %s" % d1)
-                if d2:
-                    print(";; + %s" % d2)
-        if a != a_dig:
-            print(";;; ERROR: Diff Response differs")
-            for (d1,d2) in a.diff(a_dig):
-                if d1:
-                    print(";; - %s" % d1)
-                if d2:
-                    print(";; + %s" % d2)
-    else:
-        print("Writing test file: %s-%s" % (domain,qtype))
-        with open("%s-%s" % (domain,qtype),"w") as f:
-            print(";; Sending:",file=f)
-            print(";; QUERY:",binascii.hexlify(q.pack()).decode(),file=f)
-            print(q,file=f)
-            print(file=f)
-            print(";; Got answer:",file=f)
-            print(";; RESPONSE:",binascii.hexlify(a_pkt).decode(),file=f)
-            print(a,file=f)
-            print(file=f)
+        if q != q_dig or a != a_dig:
+            if q != q_dig:
+                print(";;; ERROR: Diff Question differs")
+                for (d1,d2) in q.diff(q_dig):
+                    if d1:
+                        print(";; - %s" % d1)
+                    if d2:
+                        print(";; + %s" % d2)
+            if a != a_dig:
+                print(";;; ERROR: Diff Response differs")
+                for (d1,d2) in a.diff(a_dig):
+                    if d1:
+                        print(";; - %s" % d1)
+                    if d2:
+                        print(";; + %s" % d2)
+            return
+
+    print("Writing test file: %s-%s" % (domain,qtype))
+    with open("%s-%s" % (domain,qtype),"w") as f:
+        print(";; Sending:",file=f)
+        print(";; QUERY:",binascii.hexlify(q.pack()).decode(),file=f)
+        print(q,file=f)
+        print(file=f)
+        print(";; Got answer:",file=f)
+        print(";; RESPONSE:",binascii.hexlify(a_pkt).decode(),file=f)
+        print(a,file=f)
+        print(file=f)
 
 def check_decode(f,debug=False):
     errors = []
@@ -210,6 +215,8 @@ if __name__ == '__main__':
     p.add_argument("--new","-n",nargs=2,
                     metavar="<domain/type>",
                     help="Create new test case (args: <domain> <type>)")
+    p.add_argument("--nodig",action='store_true',default=False,
+                    help="Don't test new data against DiG")
     p.add_argument("--unittest",action='store_true',default=True,
                     help="Run unit tests")
     p.add_argument("--verbose",action='store_true',default=False,
@@ -229,7 +236,7 @@ if __name__ == '__main__':
     os.chdir(args.testdir)
 
     if args.new:
-        new_test(*args.new)
+        new_test(*args.new,nodig=args.nodig)
     elif args.interactive:
         for f in glob.iglob(args.glob):
             print("-- %s: " % f,end='')
