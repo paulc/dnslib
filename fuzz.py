@@ -41,8 +41,8 @@ if __name__ == '__main__':
                    help="DNS query type (default:A)")
     a.add_argument("--debug","-d",action='store_true',default=False,
                    help="Print debug output")
-    a.add_argument("--number","-n",type=int,default=1000,
-            help="Number of iterations (default:1000)")
+    a.add_argument("--number","-n",type=int,default=200,
+            help="Number of iterations (default:200)")
     a.add_argument("--tcp",action='store_true',default=False,
                     help="Use TCP (default: UDP)")
     args = a.parse_args()
@@ -57,8 +57,12 @@ if __name__ == '__main__':
     address,_,port = args.server.partition(':')
     port = int(port or 53)
 
-    question = DNSRecord(q=DNSQuestion(args.query,getattr(QTYPE,args.type)))
-    packet = bytearray(question.send(address,port,tcp=args.tcp))
+    if args.query == 'google.com' and args.type == 'A':
+        packet = bytearray(binascii.unhexlify(b'55838180000100100000000006676f6f676c6503636f6d0000010001c00c000100010000012b00043efca994c00c000100010000012b00043efca998c00c000100010000012b00043efca9b7c00c000100010000012b00043efca99dc00c000100010000012b00043efca9acc00c000100010000012b00043efca9bbc00c000100010000012b00043efca9a3c00c000100010000012b00043efca9a8c00c000100010000012b00043efca9b1c00c000100010000012b00043efca9a7c00c000100010000012b00043efca999c00c000100010000012b00043efca9a2c00c000100010000012b00043efca9b6c00c000100010000012b00043efca9b2c00c000100010000012b00043efca9adc00c000100010000012b00043efca99e'))
+    else:
+        question = DNSRecord(q=DNSQuestion(args.query,getattr(QTYPE,args.type)))
+        packet = bytearray(question.send(address,port,tcp=args.tcp))
+
     original = DNSRecord.parse(packet)
 
     p("Original:")

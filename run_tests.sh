@@ -13,3 +13,9 @@ do
 		$py dnslib/$src
 	done
 done
+
+for py in $VERSIONS
+do
+	echo "Fuzz:" $($py --version 2>&1)
+	$py fuzz.py
+done
