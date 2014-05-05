@@ -30,7 +30,7 @@
 
         * Server framework allowing (in most cases) custom resolvers to
           be created by just subclassing the DNSResolver class and 
-          overringing the 'resolve' method
+          overriding the 'resolve' method
 
         * A lot of fixes to error detection/handling which should make 
           the library much more robust to invalid/unsupported data. The
@@ -47,7 +47,7 @@
 
     This is a large release and despite the testing there therefore are likely
     to be some bugs. Once the 0.9 release is sufficiently stable I would expect
-    to release as 1.0.0 (and stabilise th api)
+    to release as 1.0.0 (and stabilise the api)
     
     The key DNS packet handling classes are in dnslib.dns and map to the 
     standard DNS packet sections:
