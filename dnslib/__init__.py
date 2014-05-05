@@ -295,6 +295,7 @@
         *   0.8.3   2013-04-27  Don't parse rdata if rdlength is 0
                                 Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
         *   0.9.0   2014-05-05  Major update including Py3 support (see docs)
+        *   0.9.1   2014-05-05  Documentation typos
 
     License:
     --------
@@ -316,7 +317,7 @@
 
 from dnslib.dns import *
 
-version = "0.9.0"
+version = "0.9.1"
 
 if __name__ == '__main__':
     import doctest,textwrap

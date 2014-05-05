@@ -7,9 +7,11 @@
 
 from __future__ import print_function
 
-import (base64,binascii,collections,copy,os.path,random,socket,
-        string,struct,textwrap,time)
+import base64,binascii,collections,copy,os.path,random,socket,\
+       string,struct,textwrap,time
+
 from itertools import chain
+
 try:
     from itertools import zip_longest
 except ImportError:
