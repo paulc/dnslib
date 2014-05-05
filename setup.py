@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-try:
-    from setuptools import setup, Command
-except ImportError:
-    from distutils.core import Command,setup
+#try:
+#    from setuptools import setup, Command
+#except ImportError:
+#    from distutils.core import Command,setup
+from distutils.core import Command,setup
 
 import dnslib
 long_description = dnslib.__doc__.rstrip() + "\n"
@@ -24,8 +25,12 @@ setup(name='dnslib',
       author = 'Paul Chakravarti',
       author_email = 'paul.chakravarti@gmail.com',
       url = 'http://bitbucket.org/paulc/dnslib/',
-      cmdclass = { 'readme' : GenerateReadme },
-      packages = ['dnslib','dnslib.server'],
+      cmdclass = {'readme' : GenerateReadme},
+      packages = ['dnslib'],
+      package_dir = {'dnslib' : 'dnslib'},
       license = 'BSD',
-      classifiers = [ "Topic :: Internet :: Name Service (DNS)" ],
+      classifiers = [ "Topic :: Internet :: Name Service (DNS)",
+                      "Programming Language :: Python :: 2",
+                      "Programming Language :: Python :: 3",
+                      ],
      )

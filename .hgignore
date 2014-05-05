@@ -8,3 +8,4 @@ syntax: glob
 build
 dist
 MANIFEST
+PKG-INFO

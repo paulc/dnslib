@@ -1,0 +1,4 @@
+include README.github
+include run-tests.sh
+include fuzz.py
+recursive-include test *
