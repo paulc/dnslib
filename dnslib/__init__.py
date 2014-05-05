@@ -14,7 +14,7 @@
 
         * A server framework allowing the simple creation of custom DNS 
           resolvers (dnslib.server) and a number of example servers 
-          created using this frameowork
+          created using this framework
 
         * A number of utilities for testing (dnslib.client, dnslib.proxy,
           dnslib.intercept)
@@ -47,9 +47,13 @@
 
         * Ability to compare and diff DNSRecords
 
+        * Support for additional RDATA types (SRV,DNSKEY,RRSIG) and better
+          handling of unsupported types (which are stored as opaque blobs
+          but do support round-trip encoding/decoding)
+
     This is a large release and despite the testing there therefore are likely
     to be some bugs. Once the 0.9 release is sufficiently stable I would expect
-    to release as 1.0.0 (and stabilise the api)
+    to release this as 1.0.0 (with a stable api)
     
     The key DNS packet handling classes are in dnslib.dns and map to the 
     standard DNS packet sections:
@@ -60,11 +64,11 @@
             - Answer section containing zero or more RR objects 
             - Authority section containing zero or more RR objects 
             - Additional section containing zero or more RR objects 
-        * DNS RRs (resource records) contain an RR header and an RD object)
+        * DNS RRs (resource records) - containing an RR header and an RD object
         * Specific RD types are implemented as subclasses of RD
         * DNS labels are represented by a DNSLabel class - in most cases
           this handles conversion to/from textual representation however
-          does support arbitatry labels via a tuple of bytes objects
+          does support arbitrary labels from a tuple of bytes 
 
     Usage:
     ------
@@ -82,7 +86,7 @@
     <DNS RR: 'www.l.google.com.' rtype=A rclass=IN ttl=5 rdata='66.249.91.103'>
     <DNS RR: 'www.l.google.com.' rtype=A rclass=IN ttl=5 rdata='66.249.91.147'>
 
-    The default text representation of the DNSRecord is in zone file format:
+    The default text representation of the DNSRecord is in DiG format:
 
     >>> print(d)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54701
@@ -217,7 +221,6 @@
     xxx.abc.com.            0       IN      A       1.2.3.4
     xxx.abc.com.            0       IN      AAAA    1234:5678::1
 
-
     It is also possible to create a reply from a string in zone file format:
 
     >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
@@ -246,9 +249,8 @@
     www.abc.com.            300     IN      TXT     "Some Text"
     mail.abc.com.           300     IN      CNAME   www.abc.com.
 
-
     The library also includes a simple framework for generating custom DNS
-    resolvers in dnslib.server (see module docs). In post cases this just 
+    resolvers in dnslib.server (see module docs). In most cases this just 
     requires implementing a custom 'resolve' method which receives a question 
     object and returns a response.
 
@@ -260,13 +262,16 @@
 
     The library includes a number of client utilities which can be run using:
 
-        DiG like client library 
+        DiG like client library:
+
         # python -m dnslib.client --help  
 
-        DNS Proxy Server
+        DNS Proxy Serve:
+
         # python -m dnslib.proxy --help
 
-        Intercepting DNS Proxy Server (replace proxy responses for specified domains)
+        Intercepting DNS Proxy Server (replace proxy responses for specified domains:
+
         # python -m dnslib.intercept --help
 
 

@@ -4,7 +4,7 @@
 
     Reads test files from dnslib/test (by default) containing 
     dump of DNS exchange (packet dump & parse output) and test 
-    roundtrip parsing - specifically:
+    round-trip parsing - specifically:
 
         - Parse packet data and zone format data and compare
         - Repack parsed packet data and compare with original
