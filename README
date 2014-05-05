@@ -26,7 +26,7 @@
         * Support for encoding/decoding resource records in 'Zone' (BIND) 
           file format 
 
-        * Support for encoding/decoding backets in 'DiG' format
+        * Support for encoding/decoding packets in 'DiG' format
 
         * Server framework allowing (in most cases) custom resolvers to
           be created by just subclassing the DNSResolver class and 
