@@ -64,14 +64,7 @@
         * Specific RD types are implemented as subclasses of RD
         * DNS labels are represented by a DNSLabel class - in most cases
           this handles conversion to/from textual representation however
-          does support arbitatry labels via a tuple of bytes objects)
-
-    Version 0.9 of the library was a major rewrite to support Python 3.2+ 
-    (retaining support for Python 2.7+). As part of the Py3 changes a 
-    number of other significant changes were intrtoduced:
-
-    - Much better error handling (packet decoding errors should be 
-      caught and DNSError raised)
+          does support arbitatry labels via a tuple of bytes objects
 
     Usage:
     ------
