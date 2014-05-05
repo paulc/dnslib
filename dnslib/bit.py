@@ -1,30 +1,39 @@
+# -*- coding: utf-8 -*-
 
 """
     Some basic bit mainpulation utilities
 """
+from __future__ import print_function
 
-FILTER=''.join([(len(repr(chr(x)))==3) and chr(x) or '.' for x in range(256)])
+FILTER = bytearray([ (i < 32 or i > 127) and 46 or i for i in range(256) ])
 
 def hexdump(src, length=16, prefix=''):
     """
-        Print hexdump of string
+    Print hexdump of string
 
-        >>> print hexdump("abc\xff" * 4)
-        0000  61 62 63 ff 61 62 63 ff  61 62 63 ff 61 62 63 ff  abc.abc. abc.abc.
+    >>> print(hexdump(b"abcd" * 4))
+    0000  61 62 63 64 61 62 63 64  61 62 63 64 61 62 63 64  abcdabcd abcdabcd
+
+    >>> print(hexdump(bytearray(range(48))))
+    0000  00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f  ........ ........
+    0010  10 11 12 13 14 15 16 17  18 19 1a 1b 1c 1d 1e 1f  ........ ........
+    0020  20 21 22 23 24 25 26 27  28 29 2a 2b 2c 2d 2e 2f   !"#$%&' ()*+,-./
 
     """
     n = 0
-    left = length / 2 
+    left = length // 2 
     right = length - left
     result= []
+    src = bytearray(src)
     while src:
         s,src = src[:length],src[length:]
         l,r = s[:left],s[left:]
-        hexa = "%-*s" % (left*3,' '.join(["%02x"%ord(x) for x in l]))
-        hexb = "%-*s" % (right*3,' '.join(["%02x"%ord(x) for x in r]))
+        hexa = "%-*s" % (left*3,' '.join(["%02x"%x for x in l]))
+        hexb = "%-*s" % (right*3,' '.join(["%02x"%x for x in r]))
         lf = l.translate(FILTER)
         rf = r.translate(FILTER)
-        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb, lf, rf))
+        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb, 
+                                               lf.decode(), rf.decode()))
         n += length
     return "\n".join(result)
 

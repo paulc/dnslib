@@ -1,44 +1,65 @@
+# -*- coding: utf-8 -*-
+
+"""
+    Bimap - bidirectional mapping between code/value
+"""
+
+class BimapError(Exception):
+    pass
 
 class Bimap(object):
 
     """
+        Bi-directional mapping between code/value. 
 
-    A simple bi-directional map which returns either forward or
-    reverse lookup of key through explicit 'lookup' method or 
-    through __getattr__ or __getitem__. If the key is not found
-    in either the forward/reverse dictionaries it is returned.
+        Initialised using:
 
-    >>> m = Bimap({1:'a',2:'b',3:'c'})
-    >>> m[1]
-    'a'
-    >>> m.lookup('a')
-    1
-    >>> m.a
-    1
+            name:   Used for exceptions
+            dict:   Dict mapping from value (numeric) to code (text)
+            error:  Error type to raise if key not found
 
+        The class creates a 'forward' map (value->text) and a 'reverse' map
+        (text->value). 
+        
+        __getitem__ lookups (map[value]) use the forward dictionary 
+        __getattr__ lookups (map.text) use the reverse dictionary.
+
+        >>> class TestError(Exception):
+        ...     pass
+
+        >>> TEST = Bimap('TEST',{1:'A', 2:'B', 3:'C'},TestError)
+        >>> TEST[1]
+        'A'
+        >>> TEST.A
+        1
+        >>> TEST.X
+        Traceback (most recent call last):
+        ...
+        TestError: TEST: Invalid reverse lookup: [X]
+        >>> TEST[99]
+        Traceback (most recent call last):
+        ...
+        TestError: TEST: Invalid forward lookup: [99]
+    
     """
 
-    def __init__(self,forward):
-        self.forward = forward
-        self.reverse = dict([(v,k) for (k,v) in forward.items()])
+    def __init__(self,name,forward,error=KeyError):
+        self.name = name
+        self.error = error
+        self.forward = forward.copy()
+        self.reverse = dict([(v,k) for (k,v) in list(forward.items())])
 
-    def lookup(self,k,default=None):
-        try:
-            try:
-                return self.forward[k]
-            except KeyError:
-                return self.reverse[k]
-        except KeyError:
-            if default:
-                return default
-            else:
-                raise
-    
     def __getitem__(self,k):
-        return self.lookup(k,k)
+        try:
+            return self.forward[k]
+        except KeyError as e:
+            raise self.error("%s: Invalid forward lookup: [%s]" % (self.name,k))
 
     def __getattr__(self,k):
-        return self.lookup(k,k)
+        try:
+            return self.reverse[k]
+        except KeyError as e:
+            raise self.error("%s: Invalid reverse lookup: [%s]" % (self.name,k))
 
 if __name__ == '__main__':
     import doctest
