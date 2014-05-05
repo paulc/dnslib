@@ -1,58 +1,7 @@
 
-dnslib
-------
-
-A library to encode/decode DNS wire-format packets supporting both 
-Python 2.7 and Python 3.2+.
-
-The library provides:
-
-    * Support for encoding/decoding DNS packets between wire format,
-      python objects, and Zone/DiG textual representation (dnslib.dns)
-
-    * A server framework allowing the simple creation of custom DNS 
-      resolvers (dnslib.server) and a number of example servers 
-      created using this frameowork
-
-    * A number of utilities for testing (dnslib.client, dnslib.proxy,
-      dnslib.intercept)
-
-Python 3 support was added in Version 0.9.0 which represented a fairly
-major update to the library - the key changes include:
-
-    * Python 2.7/3.2+ support (the last version supporting Python 2.6 
-      or earlier was version 0.8.3)
-
-    * Support for encoding/decoding resource records in 'Zone' (BIND) 
-      file format 
-
-    * Support for encoding/decoding backets in 'DiG' format
-
-    * Server framework allowing (in most cases) custom resolvers to
-      be created by just subclassing the DNSResolver class and 
-      overringing the 'resolve' method
-
-    * A lot of fixes to error detection/handling which should make 
-      the library much more robust to invalid/unsupported data. The
-      library should now either return a valid DNSRecord instance
-      or raise DNSError (tested via fuzzing)
-
-    * Improved utilities (dnslib.client, dnslib.proxy, dnslib.intercept)
-
-    * Improvements to encoding/decoding tests including the ability
-      to generate test data automatically in test_decode.py (comparing
-      outputs against DiG)
-
-    * Ability to compare and diff DNSRecords
-
-
-NOTE
-----
-
 This repository is a clone of the master repository at:
 
 	https://bitbucket.org/paulc/dnslib
 
 For any issues please use the Bitbucket repository
-
 
