@@ -63,7 +63,7 @@ class DNSRecord(object):
         DNSQuestion and RR sections (answer,ns,ar)
 
         >>> d = DNSRecord()
-        >>> d.add_question(DNSQuestion("abc.com"))
+        >>> d.add_question(DNSQuestion("abc.com")) # Or DNSRecord.question("abc.com")
         >>> d.add_answer(RR("abc.com",QTYPE.CNAME,ttl=60,rdata=CNAME("ns.abc.com")))
         >>> d.add_auth(RR("abc.com",QTYPE.SOA,ttl=60,rdata=SOA("ns.abc.com","admin.abc.com",(20140101,3600,3600,3600,3600))))
         >>> d.add_ar(RR("ns.abc.com",ttl=60,rdata=A("1.2.3.4")))
@@ -668,7 +668,10 @@ class EDNSOption(object):
     """
         EDNSOption pseudo-section
 
-        *** Not particularly tested ***
+        Very rudimentary support for EDNS0 options however this has not been
+        tested due to a lack of data (anyone wanting to improve support or
+        provide test data please raise an issue)
+
     """
     def __init__(self,code,data):
         self.code = code

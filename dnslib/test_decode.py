@@ -239,20 +239,22 @@ if __name__ == '__main__':
         new_test(*args.new,nodig=args.nodig)
     elif args.interactive:
         for f in glob.iglob(args.glob):
-            print("-- %s: " % f,end='')
-            e = check_decode(f,args.debug)
-            if not args.debug:
-                if e:
-                    print("ERROR\n")
-                    print_errors(e)
-                    print()
-                else:
-                    print("OK")
+            if os.path.isfile(f):
+                print("-- %s: " % f,end='')
+                e = check_decode(f,args.debug)
+                if not args.debug:
+                    if e:
+                        print("ERROR\n")
+                        print_errors(e)
+                        print()
+                    else:
+                        print("OK")
     elif args.unittest:
         for f in glob.iglob(args.glob):
-            test_name = 'test_%s' % f
-            test = test_generator(f)
-            setattr(TestContainer,test_name,test)
+            if os.path.isfile(f):
+                test_name = 'test_%s' % f
+                test = test_generator(f)
+                setattr(TestContainer,test_name,test)
         unittest.main(argv=[__name__],
                       verbosity=2 if args.verbose else 1,
                       failfast=args.failfast)
