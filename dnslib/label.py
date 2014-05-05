@@ -46,7 +46,7 @@ class DNSLabel(object):
     False
     >>> l3.stripSuffix("bbb.ccc.")
     <DNSLabel: 'xxx.yyy.aaa.'>
-    >>> l3.matchGlob("*.[abc]aa.bbb.ccc")
+    >>> l3.matchGlob("*.[abc]aa.BBB.ccc")
     True
     >>> l3.matchGlob("*.[abc]xx.bbb.ccc")
     False
@@ -94,7 +94,7 @@ class DNSLabel(object):
     def matchGlob(self,pattern):
         if type(pattern) != DNSLabel:
             pattern = DNSLabel(pattern)
-        return fnmatch.fnmatch(str(self),str(pattern))
+        return fnmatch.fnmatch(str(self).lower(),str(pattern).lower())
 
     def matchSuffix(self,suffix):
         """
