@@ -4,11 +4,12 @@
     digparser
     ---------
 
-    Encode/decode DNS packets from DiG textual representation. Parses question (if present: 
-    +qr flag) & answer sections and returns list of DNSRecord objects.
+    Encode/decode DNS packets from DiG textual representation. Parses 
+    question (if present: +qr flag) & answer sections and returns list 
+    of DNSRecord objects.
 
-    Unsupported RR types are skipped (this is different from the packet parser which will
-    store and encode the RDATA as a binary blob)
+    Unsupported RR types are skipped (this is different from the packet 
+    parser which will store and encode the RDATA as a binary blob)
 
     >>> dig = os.path.join(os.path.dirname(__file__),"test","dig","google.com-A.dig")
     >>> with open(dig) as f:

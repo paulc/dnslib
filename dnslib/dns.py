@@ -7,7 +7,8 @@
 
 from __future__ import print_function
 
-import base64,binascii,collections,copy,random,socket,string,struct,textwrap,time
+import (base64,binascii,collections,copy,os.path,random,socket,
+        string,struct,textwrap,time)
 from itertools import chain
 try:
     from itertools import zip_longest
@@ -834,7 +835,8 @@ class RD(object):
 
             (toZone uses __repr__ by default)
 
-        Unknown rdata types default to RD
+        Unknown rdata types default to RD and store rdata as a binary
+        blob (this allows round-trip encoding/decoding)
     """
 
     @classmethod
@@ -1386,8 +1388,8 @@ RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX,
         }
 
 ##
-## Zone/DiG parsers
-## TODO  - ideally these would be in a separate file but have to deal 
+## Zone parser
+## TODO  - ideally this would be in a separate file but have to deal 
 ##         with circular dependencies 
 ##
 

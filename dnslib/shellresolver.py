@@ -16,6 +16,16 @@ class ShellResolver(BaseResolver):
         Example dynamic resolver. 
         Maps DNS labels to shell commands and returns result as TXT record
         (Note: No context is passed to the shell command)
+
+        Shell commands are passed in a a list in <label>:<cmd> format - eg:
+
+            [ 'uptime.abc.com.:uptime', 'ls:ls' ]
+
+        Would respond to requests to 'uptime.abc.com.' with the output
+        of the 'uptime' command.
+
+        For non-absolute labels the 'origin' parameter is prepended
+        
     """
     def __init__(self,routes,origin,ttl):
         self.origin = DNSLabel(origin)
