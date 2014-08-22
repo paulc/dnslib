@@ -339,7 +339,7 @@ class DNSRecord(object):
                                    bitmap=self.header.bitmap,
                                    tc=1))
 
-    def send(self,dest,port=53,tcp=False):
+    def send(self,dest,port=53,tcp=False,ttl=0):
         """
             Send packet to nameserver and return response
         """
@@ -347,6 +347,7 @@ class DNSRecord(object):
         if tcp:
             data = struct.pack("!H",len(data)) + data
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            sock.settimeout(ttl)
             sock.connect((dest,port))
             sock.sendall(data)
             response = sock.recv(8192)
@@ -357,6 +358,7 @@ class DNSRecord(object):
             response = response[2:]
         else:
             sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            sock.settimeout(ttl)
             sock.sendto(self.pack(),(dest,port))
             response,server = sock.recvfrom(8192)
             sock.close()
