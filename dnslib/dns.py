@@ -562,7 +562,7 @@ class DNSHeader(object):
               self.tc and 'TC', 
               self.rd and 'RD', 
               self.ra and 'RA' ] 
-        if OPCODE[self.opcode] == 'UPDATE':
+        if OPCODE.get(self.opcode) == 'UPDATE':
             f1='zo'
             f2='pr'
             f3='up'
@@ -575,10 +575,10 @@ class DNSHeader(object):
         return "<DNS Header: id=0x%x type=%s opcode=%s flags=%s " \
                             "rcode='%s' %s=%d %s=%d %s=%d %s=%d>" % ( 
                     self.id,
-                    QR[self.qr],
-                    OPCODE[self.opcode],
+                    QR.get(self.qr),
+                    OPCODE.get(self.opcode),
                     ",".join(filter(None,f)),
-                    RCODE[self.rcode],
+                    RCODE.get(self.rcode),
                     f1, self.q, f2, self.a, f3, self.auth, f4, self.ar )
 
     def toZone(self):
@@ -588,7 +588,7 @@ class DNSHeader(object):
               self.rd and 'rd', 
               self.ra and 'ra' ] 
         z1 = ';; ->>HEADER<<- opcode: %s, status: %s, id: %d' % (
-                    OPCODE[self.opcode],RCODE[self.rcode],self.id)
+                    OPCODE.get(self.opcode),RCODE.get(self.rcode),self.id)
         z2 = ';; flags: %s; QUERY: %d, ANSWER: %d, AUTHORITY: %d, ADDITIONAL: %d' % (
                       " ".join(filter(None,f)),
                       self.q,self.a,self.auth,self.ar)
@@ -645,12 +645,12 @@ class DNSQuestion(object):
         buffer.pack("!HH",self.qtype,self.qclass)
 
     def toZone(self):
-       return ';%-30s %-7s %s' % (self.qname,CLASS[self.qclass],
-                                             QTYPE[self.qtype])
+       return ';%-30s %-7s %s' % (self.qname,CLASS.get(self.qclass),
+                                             QTYPE.get(self.qtype))
 
     def __repr__(self):
         return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
-                    self.qname, QTYPE[self.qtype], CLASS[self.qclass])
+                    self.qname, QTYPE.get(self.qtype), CLASS.get(self.qclass))
 
     def __str__(self):
         return self.toZone()
@@ -727,7 +727,8 @@ class RR(object):
                 rdata = options
             else:
                 if rdlength:
-                    rdata = RDMAP.get(QTYPE[rtype],RD).parse(buffer,rdlength)
+                    rdata = RDMAP.get(QTYPE.get(rtype),RD).parse(
+                                            buffer,rdlength)
                 else:
                     rdata = ''
             return cls(rname,rtype,rclass,ttl,rdata)
@@ -788,7 +789,7 @@ class RR(object):
             return "\n".join(s)
         else:
             return "<DNS RR: '%s' rtype=%s rclass=%s ttl=%d rdata='%s'>" % (
-                    self.rname, QTYPE[self.rtype], CLASS[self.rclass], 
+                    self.rname, QTYPE.get(self.rtype), CLASS.get(self.rclass), 
                     self.ttl, self.rdata)
 
     def toZone(self):
@@ -803,8 +804,8 @@ class RR(object):
             return "\n".join(edns)
         else:
             return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
-                                                CLASS[self.rclass],
-                                                QTYPE[self.rtype],
+                                                CLASS.get(self.rclass),
+                                                QTYPE.get(self.rtype),
                                                 self.rdata.toZone())
 
     def __str__(self):
@@ -1368,7 +1369,7 @@ class RRSIG(RD):
         
     def __repr__(self):
         return "%s %d %d %d %s %s %d %s %s" % (
-                        QTYPE[self.covered],
+                        QTYPE.get(self.covered),
                         self.algorithm,
                         self.labels,
                         self.orig_ttl,

@@ -49,6 +49,12 @@ class Bimap(object):
         self.forward = forward.copy()
         self.reverse = dict([(v,k) for (k,v) in list(forward.items())])
 
+    def get(self,k,default=None):
+        try:
+            return self.forward[k]
+        except KeyError as e:
+            return default or str(k)
+
     def __getitem__(self,k):
         try:
             return self.forward[k]
