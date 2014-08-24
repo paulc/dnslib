@@ -931,7 +931,8 @@ class TXT(RD):
 
     def __repr__(self):
         # Pyyhon 2/3 hack
-        return self.data if isinstance(self.data,str) else self.data.decode()
+        # FIXME UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfc in position 1
+        return self.data if isinstance(self.data,str) else self.data.decode(errors='replace')
 
 class A(RD):
 
