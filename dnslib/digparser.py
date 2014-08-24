@@ -46,7 +46,7 @@
     ...     for record in l:
     ...         print('---')
     ...         print(repr(record))
-       ---
+    ---
     <DNS Header: id=0xfc6b type=QUERY opcode=QUERY flags=RD rcode='NOERROR' q=1 a=0 ns=0 ar=0>
     <DNS Question: 'google.com.' qtype=ANY qclass=IN>
     ---
