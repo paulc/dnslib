@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-#try:
-#    from setuptools import setup, Command
-#except ImportError:
-#    from distutils.core import Command,setup
-from distutils.core import Command,setup
+
+try:
+    from setuptools import Command, setup
+except ImportError:
+    from distutils.core import Command, setup  # noqa
+
 
 import dnslib
 long_description = dnslib.__doc__.rstrip() + "\n"
