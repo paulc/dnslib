@@ -16,7 +16,7 @@ class GenerateReadme(Command):
     def initialize_options(self): pass
     def finalize_options(self): pass
     def run(self):
-        open("README","w").write(long_description)
+        open("README.md","w").write(long_description)
 
 setup(name='dnslib',
       version = version,
