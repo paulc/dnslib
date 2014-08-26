@@ -46,12 +46,12 @@
 
         >>> resolver = BaseResolver()
         >>> logger = DNSLogger(prefix=False)
-        >>> server = DNSServer(resolver,port=8053,address="127.0.0.1",logger=logger)
+        >>> server = DNSServer(resolver,port=8053,address="localhost",logger=logger)
         >>> server.start_thread()
         >>> q = DNSRecord.question("abc.def")
-        >>> a = q.send("127.0.0.1",8053)
-        Request: [127.0.0.1:...] (udp) / 'abc.def.' (A)
-        Reply: [127.0.0.1:...] (udp) / 'abc.def.' (A) / RRs: 
+        >>> a = q.send("localhost",8053)
+        Request: [...] (udp) / 'abc.def.' (A)
+        Reply: [...] (udp) / 'abc.def.' (A) / RRs: 
         >>> print(DNSRecord.parse(a))
         ;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
@@ -65,11 +65,11 @@
         ...         reply.add_answer(*RR.fromZone("abc.def. 60 A 1.2.3.4"))
         ...         return reply
         >>> resolver = TestResolver()
-        >>> server = DNSServer(resolver,port=8053,address="127.0.0.1",logger=logger,tcp=True)
+        >>> server = DNSServer(resolver,port=8053,address="localhost",logger=logger,tcp=True)
         >>> server.start_thread()
-        >>> a = q.send("127.0.0.1",8053,tcp=True)
-        Request: [127.0.0.1:...] (tcp) / 'abc.def.' (A)
-        Reply: [127.0.0.1:...] (tcp) / 'abc.def.' (A) / RRs: A
+        >>> a = q.send("localhost",8053,tcp=True)
+        Request: [...] (tcp) / 'abc.def.' (A)
+        Reply: [...] (tcp) / 'abc.def.' (A) / RRs: A
         >>> print(DNSRecord.parse(a))
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
