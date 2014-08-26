@@ -18,12 +18,16 @@ class Bimap(object):
             dict:   Dict mapping from value (numeric) to code (text)
             error:  Error type to raise if key not found
 
-        The class creates a 'forward' map (value->text) and a 'reverse' map
-        (text->value). 
+        The class provides:
         
-        __getitem__ lookups (map[value]) use the forward dictionary 
-        __getattr__ lookups (map.text) use the reverse dictionary.
-
+            * A 'forward' map (code->text) which is accessed through 
+              __getitem__ (bimap[code]) 
+            * A 'reverse' map (code>value) which is accessed through 
+              __getattr__ (bimap.text)
+            * A 'get' method which does a forward lookup (code->text)
+              and returns a textual version of code if there is no
+              explicit mapping (or default provided)
+        
         >>> class TestError(Exception):
         ...     pass
 
@@ -40,6 +44,8 @@ class Bimap(object):
         Traceback (most recent call last):
         ...
         TestError: TEST: Invalid forward lookup: [99]
+        >>> TEST.get(99)
+        '99'
     
     """
 

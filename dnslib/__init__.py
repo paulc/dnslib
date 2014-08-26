@@ -10,40 +10,51 @@ Python 2.7 and Python 3.2+.
 The library provides:
 
  * Support for encoding/decoding DNS packets between wire format,
-    python objects, and Zone/DiG textual representation (dnslib.dns)
+   python objects, and Zone/DiG textual representation (dnslib.dns)
 
  * A server framework allowing the simple creation of custom DNS 
-    resolvers (dnslib.server) and a number of example servers 
-    created using this frameowork
+   resolvers (dnslib.server) and a number of example servers 
+   created using this frameowork
 
  * A number of utilities for testing (dnslib.client, dnslib.proxy,
-    dnslib.intercept)
+   dnslib.intercept)
 
 Python 3 support was added in Version 0.9.0 which represented a fairly
 major update to the library - the key changes include:
 
  * Python 2.7/3.2+ support (the last version supporting Python 2.6 
-    or earlier was version 0.8.3)
+   or earlier was version 0.8.3)
+
+ * The 'Bimap' interface was changed significantly to explicitly 
+   split forward (value->text) lookups via __getitem__ and 
+   reverse (text->value) lookups via __getattr__. Applications
+   using the old interface will need to be updated.
+
+ * Hostnames are now returned with a trailing dot by default (in
+   line with RFC)
+
+ * Most object attributes are now typed in line with the record
+   definitions to make it harder to generate invalid packets 
 
  * Support for encoding/decoding resource records in 'Zone' (BIND) 
-    file format 
+   file format 
 
  * Support for encoding/decoding backets in 'DiG' format
 
  * Server framework allowing (in most cases) custom resolvers to
-    be created by just subclassing the DNSResolver class and 
-    overringing the 'resolve' method
+   be created by just subclassing the DNSResolver class and 
+   overringing the 'resolve' method
 
  * A lot of fixes to error detection/handling which should make 
-    the library much more robust to invalid/unsupported data. The
-    library should now either return a valid DNSRecord instance
-    or raise DNSError (tested via fuzzing)
+   the library much more robust to invalid/unsupported data. The
+   library should now either return a valid DNSRecord instance
+   when parsing a packet or raise DNSError (tested via fuzzing)
 
  * Improved utilities (dnslib.client, dnslib.proxy, dnslib.intercept)
 
  * Improvements to encoding/decoding tests including the ability
-    to generate test data automatically in test_decode.py (comparing
-    outputs against DiG)
+   to generate test data automatically in test_decode.py (comparing
+   outputs against DiG)
 
  * Ability to compare and diff DNSRecords
 
@@ -63,15 +74,15 @@ standard DNS packet sections:
  * DNS RRs (resource records) contain an RR header and an RD object)
  * Specific RD types are implemented as subclasses of RD
  * DNS labels are represented by a DNSLabel class - in most cases
-    this handles conversion to/from textual representation however
-    does support arbitatry labels via a tuple of bytes objects)
+   this handles conversion to/from textual representation however
+   does support arbitatry labels via a tuple of bytes objects)
 
 Version 0.9 of the library was a major rewrite to support Python 3.2+ 
 (retaining support for Python 2.7+). As part of the Py3 changes a 
 number of other significant changes were intrtoduced:
 
 - Much better error handling (packet decoding errors should be 
-    caught and DNSError raised)
+  caught and DNSError raised)
 
 Usage:
 ------
@@ -265,7 +276,7 @@ A number of sample resolvers are provided as examples (see CLI --help):
  * dnslib.zoneresolver     - Respond from Zone file 
  * dnslib.shellresolver    - Call shell script to generate response
 
-The library includes a number of client utilities which can be run using:
+The library includes a number of client utilities:
 
  * DiG like client library 
 
@@ -288,18 +299,22 @@ Changelog:
  *   0.3     2010-10-02  Add DNSLabel class to support arbitrary labels (embedded '.')
  *   0.4     2012-02-26  Merge with dbslib-circuits
  *   0.5     2012-09-13  Add support for RFC2136 DDNS updates
-                        Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
+                         Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
  *   0.6     2012-10-20  Basic AAAA support
  *   0.7     2012-10-20  Add initial EDNS0 support (untested)
  *   0.8     2012-11-04  Add support for NAPTR, Authority RR and additional RR
-                        Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
+                         Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
  *   0.8.1   2012-11-05  Added NAPTR test case and fixed logic error
-                        Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
+                         Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
  *   0.8.2   2012-11-11  Patch to fix IPv6 formatting
-                        Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
+                         Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
  *   0.8.3   2013-04-27  Don't parse rdata if rdlength is 0
-                        Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
+                         Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
  *   0.9.0   2014-05-05  Major update including Py3 support (see docs)
+ *   0.9.1   2014-05-05  Minor fixes
+ *   0.9.2   2014-08-26  Fix Bimap handling of unknown mappings to avoid exception in printing
+                         Add typed attributes to classes
+                         Misc fixes from James Mills - thanks
 
 License:
 --------
@@ -320,7 +335,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.1"
+version = "0.9.2"
 
 if __name__ == '__main__':
     import doctest,textwrap
