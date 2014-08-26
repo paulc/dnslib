@@ -22,6 +22,7 @@ from dnslib.bimap import Bimap,BimapError
 from dnslib.buffer import Buffer,BufferError
 from dnslib.label import DNSLabel,DNSLabelError,DNSBuffer
 from dnslib.lex import WordLexer
+from dnslib.ranges import B,H,I,IP4,IP6,ntuple_range
 
 class DNSError(Exception):
     pass
@@ -348,6 +349,8 @@ class DNSRecord(object):
         """
         data = self.pack()
         if tcp:
+            if len(data) > 65535:
+                raise ValueError("Packet length too long: %d" % len(data))
             data = struct.pack("!H",len(data)) + data
             sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             if timeout is not None:
@@ -456,6 +459,14 @@ class DNSHeader(object):
     """
         DNSHeader section
     """
+
+    # Ensure attribute values match packet
+    id = H('id')
+    bitmap = H('bitmap')
+    q = H('q')
+    a = H('a')
+    auth = H('auth')
+    ar = H('ar')
 
     @classmethod
     def parse(cls,buffer):
@@ -716,6 +727,12 @@ class RR(object):
         DNS Resource Record 
         Contains RR header and RD (resource data) instance
     """
+
+    rtype = H('rtype')
+    rclass = H('rclass')
+    ttl = I('ttl')
+    rdlength = H('rdlength')
+
     @classmethod
     def parse(cls,buffer):
         try:
@@ -940,6 +957,8 @@ class TXT(RD):
 
 class A(RD):
 
+    data = IP4('data')
+
     @classmethod
     def parse(cls,buffer,length):
         try:
@@ -1027,6 +1046,8 @@ class AAAA(RD):
         a tuple of 16 bytes or in text format
     """
  
+    data = IP6('data')
+
     @classmethod
     def parse(cls,buffer,length):
         try:
@@ -1053,6 +1074,8 @@ class AAAA(RD):
         return _format_ipv6(self.data)
 
 class MX(RD):
+
+    preference = H('preference')
 
     @classmethod
     def parse(cls,buffer,length):
@@ -1137,6 +1160,7 @@ class NS(CNAME):
 
 class SOA(RD):
         
+    times = ntuple_range('times',5,0,4294967295)
     @classmethod
     def parse(cls,buffer,length):
         try:
@@ -1192,6 +1216,10 @@ class SOA(RD):
 
 class SRV(RD):
         
+    priority = H('priority')
+    weight = H('weight')
+    port = H('port')
+
     @classmethod
     def parse(cls,buffer,length):
         try:
@@ -1233,6 +1261,9 @@ class SRV(RD):
     attrs = ('priority','weight','port','target')
 
 class NAPTR(RD):
+
+    order = H('order')
+    preference = H('preference')
 
     @classmethod
     def parse(cls, buffer, length):
@@ -1298,6 +1329,10 @@ class NAPTR(RD):
 
 class DNSKEY(RD):
 
+    flags = H('flags')
+    protocol = B('protocol')
+    algorithm = B('algorithm')
+
     @classmethod
     def parse(cls,buffer,length):
         try:
@@ -1330,6 +1365,14 @@ class DNSKEY(RD):
     attrs = ('flags','protocol','algorithm','key')
 
 class RRSIG(RD):
+
+    covered = H('covered')
+    algorithm = B('algorithm')
+    labels = B('labels')
+    orig_ttl = I('orig_ttl')
+    sig_exp = I('sig_exp')
+    sig_inc = I('sig_inc')
+    key_tag = H('key_tag')
 
     @classmethod
     def parse(cls,buffer,length):
