@@ -29,8 +29,8 @@ if __name__ == '__main__':
 
     p = argparse.ArgumentParser(description="DNS Client")
     p.add_argument("--server","-s",default="8.8.8.8",
-                    metavar="<address[:port]>",
-                    help="Server address[:port] (default:8.8.8.8:53)")
+                    metavar="<address:port>",
+                    help="Server address:port (default:8.8.8.8:53) (port is optional)")
     p.add_argument("--query",action='store_true',default=False,
                     help="Show query (default: False)")
     p.add_argument("--hex",action='store_true',default=False,

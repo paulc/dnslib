@@ -315,6 +315,8 @@ Changelog:
  *   0.9.2   2014-08-26  Fix Bimap handling of unknown mappings to avoid exception in printing
                          Add typed attributes to classes
                          Misc fixes from James Mills - thanks
+ *   0.9.3   2014-08-26  Workaround for argparse bug which raises AssertionError is [] is
+                         present in option text (really?)
 
 License:
 --------
@@ -335,7 +337,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.2"
+version = "0.9.3"
 
 if __name__ == '__main__':
     import doctest,textwrap
