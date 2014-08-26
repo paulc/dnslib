@@ -39,7 +39,7 @@ major update to the library - the key changes include:
  * Support for encoding/decoding resource records in 'Zone' (BIND) 
    file format 
 
- * Support for encoding/decoding backets in 'DiG' format
+ * Support for encoding/decoding packets in 'DiG' format
 
  * Server framework allowing (in most cases) custom resolvers to
    be created by just subclassing the DNSResolver class and 
@@ -60,7 +60,7 @@ major update to the library - the key changes include:
 
 This is a large release and despite the testing there therefore are likely
 to be some bugs. Once the 0.9 release is sufficiently stable I would expect
-to release as 1.0.0 (and stabilise th api)
+to release as 1.0.0 (and stabilise the API)
 
 The key DNS packet handling classes are in dnslib.dns and map to the 
 standard DNS packet sections:
@@ -75,14 +75,7 @@ standard DNS packet sections:
  * Specific RD types are implemented as subclasses of RD
  * DNS labels are represented by a DNSLabel class - in most cases
    this handles conversion to/from textual representation however
-   does support arbitatry labels via a tuple of bytes objects)
-
-Version 0.9 of the library was a major rewrite to support Python 3.2+ 
-(retaining support for Python 2.7+). As part of the Py3 changes a 
-number of other significant changes were intrtoduced:
-
-- Much better error handling (packet decoding errors should be 
-  caught and DNSError raised)
+   does support arbitatry labels via a tuple of bytes objects
 
 Usage:
 ------
