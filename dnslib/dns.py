@@ -1174,7 +1174,7 @@ class SOA(RD):
 
     @classmethod
     def fromZone(cls,rd,origin=None):
-        return cls(label(rd[0],origin),label(rd[1],origin),[int(t) for t in rd[2:]])
+        return cls(label(rd[0],origin),label(rd[1],origin),[parse_time(t) for t in rd[2:]])
 
     def __init__(self,mname=None,rname=None,times=None):
         self.mname = mname
