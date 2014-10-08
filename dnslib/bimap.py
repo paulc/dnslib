@@ -10,12 +10,12 @@ class BimapError(Exception):
 class Bimap(object):
 
     """
-        Bi-directional mapping between code/value. 
+        Bi-directional mapping between code/text. 
 
         Initialised using:
 
             name:   Used for exceptions
-            dict:   Dict mapping from value (numeric) to code (text)
+            dict:   Dict mapping from code (numeric) to text
             error:  Error type to raise if key not found
 
         The class provides:
