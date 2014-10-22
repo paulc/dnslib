@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
     DNS - main dnslib module 
 
@@ -22,7 +22,8 @@ from dnslib.bimap import Bimap,BimapError
 from dnslib.buffer import Buffer,BufferError
 from dnslib.label import DNSLabel,DNSLabelError,DNSBuffer
 from dnslib.lex import WordLexer
-from dnslib.ranges import B,H,I,IP4,IP6,ntuple_range
+from dnslib.ranges import BYTES,B,H,I,IP4,IP6,ntuple_range,check_range,\
+                          check_bytes
 
 class DNSError(Exception):
     pass
@@ -690,7 +691,22 @@ class EDNSOption(object):
         tested due to a lack of data (anyone wanting to improve support or
         provide test data please raise an issue)
 
+        >>> EDNSOption(1,b"1234")
+        <EDNS Option: Code=1 Data='31323334'>
+        >>> EDNSOption(99999,b"1234")
+        Traceback (most recent call last):
+        ...
+        ValueError: Attribute 'code' must be between 0-65535 [99999]
+        >>> EDNSOption(1,None)
+        Traceback (most recent call last):
+        ...
+        ValueError: Attribute 'data' must be instance of ...
+
     """
+
+    code = H('code')
+    data = BYTES('data')
+
     def __init__(self,code,data):
         self.code = code
         self.data = data
@@ -836,13 +852,71 @@ class RR(object):
         return not(self.__eq__(other))
 
     def __eq__(self,other):
-        if type(other) != type(self):
-            return False
-        else:
-            # List of attributes to compare when diffing (ignore ttl)
-            attrs = ('rname','rclass','rtype','rdata')
+        # Handle OPT specially as may be different types (RR/EDNS0)
+        if self.rtype == QTYPE.OPT and getattr(other,"rtype",False) == QTYPE.OPT:
+            attrs = ('rname','rclass','rtype','ttl','rdata')
             return all([getattr(self,x) == getattr(other,x) for x in attrs])
+        else:
+            if type(other) != type(self):
+                return False
+            else:
+                # List of attributes to compare when diffing (ignore ttl)
+                attrs = ('rname','rclass','rtype','rdata')
+                return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
+class EDNS0(RR):
+
+    """
+
+        ENDS0 pseudo-record
+
+        Wrapper around the ENDS0 support in RR to make it more convenient to
+        create EDNS0 pseudo-record - this just makes it easier to specify the
+        EDNS0 parameters directly
+
+        EDNS flags should be passed as a space separated string of options 
+        (currently only 'do' is supported)
+
+        >>> EDNS0("abc.com",flags="do",udp_len=2048,version=1)
+        <DNS OPT: edns_ver=1 do=1 ext_rcode=0 udp_len=2048>
+        >>> print(_)
+        ;OPT PSEUDOSECTION
+        ;EDNS: version: 1, flags: do; udp: 2048
+        >>> opt = EDNS0("abc.com",flags="do",ext_rcode=1,udp_len=2048,version=1,opts=[EDNSOption(1,b'abcd')])
+        >>> opt
+        <DNS OPT: edns_ver=1 do=1 ext_rcode=1 udp_len=2048>
+        <EDNS Option: Code=1 Data='61626364'>
+        >>> print(opt)
+        ;OPT PSEUDOSECTION
+        ;EDNS: version: 1, flags: do; udp: 2048
+        ;EDNS: code: 1; data: 61626364
+        >>> r = DNSRecord.question("abc.com").replyZone("abc.com A 1.2.3.4")
+        >>> r.add_ar(opt)
+        >>> print(r)
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+        ;; QUESTION SECTION:
+        ;abc.com.                       IN      A
+        ;; ANSWER SECTION:
+        abc.com.                0       IN      A       1.2.3.4
+        ;; ADDITIONAL SECTION:
+        ;OPT PSEUDOSECTION
+        ;EDNS: version: 1, flags: do; udp: 2048
+        ;EDNS: code: 1; data: 61626364
+        >>> DNSRecord.parse(r.pack()) == r
+        True
+    """
+
+    def __init__(self,rname=None,rtype=QTYPE.OPT,
+            ext_rcode=0,version=0,flags="",udp_len=0,opts=None):
+        check_range('ext_rcode',ext_rcode,0,255)
+        check_range('version',version,0,255)
+        edns_flags = { 'do' : 1 << 15 }
+        flag_bitmap = sum([edns_flags[x] for x in flags.split()])
+        ttl = (ext_rcode << 24) + (version << 16) + flag_bitmap
+        if opts and not all([isinstance(o,EDNSOption) for o in opts]):
+            raise ValueError("Option must be instance of EDNSOption")
+        super(EDNS0,self).__init__(rname,rtype,udp_len,ttl,opts or [])
 
 class RD(object):
     """
@@ -887,6 +961,7 @@ class RD(object):
 
     def __init__(self,data=b""):
         # Assume raw bytes
+        check_bytes('data',data)
         self.data = bytes(data)
 
     def pack(self,buffer):
