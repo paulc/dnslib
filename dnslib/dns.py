@@ -344,16 +344,20 @@ class DNSRecord(object):
                                    bitmap=self.header.bitmap,
                                    tc=1))
 
-    def send(self,dest,port=53,tcp=False,timeout=None):
+    def send(self,dest,port=53,tcp=False,timeout=None,ipv6=False):
         """
             Send packet to nameserver and return response
         """
         data = self.pack()
+        if ipv6:
+            inet = socket.AF_INET6
+        else:
+            inet = socket.AF_INET
         if tcp:
             if len(data) > 65535:
                 raise ValueError("Packet length too long: %d" % len(data))
             data = struct.pack("!H",len(data)) + data
-            sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            sock = socket.socket(inet,socket.SOCK_STREAM)
             if timeout is not None:
                 sock.settimeout(timeout)
             sock.connect((dest,port))
@@ -365,7 +369,7 @@ class DNSRecord(object):
             sock.close()
             response = response[2:]
         else:
-            sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            sock = socket.socket(inet,socket.SOCK_DGRAM)
             if timeout is not None:
                 sock.settimeout(timeout)
             sock.sendto(self.pack(),(dest,port))
