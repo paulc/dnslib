@@ -1000,17 +1000,43 @@ class RD(object):
         return not(self.__eq__(other))
 
 class TXT(RD):
+    """
+        DNS TXT record. Pass in either a single string, or a tuple/list of strings.
+
+        >>> TXT('txtvers=1')
+        txtvers=1
+        >>> TXT(('txtvers=1',))
+        txtvers=1
+        >>> TXT(['txtvers=1',])
+        txtvers=1
+        >>> TXT(['txtvers=1','swver=2.5'])
+        "txtvers=1","swver=2.5"
+        >>> a = DNSRecord()
+        >>> a.add_answer(*RR.fromZone('example.com 60 IN TXT "txtvers=1"'))
+        >>> a.add_answer(*RR.fromZone('example.com 120 IN TXT "txtvers=1","swver=2.3"'))
+        >>> print(a)
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+        ;; flags: rd; QUERY: 0, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
+        ;; ANSWER SECTION:
+        example.com.            60      IN      TXT     "txtvers=1"
+        example.com.            120     IN      TXT     "txtvers=1","swver=2.3"
+    """
 
     @classmethod
     def parse(cls,buffer,length):
         try:
-            (txtlength,) = buffer.unpack("!B")
-            # First byte is TXT length (not in RFC?)
-            if txtlength < length:
-                data = buffer.get(txtlength)
-            else:
-                raise DNSError("Invalid TXT record: len(%d) > RD len(%d)" % 
-                                        (txtlength,length))
+            data = list()
+            start_bo = buffer.offset
+            now_length = 0
+            while buffer.offset < start_bo + length:
+                (txtlength,) = buffer.unpack("!B")
+                # First byte is TXT length (not in RFC?)
+                if now_length + txtlength < length:
+                    now_length += txtlength
+                    data.append(buffer.get(txtlength))
+                else:
+                    raise DNSError("Invalid TXT record: len(%d) > RD len(%d)" % 
+                                            (txtlength,length))
             return cls(data)
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking TXT [offset=%d]: %s" % 
@@ -1018,21 +1044,34 @@ class TXT(RD):
 
     @classmethod
     def fromZone(cls,rd,origin=None):
-        return cls(rd[0].encode())
+        return cls(map(lambda x: x.encode(), rd[::2]))
+
+    def __init__(self,data):
+        if type(data) in (tuple,list):
+            self.data = data
+        else:
+            self.data = [str(data)]
 
     def pack(self,buffer):
-        if len(self.data) > 255:
-            raise DNSError("TXT record too long: %s" % self.data)
-        buffer.pack("!B",len(self.data))
-        buffer.append(self.data)
+        for ditem in self.data:
+            if len(ditem) > 255:
+                raise DNSError("TXT record too long: %s" % ditem)
+            buffer.pack("!B",len(ditem))
+            buffer.append(ditem)
 
     def toZone(self):
-        return '"%s"' % repr(self)
+        if len(self.data) == 1:
+            return '"%s"' % repr(self)
+        return repr(self)
 
     def __repr__(self):
-        # Pyyhon 2/3 hack
+        # Python 2/3 hack
         # FIXME UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfc in position 1
-        return self.data if isinstance(self.data,str) else self.data.decode(errors='replace')
+
+        join_str = '","' if len(self.data) > 1 else ''
+        q_str = '"' if len(self.data) > 1 else ''
+        return q_str + join_str.join(map(lambda x: x if isinstance(x, str)
+            else x.decode(errors='replace'), self.data)) + q_str
 
 class A(RD):
 
