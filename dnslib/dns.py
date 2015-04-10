@@ -999,27 +999,33 @@ class RD(object):
     def __ne__(self,other):
         return not(self.__eq__(other))
 
+def _force_bytes(x):
+    if isinstance(x,bytes):
+        return x
+    else:
+        return x.encode()
+
 class TXT(RD):
     """
         DNS TXT record. Pass in either a single string, or a tuple/list of strings.
 
         >>> TXT('txtvers=1')
-        txtvers=1
+        "txtvers=1"
         >>> TXT(('txtvers=1',))
-        txtvers=1
+        "txtvers=1"
         >>> TXT(['txtvers=1',])
-        txtvers=1
+        "txtvers=1"
         >>> TXT(['txtvers=1','swver=2.5'])
         "txtvers=1","swver=2.5"
         >>> a = DNSRecord()
         >>> a.add_answer(*RR.fromZone('example.com 60 IN TXT "txtvers=1"'))
-        >>> a.add_answer(*RR.fromZone('example.com 120 IN TXT "txtvers=1","swver=2.3"'))
+        >>> a.add_answer(*RR.fromZone('example.com 120 IN TXT "txtvers=1" "swver=2.3"'))
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: rd; QUERY: 0, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
         ;; ANSWER SECTION:
         example.com.            60      IN      TXT     "txtvers=1"
-        example.com.            120     IN      TXT     "txtvers=1","swver=2.3"
+        example.com.            120     IN      TXT     "txtvers=1" "swver=2.3"
     """
 
     @classmethod
@@ -1044,13 +1050,15 @@ class TXT(RD):
 
     @classmethod
     def fromZone(cls,rd,origin=None):
-        return cls(map(lambda x: x.encode(), rd[::2]))
+        return cls(list(map(lambda x: x.encode(), rd)))
 
     def __init__(self,data):
         if type(data) in (tuple,list):
-            self.data = data
+            self.data = [ _force_bytes(x) for x in data ]
         else:
-            self.data = [str(data)]
+            self.data = [ _force_bytes(data) ]
+        if any([len(x)>255 for x in self.data]):
+            raise DNSError("TXT record too long: %s" % self.data)
 
     def pack(self,buffer):
         for ditem in self.data:
@@ -1060,18 +1068,10 @@ class TXT(RD):
             buffer.append(ditem)
 
     def toZone(self):
-        if len(self.data) == 1:
-            return '"%s"' % repr(self)
-        return repr(self)
+        return " ".join([ '"%s"' % x.decode(errors='replace') for x in self.data ])
 
     def __repr__(self):
-        # Python 2/3 hack
-        # FIXME UnicodeDecodeError: 'utf-8' codec can't decode byte 0xfc in position 1
-
-        join_str = '","' if len(self.data) > 1 else ''
-        q_str = '"' if len(self.data) > 1 else ''
-        return q_str + join_str.join(map(lambda x: x if isinstance(x, str)
-            else x.decode(errors='replace'), self.data)) + q_str
+        return ",".join([ '"%s"' % x.decode(errors='replace') for x in self.data ])
 
 class A(RD):
 
