@@ -310,6 +310,11 @@ Changelog:
                          Misc fixes from James Mills - thanks
  *   0.9.3   2014-08-26  Workaround for argparse bug which raises AssertionError if [] is
                          present in option text (really?)
+ *   0.9.4   2015-04-10  Fix to support multiple strings in TXT record 
+                         Patch provided by James Cherry (https://bitbucket.org/james_cherry) - thanks
+                         NOTE: For consistency this patch changes the 'repr' output for
+                               TXT records to always be quoted
+
 
 License:
 --------
@@ -330,7 +335,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.3"
+version = "0.9.4"
 
 if __name__ == '__main__':
     import doctest,textwrap

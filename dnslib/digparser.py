@@ -80,7 +80,7 @@
     <DNS RR: 'google.com.' rtype=MX rclass=IN ttl=599 rdata='40 alt3.aspmx.l.google.com.'>
     <DNS RR: 'google.com.' rtype=MX rclass=IN ttl=599 rdata='20 alt1.aspmx.l.google.com.'>
     <DNS RR: 'google.com.' rtype=TYPE257 rclass=IN ttl=21599 rdata='0005697373756573796d616e7465632e636f6d'>
-    <DNS RR: 'google.com.' rtype=TXT rclass=IN ttl=3599 rdata='v=spf1 include:_spf.google.com ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all'>
+    <DNS RR: 'google.com.' rtype=TXT rclass=IN ttl=3599 rdata='"v=spf1 include:_spf.google.com ip4:216.73.93.70/31 ip4:216.73.93.72/31 ~all"'>
     <DNS RR: 'google.com.' rtype=MX rclass=IN ttl=599 rdata='30 alt2.aspmx.l.google.com.'>
     <DNS RR: 'google.com.' rtype=NS rclass=IN ttl=21599 rdata='ns1.google.com.'>
 
