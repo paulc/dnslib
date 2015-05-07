@@ -22,19 +22,21 @@ class InterceptResolver(BaseResolver):
         matching local records
     """
 
-    def __init__(self,address,port,ttl,intercept,skip,nxdomain):
+    def __init__(self,address,port,ttl,intercept,skip,nxdomain,timeout=0):
         """
             address/port    - upstream server
             ttl             - default ttl for intercept records
             intercept       - list of wildcard RRs to respond to (zone format)
             skip            - list of wildcard labels to skip 
             nxdomain        - list of wildcard labels to retudn NXDOMAIN
+            timeout         - timeout for upstream server
         """
         self.address = address
         self.port = port
         self.ttl = parse_time(ttl)
         self.skip = skip
         self.nxdomain = nxdomain
+        self.timeout = timeout
         self.zone = []
         for i in intercept:
             if i == '-':
@@ -59,11 +61,17 @@ class InterceptResolver(BaseResolver):
             return reply
         # Otherwise proxy
         if not reply.rr:
-            if handler.protocol == 'udp':
-                proxy_r = request.send(self.address,self.port)
-            else:
-                proxy_r = request.send(self.address,self.port,tcp=True)
-            reply = DNSRecord.parse(proxy_r)
+            try:
+                if handler.protocol == 'udp':
+                    proxy_r = request.send(self.address,self.port,
+                                    timeout=self.timeout)
+                else:
+                    proxy_r = request.send(self.address,self.port,
+                                    tcp=True,timeout=self.timeout)
+                reply = DNSRecord.parse(proxy_r)
+            except socket.timeout:
+                reply.header.rcode = getattr(RCODE,'NXDOMAIN')
+
         return reply
 
 if __name__ == '__main__':
@@ -94,6 +102,9 @@ if __name__ == '__main__':
     p.add_argument("--ttl","-t",default="60s",
                     metavar="<ttl>",
                     help="Intercept TTL (default: 60s)")
+    p.add_argument("--timeout","-o",type=float,default=5,
+                    metavar="<timeout>",
+                    help="Upstream timeout (default: 5s)")
     p.add_argument("--log",default="request,reply,truncated,error",
                     help="Log hooks to enable (default: +request,+reply,+truncated,+error,-recv,-send,-data)")
     p.add_argument("--log-prefix",action='store_true',default=False,
@@ -108,7 +119,8 @@ if __name__ == '__main__':
                                  args.ttl,
                                  args.intercept or [],
                                  args.skip or [],
-                                 args.nxdomain or [])
+                                 args.nxdomain or [],
+                                 args.timeout)
     logger = DNSLogger(args.log,args.log_prefix)
 
     print("Starting Intercept Proxy (%s:%d -> %s:%d) [%s]" % (

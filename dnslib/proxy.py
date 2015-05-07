@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import binascii,socket,struct
 
-from dnslib import DNSRecord
+from dnslib import DNSRecord,RCODE
 from dnslib.server import DNSServer,DNSHandler,BaseResolver,DNSLogger
 
 class ProxyResolver(BaseResolver):
@@ -29,16 +29,24 @@ class ProxyResolver(BaseResolver):
 
     """
 
-    def __init__(self,address,port):
+    def __init__(self,address,port,timeout=0):
         self.address = address
         self.port = port
+        self.timeout = timeout
 
     def resolve(self,request,handler):
-        if handler.protocol == 'udp':
-            proxy_r = request.send(self.address,self.port)
-        else:
-            proxy_r = request.send(self.address,self.port,tcp=True)
-        reply = DNSRecord.parse(proxy_r)
+        try:
+            if handler.protocol == 'udp':
+                proxy_r = request.send(self.address,self.port,
+                                timeout=self.timeout)
+            else:
+                proxy_r = request.send(self.address,self.port,
+                                tcp=True,timeout=self.timeout)
+            reply = DNSRecord.parse(proxy_r)
+        except socket.timeout:
+            reply = request.reply()
+            reply.header.rcode = getattr(RCODE,'NXDOMAIN')
+
         return reply
 
 class PassthroughDNSHandler(DNSHandler):
@@ -107,6 +115,9 @@ if __name__ == '__main__':
                     help="Upstream DNS server:port (default:8.8.8.8:53)")
     p.add_argument("--tcp",action='store_true',default=False,
                     help="TCP proxy (default: UDP only)")
+    p.add_argument("--timeout","-o",type=float,default=5,
+                    metavar="<timeout>",
+                    help="Upstream timeout (default: 5s)")
     p.add_argument("--passthrough",action='store_true',default=False,
                     help="Dont decode/re-encode request/response (default: off)")
     p.add_argument("--log",default="request,reply,truncated,error",
@@ -123,7 +134,7 @@ if __name__ == '__main__':
                         args.dns,args.dns_port,
                         "UDP/TCP" if args.tcp else "UDP"))
 
-    resolver = ProxyResolver(args.dns,args.dns_port)
+    resolver = ProxyResolver(args.dns,args.dns_port,args.timeout)
     handler = PassthroughDNSHandler if args.passthrough else DNSHandler
     logger = DNSLogger(args.log,args.log_prefix)
     udp_server = DNSServer(resolver,
