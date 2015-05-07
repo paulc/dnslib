@@ -51,7 +51,7 @@
         >>> q = DNSRecord.question("abc.def")
         >>> a = q.send("localhost",8053)
         Request: [...] (udp) / 'abc.def.' (A)
-        Reply: [...] (udp) / 'abc.def.' (A) / RRs: 
+        Reply: [...] (udp) / 'abc.def.' (A) / NXDOMAIN
         >>> print(DNSRecord.parse(a))
         ;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
@@ -253,7 +253,8 @@ class DNSLogger:
         self.log_data(request)
 
     def log_reply(self,handler,reply):
-        print("%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+        if reply.header.rcode == RCODE.NOERROR:
+            print("%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -261,6 +262,15 @@ class DNSLogger:
                     reply.q.qname,
                     QTYPE[reply.q.qtype],
                     ",".join([QTYPE[a.rtype] for a in reply.rr])))
+        else:
+            print("%sReply: [%s:%d] (%s) / '%s' (%s) / %s" % (
+                    self.log_prefix(handler),
+                    handler.client_address[0],
+                    handler.client_address[1],
+                    handler.protocol,
+                    reply.q.qname,
+                    QTYPE[reply.q.qtype],
+                    RCODE[reply.header.rcode]))
         self.log_data(reply)
 
     def log_truncated(self,handler,reply):
@@ -286,10 +296,10 @@ class DNSLogger:
         print("\n",dnsobj.toZone("    "),"\n",sep="")
 
 
-class UDPServer(socketserver.UDPServer):
+class UDPServer(socketserver.ThreadingMixIn,socketserver.UDPServer):
     allow_reuse_address = True
 
-class TCPServer(socketserver.TCPServer):
+class TCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     allow_reuse_address = True
 
 class DNSServer(object):
