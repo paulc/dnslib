@@ -218,7 +218,7 @@ class DNSLogger:
 
     def log_prefix(self,handler):
         if self.prefix:
-            return "%s [%s:%s] " % (time.strftime("%Y-%M-%d %X"),
+            return "%s [%s:%s] " % (time.strftime("%Y-%m-%d %X"),
                                handler.__class__.__name__,
                                handler.server.resolver.__class__.__name__)
         else:
