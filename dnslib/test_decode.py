@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
     Test dnslib packet encoding/decoding
@@ -231,33 +232,44 @@ if __name__ == '__main__':
                     help="Glob pattern")
     p.add_argument("--testdir","-t",default=testdir,
                     help="Test dir (%s)" % testdir)
+    p.add_argument("--testfile","-f",default=None,
+                    help="Test single file")
     args = p.parse_args()
 
-    os.chdir(args.testdir)
-
-    if args.new:
-        new_test(*args.new,nodig=args.nodig)
-    elif args.interactive:
-        for f in glob.iglob(args.glob):
-            if os.path.isfile(f):
-                print("-- %s: " % f,end='')
-                e = check_decode(f,args.debug)
-                if not args.debug:
-                    if e:
-                        print("ERROR\n")
-                        print_errors(e)
-                        print()
-                    else:
-                        print("OK")
-    elif args.unittest:
-        for f in glob.iglob(args.glob):
-            if os.path.isfile(f):
-                test_name = 'test_%s' % f
-                test = test_generator(f)
-                setattr(TestContainer,test_name,test)
-        unittest.main(argv=[__name__],
-                      verbosity=2 if args.verbose else 1,
-                      failfast=args.failfast)
+    if args.testfile:
+        e = check_decode(args.testfile,args.debug)
+        if not args.debug:
+            if e:
+                print("ERROR\n")
+                print_errors(e)
+                print()
+            else:
+                print("OK")
+    else:
+        os.chdir(args.testdir)
+        if args.new:
+            new_test(*args.new,nodig=args.nodig)
+        elif args.interactive:
+            for f in glob.iglob(args.glob):
+                if os.path.isfile(f):
+                    print("-- %s: " % f,end='')
+                    e = check_decode(f,args.debug)
+                    if not args.debug:
+                        if e:
+                            print("ERROR\n")
+                            print_errors(e)
+                            print()
+                        else:
+                            print("OK")
+        elif args.unittest:
+            for f in glob.iglob(args.glob):
+                if os.path.isfile(f):
+                    test_name = 'test_%s' % f
+                    test = test_generator(f)
+                    setattr(TestContainer,test_name,test)
+            unittest.main(argv=[__name__],
+                          verbosity=2 if args.verbose else 1,
+                          failfast=args.failfast)
 
 
 

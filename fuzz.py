@@ -65,6 +65,9 @@ if __name__ == '__main__':
 
     original = DNSRecord.parse(packet)
 
+    p("Question:")
+    p(question.toZone(prefix="  | "))
+
     p("Original:")
     p(original.toZone(prefix="  | "))
 
