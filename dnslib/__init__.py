@@ -314,6 +314,7 @@ Changelog:
                          Patch provided by James Cherry (https://bitbucket.org/james_cherry) - thanks
                          NOTE: For consistency this patch changes the 'repr' output for
                                TXT records to always be quoted
+ *   0.9.5   2015-10-27  Add threading & timeout handling to DNSServer
 
 
 License:
@@ -335,7 +336,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.4"
+version = "0.9.5"
 
 if __name__ == '__main__':
     import doctest,textwrap
