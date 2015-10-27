@@ -58,6 +58,7 @@ if __name__ == '__main__':
     port = int(port or 53)
 
     if args.query == 'google.com' and args.type == 'A':
+        question = None
         packet = bytearray(binascii.unhexlify(b'55838180000100100000000006676f6f676c6503636f6d0000010001c00c000100010000012b00043efca994c00c000100010000012b00043efca998c00c000100010000012b00043efca9b7c00c000100010000012b00043efca99dc00c000100010000012b00043efca9acc00c000100010000012b00043efca9bbc00c000100010000012b00043efca9a3c00c000100010000012b00043efca9a8c00c000100010000012b00043efca9b1c00c000100010000012b00043efca9a7c00c000100010000012b00043efca999c00c000100010000012b00043efca9a2c00c000100010000012b00043efca9b6c00c000100010000012b00043efca9b2c00c000100010000012b00043efca9adc00c000100010000012b00043efca99e'))
     else:
         question = DNSRecord(q=DNSQuestion(args.query,getattr(QTYPE,args.type)))
@@ -65,8 +66,9 @@ if __name__ == '__main__':
 
     original = DNSRecord.parse(packet)
 
-    p("Question:")
-    p(question.toZone(prefix="  | "))
+    if question:
+        p("Question:")
+        p(question.toZone(prefix="  | "))
 
     p("Original:")
     p(original.toZone(prefix="  | "))
