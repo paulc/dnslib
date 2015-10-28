@@ -14,7 +14,7 @@ The library provides:
 
  * A server framework allowing the simple creation of custom DNS 
    resolvers (dnslib.server) and a number of example servers 
-   created using this frameowork
+   created using this framework
 
  * A number of utilities for testing (dnslib.client, dnslib.proxy,
    dnslib.intercept)
@@ -43,7 +43,7 @@ major update to the library - the key changes include:
 
  * Server framework allowing (in most cases) custom resolvers to
    be created by just subclassing the DNSResolver class and 
-   overringing the 'resolve' method
+   overriding the 'resolve' method
 
  * A lot of fixes to error detection/handling which should make 
    the library much more robust to invalid/unsupported data. The
@@ -58,9 +58,8 @@ major update to the library - the key changes include:
 
  * Ability to compare and diff DNSRecords
 
-This is a large release and despite the testing there therefore are likely
-to be some bugs. Once the 0.9 release is sufficiently stable I would expect
-to release as 1.0.0 (and stabilise the API)
+Classes
+-------
 
 The key DNS packet handling classes are in dnslib.dns and map to the 
 standard DNS packet sections:
@@ -77,8 +76,8 @@ standard DNS packet sections:
    this handles conversion to/from textual representation however
    does support arbitatry labels via a tuple of bytes objects
 
-Usage:
-------
+Usage
+-----
 
 To decode a DNS packet:
 
@@ -315,6 +314,8 @@ Changelog:
                          NOTE: For consistency this patch changes the 'repr' output for
                                TXT records to always be quoted
  *   0.9.5   2015-10-27  Add threading & timeout handling to DNSServer
+ *   0.9.6   2015-10-28  Replace strftime in RRSIG formatting to avoid possible locale issues
+                         Identified by Bryan Everly - thanks
 
 
 License:
@@ -331,12 +332,12 @@ Master Repository/Issues:
 -------------------------
 
  *   https://bitbucket.org/paulc/dnslib
-    (Cloned on GitHub: https://github.com/paulchakravarti/dnslib)
+     (Cloned on GitHub: https://github.com/paulchakravarti/dnslib)
 """
 
 from dnslib.dns import *
 
-version = "0.9.5"
+version = "0.9.6"
 
 if __name__ == '__main__':
     import doctest,textwrap
