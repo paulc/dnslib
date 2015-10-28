@@ -1534,13 +1534,14 @@ class RRSIG(RD):
         buffer.append(self.sig)
         
     def __repr__(self):
+        timestamp_fmt = "{0.tm_year}{0.tm_mon:02}{0.tm_mday:02}{0.tm_hour:02}{0.tm_min:02}{0.tm_sec:02}"
         return "%s %d %d %d %s %s %d %s %s" % (
                         QTYPE.get(self.covered),
                         self.algorithm,
                         self.labels,
                         self.orig_ttl,
-                        time.strftime("%Y%m%d%H%M%S",time.gmtime(self.sig_exp)),
-                        time.strftime("%Y%m%d%H%M%S",time.gmtime(self.sig_inc)),
+                        timestamp_fmt.format(time.gmtime(self.sig_exp)),
+                        timestamp_fmt.format(time.gmtime(self.sig_inc)),
                         self.key_tag,
                         self.name,
                         base64.b64encode(self.sig).decode())
