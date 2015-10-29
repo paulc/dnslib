@@ -7,7 +7,7 @@
 
 from __future__ import print_function
 
-import base64,binascii,collections,copy,os.path,random,socket,\
+import base64,binascii,calendar,collections,copy,os.path,random,socket,\
        string,struct,textwrap,time
 
 from itertools import chain
@@ -1509,8 +1509,8 @@ class RRSIG(RD):
     @classmethod
     def fromZone(cls,rd,origin=None):
         return cls(getattr(QTYPE,rd[0]),int(rd[1]),int(rd[2]),int(rd[3]),
-                        int(time.mktime(time.strptime(rd[4]+'GMT',"%Y%m%d%H%M%S%Z"))),
-                        int(time.mktime(time.strptime(rd[5]+'GMT',"%Y%m%d%H%M%S%Z"))),
+                        int(calendar.timegm(time.strptime(rd[4]+'UTC',"%Y%m%d%H%M%S%Z"))),
+                        int(calendar.timegm(time.strptime(rd[5]+'UTC',"%Y%m%d%H%M%S%Z"))),
                         int(rd[6]),rd[7],
                         base64.b64decode(("".join(rd[8:])).encode('ascii')))
 
