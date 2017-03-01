@@ -12,11 +12,11 @@ class ProxyResolver(BaseResolver):
         Proxy resolver - passes all requests to upstream DNS server and
         returns response
 
-        Note that the request/response will be each be decoded/re-encoded 
+        Note that the request/response will be each be decoded/re-encoded
         twice:
 
-        a) Request packet received by DNSHandler and parsed into DNSRecord 
-        b) DNSRecord passed to ProxyResolver, serialised back into packet 
+        a) Request packet received by DNSHandler and parsed into DNSRecord
+        b) DNSRecord passed to ProxyResolver, serialised back into packet
            and sent to upstream DNS server
         c) Upstream DNS server returns response packet which is parsed into
            DNSRecord
@@ -51,7 +51,7 @@ class ProxyResolver(BaseResolver):
 
 class PassthroughDNSHandler(DNSHandler):
     """
-        Modify DNSHandler logic (get_reply method) to send directly to 
+        Modify DNSHandler logic (get_reply method) to send directly to
         upstream DNS server rather then decoding/encoding packet and
         passing to Resolver (The request/response packets are still
         parsed and logged but this is not inline)
@@ -60,7 +60,7 @@ class PassthroughDNSHandler(DNSHandler):
         host,port = self.server.resolver.address,self.server.resolver.port
 
         request = DNSRecord.parse(data)
-        self.log_request(request)
+        self.server.logger.log_request(self,request)
 
         if self.protocol == 'tcp':
             data = struct.pack("!H",len(data)) + data
@@ -70,7 +70,7 @@ class PassthroughDNSHandler(DNSHandler):
             response = send_udp(data,host,port)
 
         reply = DNSRecord.parse(response)
-        self.log_reply(reply)
+        self.server.logger.log_reply(self,reply)
 
         return response
 
