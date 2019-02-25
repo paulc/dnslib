@@ -1470,7 +1470,7 @@ class DNSKEY(RD):
         self.flags = flags
         self.protocol = protocol
         self.algorithm = algorithm
-        self.key = key
+        self.key = _force_bytes(key)
 
     def pack(self,buffer):
         buffer.pack("!HBB",self.flags,self.protocol,self.algorithm)
