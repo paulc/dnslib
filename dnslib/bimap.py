@@ -49,7 +49,7 @@ class Bimap(object):
     
     """
 
-    def __init__(self,name,forward,error=KeyError):
+    def __init__(self,name,forward,error=AttributeError):
         self.name = name
         self.error = error
         self.forward = forward.copy()
@@ -69,6 +69,9 @@ class Bimap(object):
 
     def __getattr__(self,k):
         try:
+            # Python 3.7 inspect module (called by doctest) checks for __wrapped__ attribute
+            if k == "__wrapped__":
+                raise AttributeError()
             return self.reverse[k]
         except KeyError as e:
             raise self.error("%s: Invalid reverse lookup: [%s]" % (self.name,k))
