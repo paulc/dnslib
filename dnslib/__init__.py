@@ -317,6 +317,8 @@ Changelog:
  *   0.9.6   2015-10-28  Replace strftime in RRSIG formatting to avoid possible locale issues
                          Identified by Bryan Everly - thanks
  *   0.9.7   2017-01-15  Sort out CAA/TYPE257 DiG parsing mismatch 
+ *   0.9.8   2019-02-25  Force DNSKEY key to be bytes object 
+                         Catch Bimap __wrapped__ attr (used by inspect module in 3.7)
 
 
 License:
@@ -339,7 +341,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.7"
+version = "0.9.8"
 
 if __name__ == '__main__':
     import doctest,textwrap
