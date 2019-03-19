@@ -829,7 +829,6 @@ class RR(object):
         # TODO Add property getters/setters (done for DO flag)
         if self.rtype == QTYPE.OPT:
             self.edns_len = self.rclass
-            self.edns_do = self.get_do()
             self.edns_ver = get_bits(self.ttl,16,8)
             self.edns_rcode = get_bits(self.ttl,24,8)
 
@@ -851,9 +850,9 @@ class RR(object):
 
     def set_do(self,val):
         if self.rtype == QTYPE.OPT:
-            self.edns_do = set_bits(self.ttl,val,15)
+            self.ttl = set_bits(self.ttl,val,15)
 
-    z = property(get_do,set_do)
+    edns_do = property(get_do,set_do)
 
     def pack(self,buffer):
         buffer.encode_name(self.rname)
