@@ -512,6 +512,12 @@ class DNSHeader(object):
                 self.rd = v
             elif k.lower() == "ra":
                 self.ra = v
+            elif k.lower() == "z":
+                self.z = v
+            elif k.lower() == "ad":
+                self.ad = v
+            elif k.lower() == "cd":
+                self.cd = v
             elif k.lower() == "rcode":
                 self.rcode = v
     
@@ -565,6 +571,30 @@ class DNSHeader(object):
 
     ra = property(get_ra,set_ra)
 
+    def get_z(self):
+        return get_bits(self.bitmap,6)
+
+    def set_z(self,val):
+        self.bitmap = set_bits(self.bitmap,val,6)
+
+    z = property(get_z,set_z)
+
+    def get_ad(self):
+        return get_bits(self.bitmap,5)
+
+    def set_ad(self,val):
+        self.bitmap = set_bits(self.bitmap,val,5)
+
+    ad = property(get_ad,set_ad)
+
+    def get_cd(self):
+        return get_bits(self.bitmap,4)
+
+    def set_cd(self,val):
+        self.bitmap = set_bits(self.bitmap,val,4)
+
+    cd = property(get_cd,set_cd)
+
     def get_rcode(self):
         return get_bits(self.bitmap,0,4)
 
@@ -581,7 +611,10 @@ class DNSHeader(object):
         f = [ self.aa and 'AA', 
               self.tc and 'TC', 
               self.rd and 'RD', 
-              self.ra and 'RA' ] 
+              self.ra and 'RA',
+              self.z and 'Z',
+              self.ad and 'AD',
+              self.cd and 'CD'] 
         if OPCODE.get(self.opcode) == 'UPDATE':
             f1='zo'
             f2='pr'
@@ -606,7 +639,10 @@ class DNSHeader(object):
               self.aa and 'aa', 
               self.tc and 'tc', 
               self.rd and 'rd', 
-              self.ra and 'ra' ] 
+              self.ra and 'ra',
+              self.z and 'z',
+              self.ad and 'ad',
+              self.cd and 'cd' ] 
         z1 = ';; ->>HEADER<<- opcode: %s, status: %s, id: %d' % (
                     OPCODE.get(self.opcode),RCODE.get(self.rcode),self.id)
         z2 = ';; flags: %s; QUERY: %d, ANSWER: %d, AUTHORITY: %d, ADDITIONAL: %d' % (
@@ -625,7 +661,7 @@ class DNSHeader(object):
             return False
         else:
             # Ignore id
-            attrs = ('qr','aa','tc','rd','ra','opcode','rcode')
+            attrs = ('qr','aa','tc','rd','ra','z','ad','cd','opcode','rcode')
             return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
 class DNSQuestion(object):
@@ -724,7 +760,7 @@ class EDNSOption(object):
                     self.code,binascii.hexlify(self.data).decode())
 
     def toZone(self):
-        return ";EDNS: code: %s; data: %s" % (
+        return "; EDNS: code: %s; data: %s" % (
                     self.code,binascii.hexlify(self.data).decode())
 
     def __str__(self):
@@ -790,10 +826,10 @@ class RR(object):
         self.rclass = rclass
         self.ttl = ttl
         self.rdata = rdata
-        # TODO Add property getters/setters
+        # TODO Add property getters/setters (done for DO flag)
         if self.rtype == QTYPE.OPT:
             self.edns_len = self.rclass
-            self.edns_do = get_bits(self.ttl,15)
+            self.edns_do = self.get_do()
             self.edns_ver = get_bits(self.ttl,16,8)
             self.edns_rcode = get_bits(self.ttl,24,8)
 
@@ -807,6 +843,17 @@ class RR(object):
         return self._rname
 
     rname = property(get_rname,set_rname)
+
+    def get_do(self):
+        if self.rtype == QTYPE.OPT:
+            return get_bits(self.ttl,15)
+        return 0
+
+    def set_do(self,val):
+        if self.rtype == QTYPE.OPT:
+            self.edns_do = set_bits(self.ttl,val,15)
+
+    z = property(get_do,set_do)
 
     def pack(self,buffer):
         buffer.encode_name(self.rname)
@@ -835,8 +882,8 @@ class RR(object):
 
     def toZone(self):
         if self.rtype == QTYPE.OPT:
-            edns = [ ";OPT PSEUDOSECTION", 
-                     ";EDNS: version: %d, flags: %s; udp: %d" % (
+            edns = [ ";; OPT PSEUDOSECTION", 
+                     "; EDNS: version: %d, flags: %s; udp: %d" % (
                              self.edns_ver, 
                              "do" if self.edns_do else "",
                              self.edns_len)
@@ -884,16 +931,16 @@ class EDNS0(RR):
         >>> EDNS0("abc.com",flags="do",udp_len=2048,version=1)
         <DNS OPT: edns_ver=1 do=1 ext_rcode=0 udp_len=2048>
         >>> print(_)
-        ;OPT PSEUDOSECTION
-        ;EDNS: version: 1, flags: do; udp: 2048
+        ;; OPT PSEUDOSECTION
+        ; EDNS: version: 1, flags: do; udp: 2048
         >>> opt = EDNS0("abc.com",flags="do",ext_rcode=1,udp_len=2048,version=1,opts=[EDNSOption(1,b'abcd')])
         >>> opt
         <DNS OPT: edns_ver=1 do=1 ext_rcode=1 udp_len=2048>
         <EDNS Option: Code=1 Data='61626364'>
         >>> print(opt)
-        ;OPT PSEUDOSECTION
-        ;EDNS: version: 1, flags: do; udp: 2048
-        ;EDNS: code: 1; data: 61626364
+        ;; OPT PSEUDOSECTION
+        ; EDNS: version: 1, flags: do; udp: 2048
+        ; EDNS: code: 1; data: 61626364
         >>> r = DNSRecord.question("abc.com").replyZone("abc.com A 1.2.3.4")
         >>> r.add_ar(opt)
         >>> print(r)
@@ -904,9 +951,9 @@ class EDNS0(RR):
         ;; ANSWER SECTION:
         abc.com.                0       IN      A       1.2.3.4
         ;; ADDITIONAL SECTION:
-        ;OPT PSEUDOSECTION
-        ;EDNS: version: 1, flags: do; udp: 2048
-        ;EDNS: code: 1; data: 61626364
+        ;; OPT PSEUDOSECTION
+        ; EDNS: version: 1, flags: do; udp: 2048
+        ; EDNS: code: 1; data: 61626364
         >>> DNSRecord.parse(r.pack()) == r
         True
     """

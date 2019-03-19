@@ -319,7 +319,9 @@ Changelog:
  *   0.9.7   2017-01-15  Sort out CAA/TYPE257 DiG parsing mismatch 
  *   0.9.8   2019-02-25  Force DNSKEY key to be bytes object 
                          Catch Bimap __wrapped__ attr (used by inspect module in 3.7)
-
+ *   0.9.9   2019-03-19  Add support for DNSSEC flag getters/setters (from <raul@dinosec.com> - thanks)
+                         Added --dnssec flags to dnslib.client & dnslib.test_decode (sets EDNS0 DO flag)
+                         Added EDNS0 support to dnslib.digparser
 
 License:
 --------
@@ -341,7 +343,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.8"
+version = "0.9.9"
 
 if __name__ == '__main__':
     import doctest,textwrap

@@ -71,11 +71,11 @@
 
 from __future__ import print_function
 
-import glob,os.path,string
+import glob,os.path,string,re
 
 from dnslib.lex import WordLexer
 from dnslib.dns import (DNSRecord,DNSHeader,DNSQuestion,DNSError,
-                        RR,RD,RDMAP,QR,RCODE,CLASS,QTYPE)
+                        RR,RD,RDMAP,QR,RCODE,CLASS,QTYPE,EDNS0)
 
 class DigParser:
 
@@ -139,6 +139,19 @@ class DigParser:
                         # Skip records we dont understand
                         pass
 
+    def parseEDNS(self,edns,dns):
+        args = {}
+        m = re.search('version: (\d+),',edns)
+        if m:
+            args['version'] = int(m.group(1))
+        m = re.search('flags:\s*(.*?);',edns)
+        if m:
+            args['flags'] = m.group(1)
+        m = re.search('udp: (\d+)',edns)
+        if m:
+            args['udp_len'] = int(m.group(1))
+        dns.add_ar(EDNS0(**args))
+
     def __iter__(self):
         return self.parse()
 
@@ -170,6 +183,11 @@ class DigParser:
                         section = auth
                     elif val.startswith('; ADDITIONAL'):
                         section = ar
+                    elif val.startswith('; OPT'):
+                        # Only partial support for parsing EDNS records
+                        self.expect('NL')
+                        val2 = self.expect('COMMENT')
+                        self.parseEDNS(val2,dns)
                     elif val.startswith(';') or tok[1].startswith('<<>>'):
                         pass
                     elif dns and section == q:

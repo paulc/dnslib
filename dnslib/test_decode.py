@@ -49,7 +49,7 @@
 
 from __future__ import print_function
 
-from dnslib.dns import DNSRecord
+from dnslib.dns import DNSRecord,EDNS0
 from dnslib.digparser import DigParser
 
 import argparse,binascii,code,glob,os,os.path,sys,unittest
@@ -67,9 +67,11 @@ except NameError:
 class TestContainer(unittest.TestCase):
     pass
 
-def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False):
+def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False,dnssec=False):
     tcp = False
     q = DNSRecord.question(domain,qtype)
+    if dnssec:
+        q.add_ar(EDNS0(flags="do",udp_len=4096))
     a_pkt = q.send(address,port)
     a = DNSRecord.parse(a_pkt)
     if a.header.tc:
@@ -78,7 +80,11 @@ def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False):
         a = DNSRecord.parse(a_pkt)
 
     if not nodig:
-        dig = getoutput("dig +qr -p %d %s %s @%s" % (
+        if dnssec:
+            dig = getoutput("dig +qr +dnssec -p %d %s %s @%s" % (
+                            port, domain, qtype, address))
+        else:
+            dig = getoutput("dig +qr +noedns -p %d %s %s @%s" % (
                             port, domain, qtype, address))
         dig_reply = list(iter(DigParser(dig)))
         # DiG might have retried in TCP mode so get last q/a
@@ -102,8 +108,12 @@ def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False):
                         print(";; + %s" % d2)
             return
 
-    print("Writing test file: %s-%s" % (domain,qtype))
-    with open("%s-%s" % (domain,qtype),"w") as f:
+    if dnssec:
+        fname = "%s-%s-dnssec" % (domain,qtype)
+    else:
+        fname = "%s-%s" % (domain,qtype)
+    print("Writing test file: %s" % (fname))
+    with open(fname,"w") as f:
         print(";; Sending:",file=f)
         print(";; QUERY:",binascii.hexlify(q.pack()).decode(),file=f)
         print(q,file=f)
@@ -216,6 +226,8 @@ if __name__ == '__main__':
     p.add_argument("--new","-n",nargs=2,
                     metavar="<domain/type>",
                     help="Create new test case (args: <domain> <type>)")
+    p.add_argument("--dnssec",action='store_true',default=False,
+                    help="With --new send DNSSEC request (DO)")
     p.add_argument("--nodig",action='store_true',default=False,
                     help="Don't test new data against DiG")
     p.add_argument("--unittest",action='store_true',default=True,
@@ -248,7 +260,7 @@ if __name__ == '__main__':
     else:
         os.chdir(args.testdir)
         if args.new:
-            new_test(*args.new,nodig=args.nodig)
+            new_test(*args.new,nodig=args.nodig,dnssec=args.dnssec)
         elif args.interactive:
             for f in glob.iglob(args.glob):
                 if os.path.isfile(f):

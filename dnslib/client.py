@@ -20,7 +20,7 @@ except ImportError:
 
 import binascii,code,pprint
 
-from dnslib.dns import DNSRecord,DNSHeader,DNSQuestion,QTYPE
+from dnslib.dns import DNSRecord,DNSHeader,DNSQuestion,QTYPE,EDNS0
 from dnslib.digparser import DigParser
 
 if __name__ == '__main__':
@@ -45,6 +45,8 @@ if __name__ == '__main__':
                     help="Compare result with DiG - if ---diff also specified use alternative nameserver for DiG request (default: false)")
     p.add_argument("--short",action='store_true',default=False,
                     help="Short output - rdata only (default: false)")
+    p.add_argument("--dnssec",action='store_true',default=False,
+                    help="Set DNSSEC (DO) flag in query (default: false)")
     p.add_argument("--debug",action='store_true',default=False,
                     help="Drop into CLI after request (default: false)")
     p.add_argument("domain",metavar="<domain>",
@@ -55,6 +57,9 @@ if __name__ == '__main__':
 
     # Construct request
     q = DNSRecord(q=DNSQuestion(args.domain,getattr(QTYPE,args.qtype)))
+
+    if args.dnssec:
+        q.add_ar(EDNS0(flags="do",udp_len=4096))
 
     address,_,port = args.server.partition(':')
     port = int(port or 53)
@@ -80,7 +85,11 @@ if __name__ == '__main__':
             port = int(port or 53)
 
         if args.dig:
-            dig = getoutput("dig +qr -p %d %s %s @%s" % (
+            if args.dnssec:
+                dig = getoutput("dig +qr +dnssec -p %d %s %s @%s" % (
+                                port, args.domain, args.qtype, address))
+            else:
+                dig = getoutput("dig +qr +noedns -p %d %s %s @%s" % (
                                 port, args.domain, args.qtype, address))
             dig_reply = list(iter(DigParser(dig)))
             # DiG might have retried in TCP mode so get last q/a
