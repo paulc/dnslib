@@ -164,14 +164,15 @@ class DigParser:
             while True:
                 tok,val = next(self.i)
                 if tok == 'COMMENT':
-                    if 'Sending:' in val or 'Got answer:' in val:
+                    if val.startswith('; ->>HEADER<<-'):
+                        # Start new record
                         if dns:
+                            # If we have a current record complete this
                             self.parseQuestions(q,dns)
                             self.parseAnswers(a,auth,ar,dns)
                             yield(dns)
                         dns = DNSRecord()
                         q,a,auth,ar = [],[],[],[]
-                    elif val.startswith('; ->>HEADER<<-'):
                         self.expect('NL')
                         val2 = self.expect('COMMENT')
                         dns.header = self.parseHeader(val,val2)
