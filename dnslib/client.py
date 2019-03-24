@@ -87,7 +87,7 @@ if __name__ == '__main__':
                 port = int(port or 53)
 
             if args.dig:
-                if getoutputstatus("dig -v")[0] != 0:
+                if getstatusoutput("dig -v")[0] != 0:
                     p.error("DiG not found")
                 if args.dnssec:
                     dig = getoutput("dig +qr +dnssec -p %d %s %s @%s" % (
