@@ -1,0 +1,20 @@
+;; Sending:
+;; QUERY: bafd010000010000000000000a636c6f7564666c61726503636f6d00000f0001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47869
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      MX
+
+;; Got answer:
+;; RESPONSE: bafd818000010005000000000a636c6f7564666c61726503636f6d00000f0001c00c000f00010000239900160028066173706d78320a676f6f676c656d61696cc017c00c000f000100002399000b0032066173706d7833c035c00c000f0001000023990013000a056173706d78016c06676f6f676c65c017c00c000f0001000023990009001404616c7431c067c00c000f0001000023990009001e04616c7432c067
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47869
+;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      MX
+;; ANSWER SECTION:
+cloudflare.com.         9113    IN      MX      40 aspmx2.googlemail.com.
+cloudflare.com.         9113    IN      MX      50 aspmx3.googlemail.com.
+cloudflare.com.         9113    IN      MX      10 aspmx.l.google.com.
+cloudflare.com.         9113    IN      MX      20 alt1.aspmx.l.google.com.
+cloudflare.com.         9113    IN      MX      30 alt2.aspmx.l.google.com.
+

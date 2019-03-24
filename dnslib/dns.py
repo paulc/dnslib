@@ -31,15 +31,17 @@ class DNSError(Exception):
 # DNS codes
 
 QTYPE =  Bimap('QTYPE', 
-                {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 15:'MX',
-                 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY', 28:'AAAA',
-                 29:'LOC', 33:'SRV', 35:'NAPTR', 36:'KX', 37:'CERT', 38:'A6',
-                 39:'DNAME', 41:'OPT', 42:'APL', 43:'DS', 44:'SSHFP',
-                 45:'IPSECKEY', 46:'RRSIG', 47:'NSEC', 48:'DNSKEY', 49:'DHCID',
-                 50:'NSEC3', 51:'NSEC3PARAM', 52:'TLSA', 55:'HIP', 99:'SPF',
-                 249:'TKEY', 250:'TSIG', 251:'IXFR', 252:'AXFR', 255:'ANY',
-                 257:'CAA', 32768:'TA', 32769:'DLV'},
-                DNSError)
+                {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 13:'HINFO',
+                    15:'MX', 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY',
+                    28:'AAAA', 29:'LOC', 33:'SRV', 35:'NAPTR', 36:'KX',
+                    37:'CERT', 38:'A6', 39:'DNAME', 41:'OPT', 42:'APL',
+                    43:'DS', 44:'SSHFP', 45:'IPSECKEY', 46:'RRSIG', 47:'NSEC',
+                    48:'DNSKEY', 49:'DHCID', 50:'NSEC3', 51:'NSEC3PARAM',
+                    52:'TLSA', 55:'HIP', 59:'CDS', 60:'CDNSKEY',
+                    61:'OPENPGPKEY',99:'SPF', 249:'TKEY', 250:'TSIG',
+                    251:'IXFR', 252:'AXFR', 255:'ANY', 256:'URI', 257:'CAA',
+                    32768:'TA', 32769:'DLV'}, DNSError)
+
 CLASS =  Bimap('CLASS',
                 {1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'},
                 DNSError)
@@ -1595,6 +1597,89 @@ class RRSIG(RD):
     attrs = ('covered','algorithm','labels','orig_ttl','sig_exp','sig_inc',
              'key_tag','name','sig')
 
+def decode_type_bitmap(type_bitmap):
+    """
+        Parse RR type bitmap in NSEC record
+
+        >>> decode_type_bitmap(binascii.unhexlify(b'0006400080080003'))
+        ['A', 'TXT', 'AAAA', 'RRSIG', 'NSEC']
+        >>> decode_type_bitmap(binascii.unhexlify(b'000762008008000380'))
+        ['A', 'NS', 'SOA', 'TXT', 'AAAA', 'RRSIG', 'NSEC', 'DNSKEY']
+    """
+    rrlist = []
+    buf = DNSBuffer(type_bitmap)
+    while buf.remaining():
+        winnum,winlen = buf.unpack('BB')
+        bitmap = bytearray(buf.get(winlen))
+        for (pos,value) in enumerate(bitmap):
+            for i in range(8):
+                if (value << i) & 0x80:
+                    bitpos = (256*winnum) + (8*pos) + i
+                    rrlist.append(QTYPE[bitpos])
+    return rrlist
+
+def encode_type_bitmap(rrlist):
+    """
+        Encode RR type bitmap in NSEC record
+        XXX Currenly support window #0 (RR 1-255)
+
+        >>> p = lambda x: print(binascii.hexlify(x).decode())
+        >>> p(encode_type_bitmap(['A','TXT','AAAA','RRSIG','NSEC']))
+        0006400080080003
+        >>> p(encode_type_bitmap(['A','NS','SOA','TXT','AAAA','RRSIG','NSEC','DNSKEY']))
+        000762008008000380
+    """
+    bitmap = bytearray([0]*32)
+    for rr in rrlist:
+        v = getattr(QTYPE,rr)
+        if v > 255:
+            raise ValueError("Only support window #0 (RR 1-255) [%s]" % rr)
+        bitmap[v//8] |= 1 << (7 - v%8)
+    while bitmap[-1] == 0:
+        bitmap = bitmap[:-1]
+    return struct.pack("BB",0,len(bitmap)) + bitmap
+
+class NSEC(RD):
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            end = buffer.offset + length
+            name = buffer.decode_name()
+            rrlist = decode_type_bitmap(buffer.get(end - buffer.offset))
+            return cls(name,rrlist)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking NSEC [offset=%d]: %s" % 
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(rd.pop(0),rd)
+
+    def __init__(self,label,rrlist):
+        self.label = label
+        self.rrlist = rrlist
+
+    def set_label(self,label):
+        if isinstance(label,DNSLabel):
+            self._label = label
+        else:
+            self._label = DNSLabel(label)
+
+    def get_label(self):
+        return self._label
+
+    label = property(get_label,set_label)
+
+    def pack(self,buffer):
+        buffer.encode_name_nocompress(self.label)
+        buffer.append(encode_type_bitmap(self.rrlist))
+        
+    def __repr__(self):
+        return "%s %s" % (self.label," ".join(self.rrlist))
+
+    attrs = ('label','rrlist')
+
 class CAA(RD):
     """
         CAA record.
@@ -1663,7 +1748,7 @@ class CAA(RD):
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX, 
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
-          'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 'CAA':CAA
+          'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 'NSEC':NSEC, 'CAA':CAA
         }
 
 ##

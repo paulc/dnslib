@@ -1,0 +1,16 @@
+;; Sending:
+;; QUERY: a370010000010000000000000469616e61036f72670000010001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 41840
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;iana.org.                      IN      A
+
+;; Got answer:
+;; RESPONSE: a370818000010001000000000469616e61036f72670000010001c00c000100010000015e0004c0002b08
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 41840
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;iana.org.                      IN      A
+;; ANSWER SECTION:
+iana.org.               350     IN      A       192.0.43.8
+

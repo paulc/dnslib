@@ -1,0 +1,16 @@
+;; Sending:
+;; QUERY: 5a9101000001000000000000026865036e657400000f0001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 23185
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;he.net.                        IN      MX
+
+;; Got answer:
+;; RESPONSE: 5a9181800001000100000000026865036e657400000f0001c00c000f00010001515400040001c00c
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 23185
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;he.net.                        IN      MX
+;; ANSWER SECTION:
+he.net.                 86356   IN      MX      1 he.net.
+

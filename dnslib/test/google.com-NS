@@ -1,0 +1,19 @@
+;; Sending:
+;; QUERY: b9440100000100000000000006676f6f676c6503636f6d0000020001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47428
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;google.com.                    IN      NS
+
+;; Got answer:
+;; RESPONSE: b9448180000100040000000006676f6f676c6503636f6d0000020001c00c0002000100001be80006036e7331c00cc00c0002000100001be80006036e7332c00cc00c0002000100001be80006036e7333c00cc00c0002000100001be80006036e7334c00c
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47428
+;; flags: qr rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;google.com.                    IN      NS
+;; ANSWER SECTION:
+google.com.             7144    IN      NS      ns1.google.com.
+google.com.             7144    IN      NS      ns2.google.com.
+google.com.             7144    IN      NS      ns3.google.com.
+google.com.             7144    IN      NS      ns4.google.com.
+

@@ -1,0 +1,20 @@
+;; Sending:
+;; QUERY: ad85010000010000000000000a636c6f7564666c61726503636f6d0000020001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44421
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      NS
+
+;; Got answer:
+;; RESPONSE: ad85818000010005000000000a636c6f7564666c61726503636f6d0000020001c00c0002000100014d590006036e7335c00cc00c0002000100014d590006036e7336c00cc00c0002000100014d590006036e7337c00cc00c0002000100014d590006036e7333c00cc00c0002000100014d590006036e7334c00c
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44421
+;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      NS
+;; ANSWER SECTION:
+cloudflare.com.         85337   IN      NS      ns5.cloudflare.com.
+cloudflare.com.         85337   IN      NS      ns6.cloudflare.com.
+cloudflare.com.         85337   IN      NS      ns7.cloudflare.com.
+cloudflare.com.         85337   IN      NS      ns3.cloudflare.com.
+cloudflare.com.         85337   IN      NS      ns4.cloudflare.com.
+

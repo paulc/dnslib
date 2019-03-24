@@ -1,0 +1,16 @@
+;; Sending:
+;; QUERY: 4d6d010000010000000000000377777706676f6f676c6503636f6d0000010001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 19821
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;www.google.com.                IN      A
+
+;; Got answer:
+;; RESPONSE: 4d6d818000010001000000000377777706676f6f676c6503636f6d0000010001c00c00010001000000760004d83acc44
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 19821
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;www.google.com.                IN      A
+;; ANSWER SECTION:
+www.google.com.         118     IN      A       216.58.204.68
+

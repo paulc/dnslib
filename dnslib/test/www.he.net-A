@@ -1,0 +1,17 @@
+;; Sending:
+;; QUERY: 0cb40100000100000000000003777777026865036e65740000010001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 3252
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;www.he.net.                    IN      A
+
+;; Got answer:
+;; RESPONSE: 0cb48180000100020000000003777777026865036e65740000010001c00c00050001000029990002c010c01000010001000018070004d8daba02
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 3252
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;www.he.net.                    IN      A
+;; ANSWER SECTION:
+www.he.net.             10649   IN      CNAME   he.net.
+he.net.                 6151    IN      A       216.218.186.2
+

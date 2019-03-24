@@ -6,10 +6,16 @@
 
 from __future__ import print_function
 
-import fnmatch
+import fnmatch,re,string
 
 from dnslib.bit import get_bits,set_bits
 from dnslib.buffer import Buffer, BufferError
+
+# In theory calid label characters should be letters,digits,hyphen,underscore (LDH) 
+# LDH = set(bytearray(b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_'))
+# For compatibility we only escape non-printable characters
+LDH = set(range(33,127))
+ESCAPE = re.compile(r'\\([0-9][0-9][0-9])')
 
 class DNSLabelError(Exception):
     pass
@@ -77,9 +83,15 @@ class DNSLabel(object):
             if not label or label in (b'.','.'):
                 self.label = ()
             elif type(label) is not bytes:
+                if type('') != type(b''):
+                    # Py3
+                    label = ESCAPE.sub(lambda m:chr(int(m[1])),label)
                 self.label = tuple(label.encode("idna").\
                                 rstrip(b".").split(b"."))
             else:
+                if type('') == type(b''):
+                    # Py2
+                    label = ESCAPE.sub(lambda m:chr(int(m.groups()[0])),label)
                 self.label = tuple(label.rstrip(b".").split(b"."))
 
     def add(self,name):
@@ -116,8 +128,17 @@ class DNSLabel(object):
     def idna(self):
         return ".".join([ s.decode("idna") for s in self.label ]) + "."
 
+    def _decode(self,s):
+        if set(s).issubset(LDH):
+            # All chars in LDH
+            return s.decode()
+        else:
+            # Need to encode
+            return "".join([(chr(c) if (c in LDH) else "\%03d" % c) for c in s])
+
     def __str__(self):
-        return ".".join([ s.decode() for s in self.label ]) + "."
+        decoded = []
+        return ".".join([ self._decode(bytearray(s)) for s in self.label ]) + "."
 
     def __repr__(self):
         return "<DNSLabel: '%s'>" % str(self)

@@ -1,0 +1,16 @@
+;; Sending:
+;; QUERY: 70ab0100000100000000000003777777026865036e65740000050001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28843
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;www.he.net.                    IN      CNAME
+
+;; Got answer:
+;; RESPONSE: 70ab8180000100010000000003777777026865036e65740000050001c00c00050001000029990002c010
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 28843
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;www.he.net.                    IN      CNAME
+;; ANSWER SECTION:
+www.he.net.             10649   IN      CNAME   he.net.
+

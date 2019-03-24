@@ -1,0 +1,20 @@
+;; Sending:
+;; QUERY: fec501000001000000000000026865036e65740000020001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 65221
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;he.net.                        IN      NS
+
+;; Got answer:
+;; RESPONSE: fec581800001000500000000026865036e65740000020001c00c00020001000151540006036e7332c00cc00c00020001000151540006036e7333c00cc00c00020001000151540006036e7334c00cc00c00020001000151540006036e7335c00cc00c00020001000151540006036e7331c00c
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 65221
+;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;he.net.                        IN      NS
+;; ANSWER SECTION:
+he.net.                 86356   IN      NS      ns2.he.net.
+he.net.                 86356   IN      NS      ns3.he.net.
+he.net.                 86356   IN      NS      ns4.he.net.
+he.net.                 86356   IN      NS      ns5.he.net.
+he.net.                 86356   IN      NS      ns1.he.net.
+

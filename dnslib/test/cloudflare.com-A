@@ -1,0 +1,17 @@
+;; Sending:
+;; QUERY: 6565010000010000000000000a636c6f7564666c61726503636f6d0000010001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 25957
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      A
+
+;; Got answer:
+;; RESPONSE: 6565818000010002000000000a636c6f7564666c61726503636f6d0000010001c00c000100010000007a0004c629d7a2c00c000100010000007a0004c629d6a2
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 25957
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;cloudflare.com.                IN      A
+;; ANSWER SECTION:
+cloudflare.com.         122     IN      A       198.41.215.162
+cloudflare.com.         122     IN      A       198.41.214.162
+

@@ -96,7 +96,7 @@ class DigParser:
         header = DNSHeader(id=int(_id),bitmap=0)
         header.opcode = getattr(QR,opcode.rstrip(','))
         header.rcode = getattr(RCODE,status.rstrip(','))
-        for f in ('qr','aa','tc','rd','ra'):
+        for f in ('qr','aa','tc','rd','ra','ad','cd'):
             if f in flags:
                 setattr(header,f,1)
         return header

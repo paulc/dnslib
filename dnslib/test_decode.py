@@ -72,6 +72,7 @@ def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False,dnssec=False):
     q = DNSRecord.question(domain,qtype)
     if dnssec:
         q.add_ar(EDNS0(flags="do",udp_len=4096))
+        q.header.ad = 1
     a_pkt = q.send(address,port)
     a = DNSRecord.parse(a_pkt)
     if a.header.tc:
@@ -84,7 +85,7 @@ def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False,dnssec=False):
             dig = getoutput("dig +qr +dnssec -p %d %s %s @%s" % (
                             port, domain, qtype, address))
         else:
-            dig = getoutput("dig +qr +noedns -p %d %s %s @%s" % (
+            dig = getoutput("dig +qr +noedns +noadflag -p %d %s %s @%s" % (
                             port, domain, qtype, address))
         dig_reply = list(iter(DigParser(dig)))
         # DiG might have retried in TCP mode so get last q/a

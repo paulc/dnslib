@@ -1,0 +1,19 @@
+;; Sending:
+;; QUERY: 4f99010000010000000000000469616e61036f726700000f0001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20377
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;iana.org.                      IN      MX
+
+;; Got answer:
+;; RESPONSE: 4f99818000010004000000000469616e61036f726700000f0001c00c000f000100000dc60013000a08706563686f726131056963616e6ec011c00c000f000100000dc6000d000a08706563686f726132c031c00c000f000100000dc6000d000a08706563686f726136c031c00c000f000100000dc6000d000a08706563686f726138c031
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20377
+;; flags: qr rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;iana.org.                      IN      MX
+;; ANSWER SECTION:
+iana.org.               3526    IN      MX      10 pechora1.icann.org.
+iana.org.               3526    IN      MX      10 pechora2.icann.org.
+iana.org.               3526    IN      MX      10 pechora6.icann.org.
+iana.org.               3526    IN      MX      10 pechora8.icann.org.
+

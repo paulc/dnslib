@@ -163,7 +163,7 @@ It is also possible to create RRs from a string in zone file format
     >>> RR.fromZone("abc.com IN A 1.2.3.4")
     [<DNS RR: 'abc.com.' rtype=A rclass=IN ttl=0 rdata='1.2.3.4'>]
 
-(Note: this produces a list of RRs which should be unpacked if being
+    (Note: this produces a list of RRs which should be unpacked if being
     passed to add_answer/add_auth/add_ar etc)
 
     >>> q = DNSRecord.question("abc.com")
@@ -256,6 +256,19 @@ It is also possible to create a reply from a string in zone file format:
     www.abc.com.            300     IN      TXT     "Some Text"
     mail.abc.com.           300     IN      CNAME   www.abc.com.
 
+To send a DNSSEC request (EDNS OPT record with DO flag & header AD flag):
+
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.A)) 
+    >>> q.add_ar(EDNS0(flags="do",udp_len=4096))
+    >>> q.header.ad = 1
+    >>> print(q)
+    ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
+    ;; flags: rd ad; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+    ;; QUESTION SECTION:
+    ;abc.com.                       IN      A
+    ;; ADDITIONAL SECTION:
+    ;; OPT PSEUDOSECTION
+    ; EDNS: version: 0, flags: do; udp: 4096
 
 The library also includes a simple framework for generating custom DNS
 resolvers in dnslib.server (see module docs). In post cases this just 
@@ -322,6 +335,12 @@ Changelog:
  *   0.9.9   2019-03-19  Add support for DNSSEC flag getters/setters (from <raul@dinosec.com> - thanks)
                          Added --dnssec flags to dnslib.client & dnslib.test_decode (sets EDNS0 DO flag)
                          Added EDNS0 support to dnslib.digparser
+ *   0.9.10  2019-03-24  Fixes to DNSSEC support
+                         Add NSEC RR support
+                         Add --dnssec flag to dnslib.client & dnslib.test_decode
+                         Quote/unquote non-printable characters in DNS labels
+                         Update test data
+                         (Thanks to <raul@dinosec.com> for help)
 
 License:
 --------
@@ -343,7 +362,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.9"
+version = "0.9.10"
 
 if __name__ == '__main__':
     import doctest,textwrap

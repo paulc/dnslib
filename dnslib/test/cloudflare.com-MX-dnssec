@@ -1,0 +1,27 @@
+;; Sending:
+;; QUERY: e5e1012000010000000000010a636c6f7564666c61726503636f6d00000f00010000291000000080000000
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 58849
+;; flags: rd ad; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+;; QUESTION SECTION:
+;cloudflare.com.                IN      MX
+;; ADDITIONAL SECTION:
+;; OPT PSEUDOSECTION
+; EDNS: version: 0, flags: do; udp: 4096
+
+;; Got answer:
+;; RESPONSE: e5e1818000010006000000010a636c6f7564666c61726503636f6d00000f0001c00c000f00010000236800160028066173706d78320a676f6f676c656d61696cc017c00c000f000100002368000b0032066173706d7833c035c00c000f0001000023680013000a056173706d78016c06676f6f676c65c017c00c000f0001000023680009001404616c7431c067c00c000f0001000023680009001e04616c7432c067c00c002e0001000023680062000f0d02000151805c98288a5c95696a86c90a636c6f7564666c61726503636f6d00de2ca7ed9b2422e14550f4afdc33935423978690d5aaed87ada989d7cccff3d0d494ea9bc3e57a320ac979d85ca3aaa915a82e3a8263b396e1c9bf76a30a808e0000291000000080000000
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 58849
+;; flags: qr rd ra; QUERY: 1, ANSWER: 6, AUTHORITY: 0, ADDITIONAL: 1
+;; QUESTION SECTION:
+;cloudflare.com.                IN      MX
+;; ANSWER SECTION:
+cloudflare.com.         9064    IN      MX      40 aspmx2.googlemail.com.
+cloudflare.com.         9064    IN      MX      50 aspmx3.googlemail.com.
+cloudflare.com.         9064    IN      MX      10 aspmx.l.google.com.
+cloudflare.com.         9064    IN      MX      20 alt1.aspmx.l.google.com.
+cloudflare.com.         9064    IN      MX      30 alt2.aspmx.l.google.com.
+cloudflare.com.         9064    IN      RRSIG   MX 13 2 86400 20190325010202 20190322230202 34505 cloudflare.com. 3iyn7ZskIuFFUPSv3DOTVCOXhpDVqu2HramJ18zP89DUlOqbw+V6MgrJedhco6qpFaguOoJjs5bhyb92owqAjg==
+;; ADDITIONAL SECTION:
+;; OPT PSEUDOSECTION
+; EDNS: version: 0, flags: do; udp: 4096
+

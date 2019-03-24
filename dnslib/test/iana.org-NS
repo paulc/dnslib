@@ -1,0 +1,19 @@
+;; Sending:
+;; QUERY: f869010000010000000000000469616e61036f72670000020001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 63593
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;iana.org.                      IN      NS
+
+;; Got answer:
+;; RESPONSE: f869818000010004000000000469616e61036f72670000020001c00c0002000100001baf001401610c69616e612d73657276657273036e657400c00c0002000100001baf00040162c028c00c0002000100001baf00040163c028c00c0002000100001baf000b026e73056963616e6ec011
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 63593
+;; flags: qr rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;iana.org.                      IN      NS
+;; ANSWER SECTION:
+iana.org.               7087    IN      NS      a.iana-servers.net.
+iana.org.               7087    IN      NS      b.iana-servers.net.
+iana.org.               7087    IN      NS      c.iana-servers.net.
+iana.org.               7087    IN      NS      ns.icann.org.
+
