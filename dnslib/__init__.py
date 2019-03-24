@@ -271,7 +271,7 @@ To send a DNSSEC request (EDNS OPT record with DO flag & header AD flag):
     ; EDNS: version: 0, flags: do; udp: 4096
 
 The library also includes a simple framework for generating custom DNS
-resolvers in dnslib.server (see module docs). In post cases this just 
+resolvers in dnslib.server (see module docs). In most cases this just 
 requires implementing a custom 'resolve' method which receives a question 
 object and returns a response.
 
