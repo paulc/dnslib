@@ -1,4 +1,8 @@
+
 [paths]
 default = https://paulc@bitbucket.org/paulc/dnslib
 github = git+ssh://git@github.com/paulchakravarti/dnslib.git
 
+[extensions]
+hgext.bookmarks =
+hggit =
