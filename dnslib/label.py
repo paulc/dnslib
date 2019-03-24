@@ -11,7 +11,7 @@ import fnmatch,re,string
 from dnslib.bit import get_bits,set_bits
 from dnslib.buffer import Buffer, BufferError
 
-# In theory calid label characters should be letters,digits,hyphen,underscore (LDH) 
+# In theory valid label characters should be letters,digits,hyphen,underscore (LDH) 
 # LDH = set(bytearray(b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_'))
 # For compatibility we only escape non-printable characters
 LDH = set(range(33,127))
@@ -137,7 +137,6 @@ class DNSLabel(object):
             return "".join([(chr(c) if (c in LDH) else "\%03d" % c) for c in s])
 
     def __str__(self):
-        decoded = []
         return ".".join([ self._decode(bytearray(s)) for s in self.label ]) + "."
 
     def __repr__(self):
