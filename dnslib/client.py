@@ -14,9 +14,9 @@
 from __future__ import print_function
 
 try:
-    from subprocess import getoutput
+    from subprocess import getoutput,getstatusoutput
 except ImportError:
-    from commands import getoutput
+    from commands import getoutput,getstatusoutput
 
 import binascii,code,pprint,sys
 
@@ -87,6 +87,8 @@ if __name__ == '__main__':
                 port = int(port or 53)
 
             if args.dig:
+                if getoutputstatus("dig -v")[0] != 0:
+                    p.error("DiG not found")
                 if args.dnssec:
                     dig = getoutput("dig +qr +dnssec -p %d %s %s @%s" % (
                                     port, args.domain, args.qtype, address))
