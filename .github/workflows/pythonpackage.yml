@@ -22,17 +22,17 @@ jobs:
         pwd
         ls -al
         export PYTHONPATH=$(pwd)
-        python -m dnslib.__init__
-        python dnslib/__init__.py
-        python dnslib/bimap.py
-        python dnslib/bit.py
-        python dnslib/buffer.py
-        python dnslib/label.py
-        python dnslib/dns.py
-        python dnslib/lex.py
-        python dnslib/server.py
-        python dnslib/digparser.py
-        python dnslib/ranges.py
-        python dnslib/test_decode.py
+        python -m dnslib.__init__ -v 
+        python dnslib/__init__.py -v
+        python dnslib/bimap.py -v
+        python dnslib/bit.py -v
+        python dnslib/buffer.py -v
+        python dnslib/label.py -v
+        python dnslib/dns.py -v
+        python dnslib/lex.py -v
+        python dnslib/server.py -v
+        python dnslib/digparser.py -v
+        python dnslib/ranges.py -v 
+        python dnslib/test_decode.py -v
         python fuzz.py
         
