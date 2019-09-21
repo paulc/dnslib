@@ -21,6 +21,7 @@ jobs:
       run: |
         pwd
         ls -al
+        python -m dnslib.__init__
         python dnslib/__init__.py
         python dnslib/bimap.py
         python dnslib/bit.py
