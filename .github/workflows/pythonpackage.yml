@@ -33,5 +33,5 @@ jobs:
         python dnslib/digparser.py 
         python dnslib/ranges.py -
         python dnslib/test_decode.py 
-        # python fuzz.py
+        python fuzz.py
         
