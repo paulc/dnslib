@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
+
+## From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to teh original BitBucket repository as this will no longer be maintained.
+
+
 dnslib
 ------
 
@@ -342,6 +346,7 @@ Changelog:
                          Update test data
                          (Thanks to <raul@dinosec.com> for help)
  *   0.9.11  2019-12-17  Encode NOTIFY Opcode (Issue #26)
+ *   0.9.12  2019-12-17  Transition master repository to Github (Bitbucket shutting down hg)
 
 License:
 --------
@@ -356,14 +361,15 @@ Author:
 Master Repository/Issues:
 -------------------------
 
- *   https://bitbucket.org/paulc/dnslib
-     (Cloned on GitHub: https://github.com/paulchakravarti/dnslib)
+ *   https://github.com/paulc/dnslib  
+
+ (Note: https://bitbucket.org/paulc/dnslib has been deprecated and will not be updated)
 
 """
 
 from dnslib.dns import *
 
-version = "0.9.11"
+version = "0.9.12"
 
 if __name__ == '__main__':
     import doctest,textwrap
