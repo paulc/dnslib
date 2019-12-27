@@ -269,7 +269,7 @@ To send a DNSSEC request (EDNS OPT record with DO flag & header AD flag):
     ; EDNS: version: 0, flags: do; udp: 4096
 
 The library also includes a simple framework for generating custom DNS
-resolvers in dnslib.server (see module docs). In post cases this just 
+resolvers in dnslib.server (see module docs). In most cases this just 
 requires implementing a custom 'resolve' method which receives a question 
 object and returns a response.
 
@@ -310,7 +310,7 @@ Changelog:
  *   0.8.1   2012-11-05  Added NAPTR test case and fixed logic error
                          Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
  *   0.8.2   2012-11-11  Patch to fix IPv6 formatting
-                         Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
+                         Patch provided by Torbjorn Lonnemark (https://bitbucket.org/tobbezz) - thanks
  *   0.8.3   2013-04-27  Don't parse rdata if rdlength is 0
                          Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
  *   0.9.0   2014-05-05  Major update including Py3 support (see docs)
@@ -339,6 +339,7 @@ Changelog:
                          Quote/unquote non-printable characters in DNS labels
                          Update test data
                          (Thanks to <raul@dinosec.com> for help)
+ *   0.9.11  2019-12-17  Encode NOTIFY Opcode (Issue #26)
 
 License:
 --------
@@ -348,7 +349,7 @@ BSD
 Author:
 -------
 
- *   Paul Chakravarti (paul.chakravarti@gmail.com)
+ *   PaulC 
 
 Master Repository/Issues:
 -------------------------

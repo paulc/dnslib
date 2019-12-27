@@ -312,7 +312,7 @@ Changelog:
  *   0.8.1   2012-11-05  Added NAPTR test case and fixed logic error
                          Patch provided by Stefan Andersson (https://bitbucket.org/norox) - thanks
  *   0.8.2   2012-11-11  Patch to fix IPv6 formatting
-                         Patch provided by Torbjörn Lönnemark (https://bitbucket.org/tobbezz) - thanks
+                         Patch provided by Torbjorn Lonnemark (https://bitbucket.org/tobbezz) - thanks
  *   0.8.3   2013-04-27  Don't parse rdata if rdlength is 0
                          Patch provided by Wesley Shields <wxs@FreeBSD.org> - thanks
  *   0.9.0   2014-05-05  Major update including Py3 support (see docs)
@@ -341,6 +341,7 @@ Changelog:
                          Quote/unquote non-printable characters in DNS labels
                          Update test data
                          (Thanks to <raul@dinosec.com> for help)
+ *   0.9.11  2019-12-17  Encode NOTIFY Opcode (Issue #26)
 
 License:
 --------
@@ -350,7 +351,7 @@ BSD
 Author:
 -------
 
- *   Paul Chakravarti (paul.chakravarti@gmail.com)
+ *   PaulC 
 
 Master Repository/Issues:
 -------------------------
@@ -362,7 +363,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.10"
+version = "0.9.11"
 
 if __name__ == '__main__':
     import doctest,textwrap

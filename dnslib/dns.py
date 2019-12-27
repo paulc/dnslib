@@ -53,7 +53,7 @@ RCODE =  Bimap('RCODE',
                  4:'NOTIMP', 5:'REFUSED', 6:'YXDOMAIN', 7:'YXRRSET', 
                  8:'NXRRSET', 9:'NOTAUTH', 10:'NOTZONE'},
                 DNSError)
-OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 5:'UPDATE'},
+OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 4:'NOTIFY', 5:'UPDATE'},
                 DNSError)
 
 def label(label,origin=None):
