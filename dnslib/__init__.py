@@ -2,7 +2,7 @@
 
 """
 
-## From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to teh original BitBucket repository as this will no longer be maintained.
+## From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to the original BitBucket repository as this will no longer be maintained.
 
 
 dnslib
