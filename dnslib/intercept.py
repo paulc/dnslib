@@ -22,7 +22,7 @@ class InterceptResolver(BaseResolver):
         matching local records
     """
 
-    def __init__(self,address,port,ttl,intercept,skip,nxdomain,forward,timeout=0):
+    def __init__(self,address,port,ttl,intercept,skip,nxdomain,forward,all_qtypes,timeout=0):
         """
             address/port    - upstream server
             ttl             - default ttl for intercept records
@@ -30,6 +30,7 @@ class InterceptResolver(BaseResolver):
             skip            - list of wildcard labels to skip
             nxdomain        - list of wildcard labels to return NXDOMAIN
             forward         - list of wildcard labels to forward
+            all_qtypes      - intercept all qtypes if qname matches.
             timeout         - timeout for upstream server(s)
         """
         self.address = address
@@ -42,6 +43,7 @@ class InterceptResolver(BaseResolver):
             qname, _, upstream = i.partition(':')
             upstream_ip, _, upstream_port = upstream.partition(':')
             self.forward.append((qname, upstream_ip, int(upstream_port or '53')))
+        self.all_qtypes = all_qtypes
         self.timeout = timeout
         self.zone = []
         for i in intercept:
@@ -51,19 +53,24 @@ class InterceptResolver(BaseResolver):
                 self.zone.append((rr.rname,QTYPE[rr.rtype],rr))
 
     def resolve(self,request,handler):
+        matched = False
         reply = request.reply()
         qname = request.q.qname
         qtype = QTYPE[request.q.qtype]
         # Try to resolve locally unless on skip list
         if not any([qname.matchGlob(s) for s in self.skip]):
             for name,rtype,rr in self.zone:
-                if qname.matchGlob(name) and (qtype in (rtype,'ANY','CNAME')):
-                    a = copy.copy(rr)
-                    a.rname = qname
-                    reply.add_answer(a)
+                if qname.matchGlob(name):
+                    if qtype in (rtype,'ANY','CNAME'):
+                        a = copy.copy(rr)
+                        a.rname = qname
+                        reply.add_answer(a)
+                    matched = True
         # Check for NXDOMAIN
         if any([qname.matchGlob(s) for s in self.nxdomain]):
             reply.header.rcode = getattr(RCODE,'NXDOMAIN')
+            return reply
+        if matched and self.all_qtypes:
             return reply
         # Otherwise proxy, first checking forwards, then to upstream.
         upstream, upstream_port = self.address,self.port
@@ -119,6 +126,8 @@ if __name__ == '__main__':
     p.add_argument("--timeout","-o",type=float,default=5,
                     metavar="<timeout>",
                     help="Upstream timeout (default: 5s)")
+    p.add_argument("--all-qtypes",action='store_true',default=False,
+                   help="Return an empty response if qname matches, but qtype doesn't")
     p.add_argument("--log",default="request,reply,truncated,error",
                     help="Log hooks to enable (default: +request,+reply,+truncated,+error,-recv,-send,-data)")
     p.add_argument("--log-prefix",action='store_true',default=False,
@@ -135,6 +144,7 @@ if __name__ == '__main__':
                                  args.skip or [],
                                  args.nxdomain or [],
                                  args.forward or [],
+                                 args.all_qtypes,
                                  args.timeout)
     logger = DNSLogger(args.log,args.log_prefix)
 
