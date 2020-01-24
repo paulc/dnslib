@@ -81,7 +81,7 @@ class InterceptResolver(BaseResolver):
                                     tcp=True,timeout=self.timeout)
                 reply = DNSRecord.parse(proxy_r)
             except socket.timeout:
-                reply.header.rcode = getattr(RCODE,'NXDOMAIN')
+                reply.header.rcode = getattr(RCODE,'SERVFAIL')
 
         return reply
 
