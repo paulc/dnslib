@@ -22,20 +22,26 @@ class InterceptResolver(BaseResolver):
         matching local records
     """
 
-    def __init__(self,address,port,ttl,intercept,skip,nxdomain,timeout=0):
+    def __init__(self,address,port,ttl,intercept,skip,nxdomain,forward,timeout=0):
         """
             address/port    - upstream server
             ttl             - default ttl for intercept records
             intercept       - list of wildcard RRs to respond to (zone format)
-            skip            - list of wildcard labels to skip 
-            nxdomain        - list of wildcard labels to retudn NXDOMAIN
-            timeout         - timeout for upstream server
+            skip            - list of wildcard labels to skip
+            nxdomain        - list of wildcard labels to return NXDOMAIN
+            forward         - list of wildcard labels to forward
+            timeout         - timeout for upstream server(s)
         """
         self.address = address
         self.port = port
         self.ttl = parse_time(ttl)
         self.skip = skip
         self.nxdomain = nxdomain
+        self.forward = []
+        for i in forward:
+            qname, _, upstream = i.partition(':')
+            upstream_ip, _, upstream_port = upstream.partition(':')
+            self.forward.append((qname, upstream_ip, int(upstream_port or '53')))
         self.timeout = timeout
         self.zone = []
         for i in intercept:
@@ -59,14 +65,19 @@ class InterceptResolver(BaseResolver):
         if any([qname.matchGlob(s) for s in self.nxdomain]):
             reply.header.rcode = getattr(RCODE,'NXDOMAIN')
             return reply
-        # Otherwise proxy
+        # Otherwise proxy, first checking forwards, then to upstream.
+        upstream, upstream_port = self.address,self.port
+        if not any([qname.matchGlob(s) for s in self.skip]):
+            for name, ip, port in self.forward:
+                if qname.matchGlob(name):
+                    upstream, upstream_port = ip, port
         if not reply.rr:
             try:
                 if handler.protocol == 'udp':
-                    proxy_r = request.send(self.address,self.port,
+                    proxy_r = request.send(upstream,upstream_port,
                                     timeout=self.timeout)
                 else:
-                    proxy_r = request.send(self.address,self.port,
+                    proxy_r = request.send(upstream,upstream_port,
                                     tcp=True,timeout=self.timeout)
                 reply = DNSRecord.parse(proxy_r)
             except socket.timeout:
@@ -99,6 +110,9 @@ if __name__ == '__main__':
     p.add_argument("--nxdomain","-x",action="append",
                     metavar="<label>",
                     help="Return NXDOMAIN (glob)")
+    p.add_argument("--forward","-f",action="append",
+                   metavar="<label:dns server:port>",
+                   help="forward requests matching label (glob) to dns server")
     p.add_argument("--ttl","-t",default="60s",
                     metavar="<ttl>",
                     help="Intercept TTL (default: 60s)")
@@ -120,6 +134,7 @@ if __name__ == '__main__':
                                  args.intercept or [],
                                  args.skip or [],
                                  args.nxdomain or [],
+                                 args.forward or [],
                                  args.timeout)
     logger = DNSLogger(args.log,args.log_prefix)
 
@@ -134,6 +149,10 @@ if __name__ == '__main__':
         print("    NXDOMAIN:",", ".join(resolver.nxdomain))
     if resolver.skip:
         print("    Skipping:",", ".join(resolver.skip))
+    if resolver.forward:
+        print("    Forwarding:")
+        for i in resolver.forward:
+            print("    | ","%s:%s:%s" % i,sep="")
     print()
 
 
