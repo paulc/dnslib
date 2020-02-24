@@ -186,7 +186,6 @@ class WordLexer(Lexer):
                 return tok(self.lexQuote)
             elif c in self.wordchars:
                 return tok(self.lexWord)
-                return (self.spacetok,self.lexWord)
             elif c:
                 raise ValueError("Invalid input [%d]: %s" % (
                                         self.f.tell(),c))
