@@ -347,6 +347,7 @@ Changelog:
                          (Thanks to <raul@dinosec.com> for help)
  *   0.9.11  2019-12-17  Encode NOTIFY Opcode (Issue #26)
  *   0.9.12  2019-12-17  Transition master repository to Github (Bitbucket shutting down hg)
+ *   0.9.13  2020-06-01  Handle truncated requests in server.py (Issue #9)
 
 License:
 --------
