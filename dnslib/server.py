@@ -359,7 +359,7 @@ class DNSServer(object):
         self.server.shutdown()
 
     def isAlive(self):
-        return self.thread.isAlive()
+        return self.thread.is_alive()
 
 if __name__ == "__main__":
     import doctest
