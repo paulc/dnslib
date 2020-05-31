@@ -348,6 +348,8 @@ Changelog:
  *   0.9.11  2019-12-17  Encode NOTIFY Opcode (Issue #26)
  *   0.9.12  2019-12-17  Transition master repository to Github (Bitbucket shutting down hg)
  *   0.9.13  2020-06-01  Handle truncated requests in server.py (Issue #9)
+                         Replace thred.isAlive with thread.is_alive (Deprecated in Py3.9)
+                         Merged Pull Request #4 (Extra options for intercept.py) - thanks to @nolanl
 
 License:
 --------
@@ -370,7 +372,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.12"
+version = "0.9.13"
 
 if __name__ == '__main__':
     import doctest,textwrap
