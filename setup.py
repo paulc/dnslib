@@ -3,7 +3,7 @@
 try:
     from setuptools import Command, setup
 except ImportError:
-    from distutils.core import Command, setup 
+    from distutils.core import Command, setup
 
 import dnslib
 long_description = dnslib.__doc__.rstrip() + "\n"

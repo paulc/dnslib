@@ -13,9 +13,9 @@
                       The 'handle' method deals with the sending/receiving
                       packets (handling TCP length prefix) and delegates
                       the protocol handling to 'get_reply'. This decodes
-                      packet, hands off a DNSRecord to the Resolver instance, 
-                      and encodes the returned DNSRecord. 
-                      
+                      packet, hands off a DNSRecord to the Resolver instance,
+                      and encodes the returned DNSRecord.
+
                       In most cases you dont need to change DNSHandler unless
                       you need to get hold of the raw protocol data in the
                       Resolver
@@ -23,11 +23,11 @@
         DNSLogger   - The class provides a default set of logging functions for
                       the various stages of the request handled by a DNSServer
                       instance which are enabled/disabled by flags in the 'log'
-                      class variable. 
+                      class variable.
 
-        Resolver    - Instance implementing a 'resolve' method that receives 
-                      the decodes request packet and returns a response. 
-                        
+        Resolver    - Instance implementing a 'resolve' method that receives
+                      the decodes request packet and returns a response.
+
                       To implement a custom resolver in most cases all you need
                       is to implement this interface.
 
@@ -95,7 +95,7 @@ from dnslib import DNSRecord,DNSError,QTYPE,RCODE,RR
 class BaseResolver(object):
     """
         Base resolver implementation. Provides 'resolve' method which is
-        called by DNSHandler with the decode request (DNSRecord instance) 
+        called by DNSHandler with the decode request (DNSRecord instance)
         and returns a DNSRecord instance as reply.
 
         In most cases you should be able to create a custom resolver by
@@ -103,7 +103,7 @@ class BaseResolver(object):
         application (see fixedresolver/zoneresolver/shellresolver for
         examples)
 
-        Note that a single instance is used by all DNSHandler instances so 
+        Note that a single instance is used by all DNSHandler instances so
         need to consider blocking & thread safety.
     """
     def resolve(self,request,handler):
@@ -118,7 +118,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
     """
         Handler for socketserver. Transparently handles both TCP/UDP requests
         (TCP requests have length prepended) and hands off lookup to resolver
-        instance specified in <SocketServer>.resolver 
+        instance specified in <SocketServer>.resolver
     """
 
     udplen = 0                  # Max udp packet length (0 = ignore)
@@ -316,7 +316,7 @@ class DNSServer(object):
         or as a background thread.
 
         Processing is delegated to custom resolver (instance) and
-        optionally custom logger (instance), handler (class), and 
+        optionally custom logger (instance), handler (class), and
         server (class)
 
         In most cases only a custom resolver instance is required
@@ -346,7 +346,7 @@ class DNSServer(object):
         self.server = server((address,port),handler)
         self.server.resolver = resolver
         self.server.logger = logger or DNSLogger()
-    
+
     def start(self):
         self.server.serve_forever()
 

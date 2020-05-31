@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-    InterceptResolver - proxy requests to upstream server 
+    InterceptResolver - proxy requests to upstream server
                         (optionally intercepting)
-        
+
 """
 from __future__ import print_function
 
@@ -16,8 +16,8 @@ from dnslib.label import DNSLabel
 class InterceptResolver(BaseResolver):
 
     """
-        Intercepting resolver 
-        
+        Intercepting resolver
+
         Proxy requests to upstream server optionally intercepting requests
         matching local records
     """
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     print()
 
 
-    DNSHandler.log = { 
+    DNSHandler.log = {
         'log_request',      # DNS Request
         'log_reply',        # DNS Response
         'log_truncated',    # Truncated

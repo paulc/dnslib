@@ -2,9 +2,9 @@
 
 """
     Wrapper around property builtin to restrict attribute to defined
-    integer value range (throws ValueError). 
+    integer value range (throws ValueError).
 
-    Intended to ensure that values packed with struct are in the 
+    Intended to ensure that values packed with struct are in the
     correct range
 
     >>> class T(object):
@@ -60,7 +60,7 @@ else:
 
 def check_instance(name,val,types):
     if not isinstance(val,types):
-        raise ValueError("Attribute '%s' must be instance of %s [%s]" % 
+        raise ValueError("Attribute '%s' must be instance of %s [%s]" %
                                         (name,types,type(val)))
 
 def check_bytes(name,val):
@@ -73,7 +73,7 @@ def instance_property(attr,types):
         if isinstance(val,types):
             setattr(obj,"_%s" % attr,val)
         else:
-            raise ValueError("Attribute '%s' must be instance of %s [%s]" % 
+            raise ValueError("Attribute '%s' must be instance of %s [%s]" %
                                         (attr,types,type(val)))
     return property(getter,setter)
 
@@ -82,7 +82,7 @@ def BYTES(attr):
 
 def check_range(name,val,min,max):
     if not (isinstance(val,int_types) and min <= val <= max):
-        raise ValueError("Attribute '%s' must be between %d-%d [%s]" % 
+        raise ValueError("Attribute '%s' must be between %d-%d [%s]" %
                                         (name,min,max,val))
 
 def range_property(attr,min,max):
@@ -92,7 +92,7 @@ def range_property(attr,min,max):
         if isinstance(val,int_types) and min <= val <= max:
             setattr(obj,"_%s" % attr,val)
         else:
-            raise ValueError("Attribute '%s' must be between %d-%d [%s]" % 
+            raise ValueError("Attribute '%s' must be between %d-%d [%s]" %
                                         (attr,min,max,val))
     return property(getter,setter)
 
@@ -120,12 +120,12 @@ def ntuple_range(attr,n,min,max):
         return getattr(obj,"_%s" % attr)
     def setter(obj,val):
         if len(val) != n:
-            raise ValueError("Attribute '%s' must be tuple with %d elements [%s]" % 
+            raise ValueError("Attribute '%s' must be tuple with %d elements [%s]" %
                                         (attr,n,val))
         if all(map(f,val)):
             setattr(obj,"_%s" % attr,val)
         else:
-            raise ValueError("Attribute '%s' elements must be between %d-%d [%s]" % 
+            raise ValueError("Attribute '%s' elements must be between %d-%d [%s]" %
                                         (attr,min,max,val))
     return property(getter,setter)
 
