@@ -127,6 +127,9 @@ class DNSHandler(socketserver.BaseRequestHandler):
         if self.server.socket_type == socket.SOCK_STREAM:
             self.protocol = 'tcp'
             data = self.request.recv(8192)
+            if len(data) < 2:
+                self.server.logger.log_error(self,"Request Truncated")
+                return
             length = struct.unpack("!H",bytes(data[:2]))[0]
             while len(data) - 2 < length:
                 new_data = self.request.recv(8192)
