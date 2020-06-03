@@ -347,7 +347,7 @@ if __name__ == '__main__':
         try:
             # Test if we have /dev/urandom
             open("/dev/urandom")
-            doctest.testmod()
+            sys.exit(0 if doctest.testmod().failed == 0 else 1)
         except IOError:
             # Don't run stream test
             doctest.run_docstring_examples(Lexer, globals())

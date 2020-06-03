@@ -142,4 +142,3 @@ if __name__ == '__main__':
 
     except DNSError as e:
         p.error(e)
-

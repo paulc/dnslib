@@ -375,6 +375,5 @@ from dnslib.dns import *
 version = "0.9.13"
 
 if __name__ == '__main__':
-    import doctest,textwrap
-    doctest.testmod(optionflags=doctest.ELLIPSIS)
-
+    import doctest,sys,textwrap
+    sys.exit(0 if doctest.testmod(optionflags=doctest.ELLIPSIS).failed == 0 else 1)

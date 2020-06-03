@@ -362,5 +362,5 @@ class DNSServer(object):
         return self.thread.is_alive()
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod(optionflags=doctest.ELLIPSIS)
+    import doctest,sys
+    sys.exit(0 if doctest.testmod(optionflags=doctest.ELLIPSIS).failed == 0 else 1)
