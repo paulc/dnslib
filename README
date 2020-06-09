@@ -6,7 +6,7 @@
 dnslib
 ------
 
-A library to encode/decode DNS wire-format packets supporting both 
+A library to encode/decode DNS wire-format packets supporting both
 Python 2.7 and Python 3.2+.
 
 The library provides:
@@ -14,8 +14,8 @@ The library provides:
  * Support for encoding/decoding DNS packets between wire format,
    python objects, and Zone/DiG textual representation (dnslib.dns)
 
- * A server framework allowing the simple creation of custom DNS 
-   resolvers (dnslib.server) and a number of example servers 
+ * A server framework allowing the simple creation of custom DNS
+   resolvers (dnslib.server) and a number of example servers
    created using this framework
 
  * A number of utilities for testing (dnslib.client, dnslib.proxy,
@@ -24,11 +24,11 @@ The library provides:
 Python 3 support was added in Version 0.9.0 which represented a fairly
 major update to the library - the key changes include:
 
- * Python 2.7/3.2+ support (the last version supporting Python 2.6 
+ * Python 2.7/3.2+ support (the last version supporting Python 2.6
    or earlier was version 0.8.3)
 
- * The 'Bimap' interface was changed significantly to explicitly 
-   split forward (value->text) lookups via __getitem__ and 
+ * The 'Bimap' interface was changed significantly to explicitly
+   split forward (value->text) lookups via __getitem__ and
    reverse (text->value) lookups via __getattr__. Applications
    using the old interface will need to be updated.
 
@@ -36,18 +36,18 @@ major update to the library - the key changes include:
    line with RFC)
 
  * Most object attributes are now typed in line with the record
-   definitions to make it harder to generate invalid packets 
+   definitions to make it harder to generate invalid packets
 
- * Support for encoding/decoding resource records in 'Zone' (BIND) 
-   file format 
+ * Support for encoding/decoding resource records in 'Zone' (BIND)
+   file format
 
  * Support for encoding/decoding packets in 'DiG' format
 
  * Server framework allowing (in most cases) custom resolvers to
-   be created by just subclassing the DNSResolver class and 
+   be created by just subclassing the DNSResolver class and
    overriding the 'resolve' method
 
- * A lot of fixes to error detection/handling which should make 
+ * A lot of fixes to error detection/handling which should make
    the library much more robust to invalid/unsupported data. The
    library should now either return a valid DNSRecord instance
    when parsing a packet or raise DNSError (tested via fuzzing)
@@ -63,15 +63,15 @@ major update to the library - the key changes include:
 Classes
 -------
 
-The key DNS packet handling classes are in dnslib.dns and map to the 
+The key DNS packet handling classes are in dnslib.dns and map to the
 standard DNS packet sections:
 
  * DNSRecord - container for DNS packet. Contains:
-    - DNSHeader 
-    - Question section containing zero or more DNSQuestion objects 
-    - Answer section containing zero or more RR objects 
-    - Authority section containing zero or more RR objects 
-    - Additional section containing zero or more RR objects 
+    - DNSHeader
+    - Question section containing zero or more DNSQuestion objects
+    - Answer section containing zero or more RR objects
+    - Authority section containing zero or more RR objects
+    - Additional section containing zero or more RR objects
  * DNS RRs (resource records) contain an RR header and an RD object)
  * Specific RD types are implemented as subclasses of RD
  * DNS labels are represented by a DNSLabel class - in most cases
@@ -200,7 +200,7 @@ format defined in RFC1035 (specifically not $INCLUDE)
 
 To create a skeleton reply to a DNS query:
 
-    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY))
     >>> a = q.reply()
     >>> a.add_answer(RR("abc.com",QTYPE.A,rdata=A("1.2.3.4"),ttl=60))
     >>> str(DNSRecord.parse(a.pack())) == str(a)
@@ -232,7 +232,7 @@ Add additional RRs:
 
 It is also possible to create a reply from a string in zone file format:
 
-    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY))
     >>> a = q.replyZone("abc.com 60 IN CNAME xxx.abc.com")
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
@@ -245,7 +245,7 @@ It is also possible to create a reply from a string in zone file format:
     >>> str(DNSRecord.parse(a.pack())) == str(a)
     True
 
-    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY)) 
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.ANY))
     >>> a = q.replyZone(textwrap.dedent(z))
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
@@ -260,7 +260,7 @@ It is also possible to create a reply from a string in zone file format:
 
 To send a DNSSEC request (EDNS OPT record with DO flag & header AD flag):
 
-    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.A)) 
+    >>> q = DNSRecord(q=DNSQuestion("abc.com",QTYPE.A))
     >>> q.add_ar(EDNS0(flags="do",udp_len=4096))
     >>> q.header.ad = 1
     >>> print(q)
@@ -273,19 +273,19 @@ To send a DNSSEC request (EDNS OPT record with DO flag & header AD flag):
     ; EDNS: version: 0, flags: do; udp: 4096
 
 The library also includes a simple framework for generating custom DNS
-resolvers in dnslib.server (see module docs). In most cases this just 
-requires implementing a custom 'resolve' method which receives a question 
+resolvers in dnslib.server (see module docs). In most cases this just
+requires implementing a custom 'resolve' method which receives a question
 object and returns a response.
 
 A number of sample resolvers are provided as examples (see CLI --help):
 
  * dnslib.fixedresolver    - Respond to all requests with fixed response
- * dnslib.zoneresolver     - Respond from Zone file 
+ * dnslib.zoneresolver     - Respond from Zone file
  * dnslib.shellresolver    - Call shell script to generate response
 
 The library includes a number of client utilities:
 
- * DiG like client library 
+ * DiG like client library
 
         # python -m dnslib.client --help
 
@@ -324,15 +324,15 @@ Changelog:
                          Misc fixes from James Mills - thanks
  *   0.9.3   2014-08-26  Workaround for argparse bug which raises AssertionError if [] is
                          present in option text (really?)
- *   0.9.4   2015-04-10  Fix to support multiple strings in TXT record 
+ *   0.9.4   2015-04-10  Fix to support multiple strings in TXT record
                          Patch provided by James Cherry (https://bitbucket.org/james_cherry) - thanks
                          NOTE: For consistency this patch changes the 'repr' output for
                                TXT records to always be quoted
  *   0.9.5   2015-10-27  Add threading & timeout handling to DNSServer
  *   0.9.6   2015-10-28  Replace strftime in RRSIG formatting to avoid possible locale issues
                          Identified by Bryan Everly - thanks
- *   0.9.7   2017-01-15  Sort out CAA/TYPE257 DiG parsing mismatch 
- *   0.9.8   2019-02-25  Force DNSKEY key to be bytes object 
+ *   0.9.7   2017-01-15  Sort out CAA/TYPE257 DiG parsing mismatch
+ *   0.9.8   2019-02-25  Force DNSKEY key to be bytes object
                          Catch Bimap __wrapped__ attr (used by inspect module in 3.7)
  *   0.9.9   2019-03-19  Add support for DNSSEC flag getters/setters (from <raul@dinosec.com> - thanks)
                          Added --dnssec flags to dnslib.client & dnslib.test_decode (sets EDNS0 DO flag)
@@ -348,6 +348,8 @@ Changelog:
  *   0.9.13  2020-06-01  Handle truncated requests in server.py (Issue #9)
                          Replace thred.isAlive with thread.is_alive (Deprecated in Py3.9)
                          Merged Pull Request #4 (Extra options for intercept.py) - thanks to @nolanl
+ *   0.9.14  2020-06-09  Merged Pull Request #10 (Return doctest status via exit code)
+                         Thanks to @mgorny
 
 License:
 --------
@@ -357,11 +359,11 @@ BSD
 Author:
 -------
 
- *   PaulC 
+ *   PaulC
 
 Master Repository/Issues:
 -------------------------
 
- *   https://github.com/paulc/dnslib  
+ *   https://github.com/paulc/dnslib
 
  (Note: https://bitbucket.org/paulc/dnslib has been deprecated and will not be updated)
