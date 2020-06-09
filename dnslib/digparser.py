@@ -230,4 +230,4 @@ if __name__ == '__main__':
         for record in l:
             print(repr(record))
     else:
-        doctest.testmod()
+        sys.exit(0 if doctest.testmod().failed == 0 else 1)

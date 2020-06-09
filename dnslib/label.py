@@ -308,5 +308,5 @@ class DNSBuffer(Buffer):
         self.append(b'\x00')
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    import doctest,sys
+    sys.exit(0 if doctest.testmod().failed == 0 else 1)

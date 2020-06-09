@@ -350,6 +350,8 @@ Changelog:
  *   0.9.13  2020-06-01  Handle truncated requests in server.py (Issue #9)
                          Replace thred.isAlive with thread.is_alive (Deprecated in Py3.9)
                          Merged Pull Request #4 (Extra options for intercept.py) - thanks to @nolanl
+ *   0.9.14  2020-06-09  Merged Pull Request #10 (Return doctest status via exit code)
+                         Thanks to @mgorny
 
 License:
 --------
@@ -372,9 +374,8 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.13"
+version = "0.9.14"
 
 if __name__ == '__main__':
-    import doctest,textwrap
-    doctest.testmod(optionflags=doctest.ELLIPSIS)
-
+    import doctest,sys,textwrap
+    sys.exit(0 if doctest.testmod(optionflags=doctest.ELLIPSIS).failed == 0 else 1)
