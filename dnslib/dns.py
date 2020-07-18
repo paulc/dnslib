@@ -31,7 +31,7 @@ class DNSError(Exception):
 # DNS codes
 
 QTYPE =  Bimap('QTYPE',
-                {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 12:'PTR', 13:'HINFO',
+        {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 10:'NULL', 12:'PTR', 13:'HINFO',
                     15:'MX', 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY',
                     28:'AAAA', 29:'LOC', 33:'SRV', 35:'NAPTR', 36:'KX',
                     37:'CERT', 38:'A6', 39:'DNAME', 41:'OPT', 42:'APL',
