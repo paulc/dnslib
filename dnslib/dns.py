@@ -355,28 +355,32 @@ class DNSRecord(object):
             inet = socket.AF_INET6
         else:
             inet = socket.AF_INET
-        if tcp:
-            if len(data) > 65535:
-                raise ValueError("Packet length too long: %d" % len(data))
-            data = struct.pack("!H",len(data)) + data
-            sock = socket.socket(inet,socket.SOCK_STREAM)
-            if timeout is not None:
-                sock.settimeout(timeout)
-            sock.connect((dest,port))
-            sock.sendall(data)
-            response = sock.recv(8192)
-            length = struct.unpack("!H",bytes(response[:2]))[0]
-            while len(response) - 2 < length:
-                response += sock.recv(8192)
-            sock.close()
-            response = response[2:]
-        else:
-            sock = socket.socket(inet,socket.SOCK_DGRAM)
-            if timeout is not None:
-                sock.settimeout(timeout)
-            sock.sendto(self.pack(),(dest,port))
-            response,server = sock.recvfrom(8192)
-            sock.close()
+        try:
+            sock = None
+            if tcp:
+                if len(data) > 65535:
+                     raise ValueError("Packet length too long: %d" % len(data))
+                data = struct.pack("!H",len(data)) + data
+                sock = socket.socket(inet,socket.SOCK_STREAM)
+                if timeout is not None:
+                    sock.settimeout(timeout)
+                sock.connect((dest,port))
+                sock.sendall(data)
+                response = sock.recv(8192)
+                length = struct.unpack("!H",bytes(response[:2]))[0]
+                while len(response) - 2 < length:
+                    response += sock.recv(8192)
+                response = response[2:]
+            else:
+                sock = socket.socket(inet,socket.SOCK_DGRAM)
+                if timeout is not None:
+                    sock.settimeout(timeout)
+                sock.sendto(self.pack(),(dest,port))
+                response,server = sock.recvfrom(8192)
+        finally:
+            if (sock is not None):
+                sock.close()
+
         return response
 
     def format(self,prefix="",sort=False):
