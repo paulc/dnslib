@@ -304,9 +304,13 @@ class DNSLogger:
 
 class UDPServer(socketserver.ThreadingMixIn,socketserver.UDPServer):
     allow_reuse_address = True
+    #https://bugs.python.org/issue37788
+    #https://github.com/prometheus/client_python/pull/356
+    daemon_threads = True # fix for python 3.7 please see links above for details
 
 class TCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     allow_reuse_address = True
+    daemon_threads = True
 
 class DNSServer(object):
 
