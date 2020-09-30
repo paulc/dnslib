@@ -305,8 +305,18 @@ class DNSLogger:
 class UDPServer(socketserver.ThreadingMixIn,socketserver.UDPServer):
     allow_reuse_address = True
 
+    def __init__(self, server_address, handler):
+        if server_address[0] == '' or ':' in server_address[0]:
+            self.address_family = socket.AF_INET6
+        super(UDPServer, self).__init__(server_address, handler)
+
 class TCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer):
     allow_reuse_address = True
+
+    def __init__(self, server_address, handler):
+        if server_address[0] == '' or ':' in server_address[0]:
+            self.address_family = socket.AF_INET6
+        super(TCPServer, self).__init__(server_address, handler)
 
 class DNSServer(object):
 
