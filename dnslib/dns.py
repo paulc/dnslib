@@ -1621,23 +1621,35 @@ def decode_type_bitmap(type_bitmap):
 def encode_type_bitmap(rrlist):
     """
         Encode RR type bitmap in NSEC record
-        XXX Currenly support window #0 (RR 1-255)
 
         >>> p = lambda x: print(binascii.hexlify(x).decode())
         >>> p(encode_type_bitmap(['A','TXT','AAAA','RRSIG','NSEC']))
         0006400080080003
         >>> p(encode_type_bitmap(['A','NS','SOA','TXT','AAAA','RRSIG','NSEC','DNSKEY']))
         000762008008000380
+        >>> p(encode_type_bitmap(['A','ANY','URI','CAA','TA','DLV']))
+        002040000000000000000000000000000000000000000000000000000000000000010101c08001c0
     """
-    bitmap = bytearray([0]*32)
-    for rr in rrlist:
-        v = getattr(QTYPE,rr)
-        if v > 255:
-            raise ValueError("Only support window #0 (RR 1-255) [%s]" % rr)
+    rrlist = sorted([getattr(QTYPE,rr) for rr in rrlist])
+    buf = DNSBuffer()
+    curWindow = rrlist[0]//256
+    bitmap = bytearray(32)
+    n = len(rrlist)-1
+    for i, rr in enumerate(rrlist):
+        v = rr - curWindow*256
         bitmap[v//8] |= 1 << (7 - v%8)
-    while bitmap[-1] == 0:
-        bitmap = bitmap[:-1]
-    return struct.pack("BB",0,len(bitmap)) + bitmap
+
+        if i == n or rrlist[i+1] >= (curWindow+1)*256:
+            while bitmap[-1] == 0:
+                bitmap = bitmap[:-1]
+            buf.pack("BB", curWindow, len(bitmap))
+            buf.append(bitmap)
+
+            if i != n:
+                curWindow = rrlist[i+1]//256
+                bitmap = bytearray(32)
+
+    return buf.data
 
 class NSEC(RD):
 
