@@ -37,10 +37,11 @@ QTYPE =  Bimap('QTYPE',
                     37:'CERT', 38:'A6', 39:'DNAME', 41:'OPT', 42:'APL',
                     43:'DS', 44:'SSHFP', 45:'IPSECKEY', 46:'RRSIG', 47:'NSEC',
                     48:'DNSKEY', 49:'DHCID', 50:'NSEC3', 51:'NSEC3PARAM',
-                    52:'TLSA', 55:'HIP', 59:'CDS', 60:'CDNSKEY',
-                    61:'OPENPGPKEY',99:'SPF', 249:'TKEY', 250:'TSIG',
-                    251:'IXFR', 252:'AXFR', 255:'ANY', 256:'URI', 257:'CAA',
-                    32768:'TA', 32769:'DLV'}, DNSError)
+                    52:'TLSA', 53:'HIP', 55:'HIP', 59:'CDS', 60:'CDNSKEY',
+                    61:'OPENPGPKEY', 62:'CSYNC', 63:'ZONEMD', 64:'SVCB',
+                    65:'HTTPS', 99:'SPF', 108:'EUI48', 109:'EUI64', 249:'TKEY',
+                    250:'TSIG', 251:'IXFR', 252:'AXFR', 255:'ANY', 256:'URI',
+                    257:'CAA', 32768:'TA', 32769:'DLV'}, DNSError)
 
 CLASS =  Bimap('CLASS',
                 {1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'},

@@ -143,7 +143,7 @@ class DNSLabel(object):
         return "<DNSLabel: '%s'>" % str(self)
 
     def __hash__(self):
-        return hash(self.label)
+        return hash(tuple(map(lambda x:x.lower(),self.label)))
 
     def __ne__(self,other):
         return not self == other

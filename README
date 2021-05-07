@@ -350,6 +350,10 @@ Changelog:
                          Merged Pull Request #4 (Extra options for intercept.py) - thanks to @nolanl
  *   0.9.14  2020-06-09  Merged Pull Request #10 (Return doctest status via exit code)
                          Thanks to @mgorny
+ *   0.9.15  2021-05-07  DNSServer fixes - support IPv6 (from Pull Request #21) - thanks to @mikma
+                                         - deamon threads (Pull Request #19) - thanks to @wojons
+                         Add unsupported RR types (Issue #27)
+                         
 
 License:
 --------
