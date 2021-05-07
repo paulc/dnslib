@@ -1325,6 +1325,9 @@ class PTR(CNAME):
 class NS(CNAME):
     pass
 
+class DNAME(CNAME):
+    pass
+
 class SOA(RD):
 
     times = ntuple_range('times',5,0,4294967295)
