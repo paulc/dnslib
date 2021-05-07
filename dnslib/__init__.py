@@ -355,7 +355,10 @@ Changelog:
  *   0.9.15  2021-05-07  DNSServer fixes - support IPv6 (from Pull Request #21) - thanks to @mikma
                                          - deamon threads (Pull Request #19) - thanks to @wojons
                          Add unsupported RR types (Issue #27)
-                         
+ *   0.9.16  2021-05-07  Merge pull request #23 from Tugzrida/patch-1
+                            Add support for all RR types to NSEC type bitmap
+                         Merge pull request #17 from sunds/issue_16
+                            Issue 16: uncaught exceptions leak open sockets
 
 License:
 --------
@@ -378,7 +381,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.15"
+version = "0.9.16"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap
