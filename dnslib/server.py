@@ -302,7 +302,7 @@ class DNSLogger:
         print("\n",dnsobj.toZone("    "),"\n",sep="")
 
 
-class UDPServer(socketserver.UDPServer,socketserver.ThreadingMixIn,object):
+class UDPServer(socketserver.ThreadingMixIn,socketserver.UDPServer,object):
     def __init__(self, server_address, handler):
         self.allow_reuse_address = True
         self.daemon_threads = True
@@ -310,7 +310,7 @@ class UDPServer(socketserver.UDPServer,socketserver.ThreadingMixIn,object):
             self.address_family = socket.AF_INET6
         super(UDPServer,self).__init__(server_address, handler)
 
-class TCPServer(socketserver.TCPServer,socketserver.ThreadingMixIn,object):
+class TCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer,object):
     def __init__(self, server_address, handler):
         self.allow_reuse_address = True
         self.daemon_threads = True
