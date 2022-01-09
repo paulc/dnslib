@@ -359,6 +359,8 @@ Changelog:
                             Add support for all RR types to NSEC type bitmap
                          Merge pull request #17 from sunds/issue_16
                             Issue 16: uncaught exceptions leak open sockets
+ *   0.9.17  2022-01-09  Validate TXID in client.py (Issue #30 - thanks to @daniel4x)
+                       
 
 License:
 --------
@@ -381,7 +383,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.16"
+version = "0.9.17"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap

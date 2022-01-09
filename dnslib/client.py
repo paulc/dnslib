@@ -76,6 +76,9 @@ if __name__ == '__main__':
         a_pkt = q.send(address,port,tcp=args.tcp)
         a = DNSRecord.parse(a_pkt)
 
+        if q.header.id != a.header.id:
+            raise DNSError('Response transaction id does not match query transaction id')
+
         if a.header.tc and args.noretry == False:
             # Truncated - retry in TCP mode
             a_pkt = q.send(address,port,tcp=True)
