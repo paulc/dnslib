@@ -83,7 +83,7 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     resolver = ShellResolver(args.map,args.origin,args.ttl)
-    logger = DNSLogger(args.log,args.log_prefix)
+    logger = DNSLogger(args.log,prefix=args.log_prefix)
 
     print("Starting Shell Resolver (%s:%d) [%s]" % (
                         args.address or "*",

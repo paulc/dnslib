@@ -85,7 +85,7 @@ if __name__ == '__main__':
         args.zone = open(args.zone)
 
     resolver = ZoneResolver(args.zone,args.glob)
-    logger = DNSLogger(args.log,args.log_prefix)
+    logger = DNSLogger(args.log,prefix=args.log_prefix)
 
     print("Starting Zone Resolver (%s:%d) [%s]" % (
                         args.address or "*",

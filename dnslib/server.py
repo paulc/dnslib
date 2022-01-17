@@ -59,15 +59,33 @@
         ;abc.def.                       IN      A
         >>> server.stop()
 
+        DNSLogger accepts custom logging function (logf)
+
+        >>> resolver = BaseResolver()
+        >>> logger = DNSLogger(prefix=False,logf=lambda s:print(s.upper()))
+        >>> server = DNSServer(resolver,port=8054,address="localhost",logger=logger)
+        >>> server.start_thread()
+        >>> q = DNSRecord.question("abc.def")
+        >>> a = q.send("localhost",8054)
+        REQUEST: [...] (UDP) / 'ABC.DEF.' (A)
+        REPLY: [...] (UDP) / 'ABC.DEF.' (A) / NXDOMAIN
+        >>> print(DNSRecord.parse(a))
+        ;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: ...
+        ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+        ;; QUESTION SECTION:
+        ;abc.def.                       IN      A
+        >>> server.stop()
+
         >>> class TestResolver:
         ...     def resolve(self,request,handler):
         ...         reply = request.reply()
         ...         reply.add_answer(*RR.fromZone("abc.def. 60 A 1.2.3.4"))
         ...         return reply
         >>> resolver = TestResolver()
-        >>> server = DNSServer(resolver,port=8053,address="localhost",logger=logger,tcp=True)
+        >>> logger = DNSLogger(prefix=False)
+        >>> server = DNSServer(resolver,port=8055,address="localhost",logger=logger,tcp=True)
         >>> server.start_thread()
-        >>> a = q.send("localhost",8053,tcp=True)
+        >>> a = q.send("localhost",8055,tcp=True)
         Request: [...] (tcp) / 'abc.def.' (A)
         Reply: [...] (tcp) / 'abc.def.' (A) / RRs: A
         >>> print(DNSRecord.parse(a))
@@ -194,9 +212,12 @@ class DNSLogger:
             log_truncated     - Truncated
             log_error         - Decoding error
             log_data          - Dump full request/response
+
+        A custom logging function can be passed to the constructor via the
+        `logf` parameter (defaults to print)
     """
 
-    def __init__(self,log="",prefix=True):
+    def __init__(self,log="",prefix=True,logf=None):
         """
             Selectively enable log hooks depending on log argument
             (comma separated list of hooks to enable/disable)
@@ -207,6 +228,8 @@ class DNSLogger:
             - If entry doesn't start with +/- replace defaults
 
             Prefix argument enables/disables log prefix
+
+            Logf argument sets log print function (defaults to print)
         """
         default = ["request","reply","truncated","error"]
         log = log.split(",") if log else []
@@ -218,6 +241,7 @@ class DNSLogger:
             if l[4:] not in enabled:
                 setattr(self,l,self.log_pass)
         self.prefix = prefix
+        self.logf = logf or print
 
     def log_pass(self,*args):
         pass
@@ -231,7 +255,7 @@ class DNSLogger:
             return ""
 
     def log_recv(self,handler,data):
-        print("%sReceived: [%s:%d] (%s) <%d> : %s" % (
+        self.logf("%sReceived: [%s:%d] (%s) <%d> : %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -240,7 +264,7 @@ class DNSLogger:
                     binascii.hexlify(data)))
 
     def log_send(self,handler,data):
-        print("%sSent: [%s:%d] (%s) <%d> : %s" % (
+        self.logf("%sSent: [%s:%d] (%s) <%d> : %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -249,7 +273,7 @@ class DNSLogger:
                     binascii.hexlify(data)))
 
     def log_request(self,handler,request):
-        print("%sRequest: [%s:%d] (%s) / '%s' (%s)" % (
+        self.logf("%sRequest: [%s:%d] (%s) / '%s' (%s)" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -260,7 +284,7 @@ class DNSLogger:
 
     def log_reply(self,handler,reply):
         if reply.header.rcode == RCODE.NOERROR:
-            print("%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+            self.logf("%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -269,7 +293,7 @@ class DNSLogger:
                     QTYPE[reply.q.qtype],
                     ",".join([QTYPE[a.rtype] for a in reply.rr])))
         else:
-            print("%sReply: [%s:%d] (%s) / '%s' (%s) / %s" % (
+            self.logf("%sReply: [%s:%d] (%s) / '%s' (%s) / %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -280,7 +304,7 @@ class DNSLogger:
         self.log_data(reply)
 
     def log_truncated(self,handler,reply):
-        print("%sTruncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+        self.logf("%sTruncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -291,7 +315,7 @@ class DNSLogger:
         self.log_data(reply)
 
     def log_error(self,handler,e):
-        print("%sInvalid Request: [%s:%d] (%s) :: %s" % (
+        self.logf("%sInvalid Request: [%s:%d] (%s) :: %s" % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
@@ -299,7 +323,7 @@ class DNSLogger:
                     e))
 
     def log_data(self,dnsobj):
-        print("\n",dnsobj.toZone("    "),"\n",sep="")
+        self.logf("\n%s\n" % (dnsobj.toZone("    ")))
 
 
 class UDPServer(socketserver.ThreadingMixIn,socketserver.UDPServer,object):

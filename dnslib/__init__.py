@@ -368,7 +368,8 @@ Changelog:
                          Merge pull request #17 from sunds/issue_16
                             Issue 16: uncaught exceptions leak open sockets
  *   0.9.18  2022-01-09  Validate TXID in client.py (Issue #30 - thanks to @daniel4x)
-                       
+ *   0.9.19  2022-01-09  Allow custom log function (logf) in  DNSLogger
+                         (Issue #31 - trhanks to @DmitryFrolovTri)
 
 License:
 --------
@@ -391,7 +392,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.18"
+version = "0.9.19"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap

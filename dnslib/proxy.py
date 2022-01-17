@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     resolver = ProxyResolver(args.dns,args.dns_port,args.timeout)
     handler = PassthroughDNSHandler if args.passthrough else DNSHandler
-    logger = DNSLogger(args.log,args.log_prefix)
+    logger = DNSLogger(args.log,prefix=args.log_prefix)
     udp_server = DNSServer(resolver,
                            port=args.port,
                            address=args.address,

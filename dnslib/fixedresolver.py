@@ -65,7 +65,7 @@ if __name__ == '__main__':
             args.response = open(args.zonefile)
 
     resolver = FixedResolver(args.response)
-    logger = DNSLogger(args.log,args.log_prefix)
+    logger = DNSLogger(args.log,prefix=args.log_prefix)
 
     print("Starting Fixed Resolver (%s:%d) [%s]" % (
                         args.address or "*",
