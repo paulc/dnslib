@@ -50,6 +50,8 @@ class DNSLabel(object):
     True
     >>> l3.matchSuffix("xxx.yyy.")
     False
+    >>> l3.matchSuffix("Bbb.ccc.")
+    True
     >>> l3.stripSuffix("bbb.ccc.")
     <DNSLabel: 'xxx.yyy.aaa.'>
     >>> l3.matchGlob("*.[abc]aa.BBB.ccc")
@@ -113,14 +115,14 @@ class DNSLabel(object):
             Return True if label suffix matches
         """
         suffix = DNSLabel(suffix)
-        return self.label[-len(suffix.label):] == suffix.label
+        return DNSLabel(self.label[-len(suffix.label):]) == suffix
 
     def stripSuffix(self,suffix):
         """
             Strip suffix from label
         """
         suffix = DNSLabel(suffix)
-        if self.label[-len(suffix.label):] == suffix.label:
+        if self.matchSuffix(suffix):
             return DNSLabel(self.label[:-len(suffix.label)])
         else:
             return self
