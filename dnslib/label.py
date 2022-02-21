@@ -134,7 +134,7 @@ class DNSLabel(object):
             return s.decode()
         else:
             # Need to encode
-            return "".join([(chr(c) if (c in LDH) else "\%03d" % c) for c in s])
+            return "".join([(chr(c) if (c in LDH) else "\\%03d" % c) for c in s])
 
     def __str__(self):
         return ".".join([ self._decode(bytearray(s)) for s in self.label ]) + "."
