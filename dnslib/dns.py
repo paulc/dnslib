@@ -1058,16 +1058,27 @@ def _force_bytes(x):
     else:
         return x.encode()
 
+# Python 2 does not have isprintable()
+def _isprint(c):
+    return (32 <= ord(c) <= 126) or (ord(c) > 127)
+
+
+def _bytes_to_printable(b):
+    return '"' + ''.join([ (c if _isprint(c) else "\\{0:03o}".format(ord(c))) for c in b.decode(errors='replace') ]) + '"'
+
 class TXT(RD):
     """
-        DNS TXT record. Pass in either a single string, or a tuple/list of strings.
+        DNS TXT record. Pass in either a single byte/unicode string, or a tuple/list of byte/unicode strings.
+        (byte strings are prefered as this avoids possible encoding issues)
 
-        >>> TXT('txtvers=1')
+        >>> TXT(b'txtvers=1')
         "txtvers=1"
-        >>> TXT(('txtvers=1',))
+        >>> TXT((b'txtvers=1',))
         "txtvers=1"
-        >>> TXT(['txtvers=1',])
+        >>> TXT([b'txtvers=1',])
         "txtvers=1"
+        >>> TXT([b'txtvers=1',b'swver=2.5'])
+        "txtvers=1","swver=2.5"
         >>> TXT(['txtvers=1','swver=2.5'])
         "txtvers=1","swver=2.5"
         >>> a = DNSRecord()
@@ -1121,10 +1132,10 @@ class TXT(RD):
             buffer.append(ditem)
 
     def toZone(self):
-        return " ".join([ '"%s"' % x.decode(errors='replace') for x in self.data ])
+        return " ".join([ _bytes_to_printable(x) for x in self.data ])
 
     def __repr__(self):
-        return ",".join([ '"%s"' % x.decode(errors='replace') for x in self.data ])
+        return ",".join([ _bytes_to_printable(x) for x in self.data ])
 
 class A(RD):
 
