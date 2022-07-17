@@ -145,7 +145,7 @@ class WordLexer(Lexer):
         To emit SPACE tokens: self.spacetok = ('SPACE',None)
         To emit NL tokens: self.nltok = ('NL',None)
 
-        >>> l = WordLexer(r'abc "def\100\x3d\. ghi" jkl')
+        >>> l = WordLexer(r'abc "def\100\x3d\\. ghi" jkl')
         >>> list(l)
         [('ATOM', 'abc'), ('ATOM', 'def@=. ghi'), ('ATOM', 'jkl')]
         >>> l = WordLexer(r"1 '2 3 4' 5")
