@@ -369,7 +369,14 @@ Changelog:
                             Issue 16: uncaught exceptions leak open sockets
  *   0.9.18  2022-01-09  Validate TXID in client.py (Issue #30 - thanks to @daniel4x)
  *   0.9.19  2022-01-09  Allow custom log function (logf) in  DNSLogger
-                         (Issue #31 - trhanks to @DmitryFrolovTri)
+                            (Issue #31 - thanks to @DmitryFrolovTri)
+ *   0.9.20  2022-07-17  Fix DeprecationWarnings about invalid escape sequences
+                            (Pull-Request #39 - thanks to @brianmaissy)
+                         Make DNSLabel matchSuffix and stripSuffix case-insensitive
+                            (Pull-Request #37 - thanks to @NiKiZe)
+                         Fix display of non-printable characters in TXT records
+                            (Issue #32 - thanks to @sbv-csis)
+                         Add --strip-aaaa option to dnslib.proxy 
 
 License:
 --------
@@ -392,7 +399,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.19"
+version = "0.9.20"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap
