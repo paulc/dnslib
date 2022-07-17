@@ -374,6 +374,8 @@ Changelog:
                             (Pull-Request #39 - thanks to @brianmaissy)
                          Make DNSLabel matchSuffix and stripSuffix case-insensitive
                             (Pull-Request #37 - thanks to @NiKiZe)
+                         Add support for HTTPS RR
+                            (Pull-Request #35 - thanks to @jkl-caliber)
                          Fix display of non-printable characters in TXT records
                             (Issue #32 - thanks to @sbv-csis)
                          Add --strip-aaaa option to dnslib.proxy 
