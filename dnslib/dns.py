@@ -276,7 +276,7 @@ class DNSRecord(object):
 
     def set_header_qa(self):
         """
-            Reset header q/a/auth/ar counts to match numver of records
+            Reset header q/a/auth/ar counts to match number of records
             (normally done transparently)
         """
         self.header.q = len(self.questions)
@@ -981,7 +981,7 @@ class RD(object):
 
         To create a new RD type subclass this and add to RDMAP (below)
 
-        Subclass should implement (as a mininum):
+        Subclass should implement (as a minimum):
 
             parse (parse from packet data)
             __init__ (create class)
@@ -1069,7 +1069,7 @@ def _bytes_to_printable(b):
 class TXT(RD):
     """
         DNS TXT record. Pass in either a single byte/unicode string, or a tuple/list of byte/unicode strings.
-        (byte strings are prefered as this avoids possible encoding issues)
+        (byte strings are preferred as this avoids possible encoding issues)
 
         >>> TXT(b'txtvers=1')
         "txtvers=1"
