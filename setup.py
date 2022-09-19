@@ -1,5 +1,17 @@
 #!/usr/bin/env python
 
+# To update PyPi version:
+#
+# Make sure you have updated version in __init__.py
+#
+# ./run_tests.sh
+# rm -rf dist
+# python3 setup.py readme
+# python3 setup.py sdist
+# python3 setup.py bdist_wheel 
+# python2 setup.py bdist_wheel 
+# twine upload
+
 try:
     from setuptools import Command, setup
 except ImportError:
