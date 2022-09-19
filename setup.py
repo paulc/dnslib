@@ -9,6 +9,7 @@
 # git push -am ...
 # git tag -a <version> -m <message>
 # git push --tags
+# (Create release from tag on Github)
 #
 # rm -rf dist
 # python3 setup.py sdist
