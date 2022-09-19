@@ -2,11 +2,15 @@
 
 # To update PyPi version:
 #
-# Make sure you have updated version in __init__.py
+# (Make sure you have updated version and changelog in __init__.py)
 #
 # ./run_tests.sh
-# rm -rf dist
 # python3 setup.py readme
+# git push -am ...
+# git tag -a <version> -m <message>
+# git push --tags
+#
+# rm -rf dist
 # python3 setup.py sdist
 # python3 setup.py bdist_wheel 
 # python2 setup.py bdist_wheel 

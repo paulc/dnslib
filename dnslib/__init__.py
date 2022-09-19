@@ -379,6 +379,7 @@ Changelog:
                          Fix display of non-printable characters in TXT records
                             (Issue #32 - thanks to @sbv-csis)
                          Add --strip-aaaa option to dnslib.proxy 
+ *   0.9.21  2022-09-19  Minor clean-up / add wheels to distro
 
 License:
 --------
@@ -401,7 +402,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.20"
+version = "0.9.21"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap
