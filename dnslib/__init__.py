@@ -380,6 +380,9 @@ Changelog:
                             (Issue #32 - thanks to @sbv-csis)
                          Add --strip-aaaa option to dnslib.proxy 
  *   0.9.21  2022-09-19  Minor clean-up / add wheels to distro
+ *   0.9.22  2022-09027  Issue #43 (0.9.21 Raises TypeError instead of DNSError when failing to parse HTTPS records)
+                         Note that we just fix the exception - there still seems to be a problem with parsing HTTPS records
+                         (Thnaks to @robinlandstrom)
 
 License:
 --------
@@ -402,7 +405,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.21"
+version = "0.9.22"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap

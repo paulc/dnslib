@@ -1838,7 +1838,7 @@ class HTTPS(RD):
                 params.append((k, v))
             return cls(priority, target, params)
         except (BufferError,BimapError) as e:
-            raise DNSError("Error unpacking HTTPS: " + str(e) + binascii.hexlify(buffer.data[buffer.offset:]))
+            raise DNSError("Error unpacking HTTPS: " + str(e) + str(binascii.hexlify(buffer.data[buffer.offset:])))
 
     def pack(self,buffer):
         buffer.pack("!H", self.priority)
