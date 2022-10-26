@@ -1810,6 +1810,21 @@ class HTTPS(RD):
         >>> obj.pack(b)
         >>> b.data == pcap
         True
+
+        # Issue 43: HTTPS reads after RD end 
+        >>> msg = binascii.unhexlify("93088410000100020000000107646973636f726403636f6d0000410001c00c004100010000012c002b0001000001000c0268330568332d323902683200040014a29f80e9a29f87e8a29f88e8a29f89e8a29f8ae8c00c002e00010000012c005f00410d020000012c632834e5632575c586c907646973636f726403636f6d0044d488ce4a5b9085289c671f0296b2b06cffaca28880c57643befd43d6de433d84ae078b282fc2cdd744f3bea2f201042a7a0d6f3e17ebd887b082bbe30dfda100002904d0000080000000")
+        >>> print(DNSRecord.parse(msg))
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37640
+        ;; flags: qr aa cd; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+        ;; QUESTION SECTION:
+        ;discord.com.                   IN      HTTPS
+        ;; ANSWER SECTION:
+        discord.com.            300     IN      HTTPS   1 . alpn=h3,h3-29,h2 ipv4hint=162.159.128.233,162.159.135.232,162.159.136.232,162.159.137.232,162.159.138.232
+        discord.com.            300     IN      RRSIG   HTTPS 13 2 300 20220919092245 20220917072245 34505 discord.com. RNSIzkpbkIUonGcfApaysGz/rKKIgMV2Q779Q9beQz2ErgeLKC/CzddE876i8gEEKnoNbz4X69iHsIK74w39oQ==
+        ;; ADDITIONAL SECTION:
+        ;; OPT PSEUDOSECTION
+        ; EDNS: version: 0, flags: do; udp: 1232
+
     """
 
     attrs = ('priority', 'target', 'params')
