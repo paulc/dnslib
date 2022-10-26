@@ -1822,6 +1822,7 @@ class HTTPS(RD):
     @classmethod
     def parse(cls,buffer,length):
         try:
+            end = buffer.offset + length
             priority, = buffer.unpack("!H")
             target = []
             while True:
@@ -1831,7 +1832,7 @@ class HTTPS(RD):
                 seg = bytearray(buffer.get(n))
                 target.append(seg)
             params = []
-            while buffer.remaining() > 0:
+            while buffer.offset < end:
                 k, = buffer.unpack("!H")
                 n, = buffer.unpack("!H")
                 v = bytearray(buffer.get(n))
