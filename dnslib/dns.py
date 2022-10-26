@@ -30,6 +30,20 @@ class DNSError(Exception):
 
 # DNS codes
 
+def unknown_qtype(name,key,forward):
+    if forward:
+        try:
+            return "TYPE%d" % (key,)
+        except:
+            raise DNSError("%s: Invalid forward lookup: [%s]" % (name,key))
+    else:
+        if key.startswith("TYPE"):
+            try:
+                return int(key[4:])
+            except:
+                pass
+        raise DNSError("%s: Invalid reverse lookup: [%s]" % (name,key))
+
 QTYPE =  Bimap('QTYPE',
         {1:'A', 2:'NS', 5:'CNAME', 6:'SOA', 10:'NULL', 12:'PTR', 13:'HINFO',
                     15:'MX', 16:'TXT', 17:'RP', 18:'AFSDB', 24:'SIG', 25:'KEY',
@@ -41,7 +55,7 @@ QTYPE =  Bimap('QTYPE',
                     61:'OPENPGPKEY', 62:'CSYNC', 63:'ZONEMD', 64:'SVCB',
                     65:'HTTPS', 99:'SPF', 108:'EUI48', 109:'EUI64', 249:'TKEY',
                     250:'TSIG', 251:'IXFR', 252:'AXFR', 255:'ANY', 256:'URI',
-                    257:'CAA', 32768:'TA', 32769:'DLV'}, DNSError)
+                    257:'CAA', 32768:'TA', 32769:'DLV'}, unknown_qtype)
 
 CLASS =  Bimap('CLASS',
                 {1:'IN', 2:'CS', 3:'CH', 4:'Hesiod', 254:'None', 255:'*'},
@@ -709,7 +723,7 @@ class DNSQuestion(object):
 
     def toZone(self):
        return ';%-30s %-7s %s' % (self.qname,CLASS.get(self.qclass),
-                                             QTYPE.get(self.qtype))
+                                             QTYPE[self.qtype])
 
     def __repr__(self):
         return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
@@ -899,7 +913,7 @@ class RR(object):
         else:
             return '%-23s %-7s %-7s %-7s %s' % (self.rname,self.ttl,
                                                 CLASS.get(self.rclass),
-                                                QTYPE.get(self.rtype),
+                                                QTYPE[self.rtype],
                                                 self.rdata.toZone())
 
     def __str__(self):
@@ -1031,8 +1045,10 @@ class RD(object):
         """
             Default 'repr' format should be equivalent to RD zone format
         """
-        # For unknown rdata just default to hex
-        return binascii.hexlify(self.data).decode()
+        if len(self.data) > 0:
+            return "\\# %d %s" % (len(self.data), binascii.hexlify(self.data).decode().upper())
+        else:
+            return "\\# 0"
 
     def toZone(self):
         return repr(self)
