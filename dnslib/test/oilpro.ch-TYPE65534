@@ -1,0 +1,17 @@
+;; Sending:
+;; QUERY: 536601000001000000000000066f696c70726f02636800fffe0001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 21350
+;; flags: rd; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;oilpro.ch.                     IN      TYPE65534
+
+;; Got answer:
+;; RESPONSE: 536681800001000200000000066f696c70726f02636800fffe0001c00cfffe00010000000000050dd5c60001c00cfffe00010000000000050d2a680001
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 21350
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;oilpro.ch.                     IN      TYPE65534
+;; ANSWER SECTION:
+oilpro.ch.              0       IN      TYPE65534 \# 5 0DD5C60001
+oilpro.ch.              0       IN      TYPE65534 \# 5 0D2A680001
+
