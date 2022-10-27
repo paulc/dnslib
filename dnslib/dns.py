@@ -2163,13 +2163,54 @@ class HTTPS(RD):
         targ = ".".join([self.zf_tostr(t) for t in self.target]) + "."
         return " ".join([pri, targ] + [self.zf_format_param(k, v) for k,v in self.params])
 
+class SSHFP(RD):
+    """
+        SSHFP record as specified in RFC 4255
+        https://www.rfc-editor.org/rfc/rfc4255.html
+    """
+
+    algorithm = B('algorithm')
+    fp_type = B('fp_type')
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            (algorithm,fp_type) = buffer.unpack("!BB")
+            fingerprint = buffer.get(length - 2)
+            return cls(algorithm,fp_type,fingerprint)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking DS [offset=%d]: %s" %
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(int(rd[0]),int(rd[1]),
+                   binascii.unhexlify("".join(rd[2:]).encode('ascii')))
+
+    def __init__(self,algorithm,fp_type,fingerprint):
+        self.algorithm = algorithm
+        self.fp_type = fp_type
+        self.fingerprint = _force_bytes(fingerprint)
+
+    def pack(self,buffer):
+        buffer.pack("!BB",self.algorithm,self.fp_type)
+        buffer.append(self.fingerprint)
+
+    def __repr__(self):
+        return "%d %d %s" % (
+                        self.algorithm,
+                        self.fp_type,
+                        binascii.hexlify(self.fingerprint).decode().upper())
+
+    attrs = ('algorithm','fp_type','fingerprint')
+
 # Map from RD type to class (used to pack/unpack records)
 # If you add a new RD class you must add to RDMAP
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX,
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
           'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 'NSEC':NSEC, 'CAA':CAA,
-          'HTTPS': HTTPS, 'DS':DS
+          'HTTPS': HTTPS, 'DS':DS, 'SSHFP':SSHFP
         }
 
 ##
