@@ -6,7 +6,8 @@
 #
 # ./run_tests.sh
 # python3 setup.py readme
-# git push -am ...
+# git commit -am ...
+# git push 
 # git tag -a <version> -m <message>
 # git push --tags
 # (Create release from tag on Github)
