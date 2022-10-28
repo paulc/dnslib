@@ -1528,6 +1528,50 @@ class NAPTR(RD):
 
     attrs = ('order','preference','flags','service','regexp','replacement')
 
+class DS(RD):
+    """
+        DS (delegation signer) record as specified in RFC 4034 Section 5.
+        https://www.rfc-editor.org/rfc/rfc4034#section-5
+    """
+
+    key_tag = H('key_tag')
+    algorithm = B('algorithm')
+    digest_type = B('digest_type')
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            (key_tag,algorithm,digest_type) = buffer.unpack("!HBB")
+            digest = buffer.get(length - 4)
+            return cls(key_tag,algorithm,digest_type,digest)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking DS [offset=%d]: %s" %
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(int(rd[0]),int(rd[1]),int(rd[2]),
+                   binascii.unhexlify("".join(rd[3:]).encode('ascii')))
+
+    def __init__(self,key_tag,algorithm,digest_type,digest):
+        self.key_tag = key_tag
+        self.algorithm = algorithm
+        self.digest_type = digest_type
+        self.digest = _force_bytes(digest)
+
+    def pack(self,buffer):
+        buffer.pack("!HBB",self.key_tag,self.algorithm,self.digest_type)
+        buffer.append(self.digest)
+
+    def __repr__(self):
+        return "%d %d %d %s" % (
+                        self.key_tag,
+                        self.algorithm,
+                        self.digest_type,
+                        binascii.hexlify(self.digest).decode().upper())
+
+    attrs = ('key_tag','algorithm','digest_type','digest')
+
 class DNSKEY(RD):
 
     flags = H('flags')
@@ -2119,13 +2163,98 @@ class HTTPS(RD):
         targ = ".".join([self.zf_tostr(t) for t in self.target]) + "."
         return " ".join([pri, targ] + [self.zf_format_param(k, v) for k,v in self.params])
 
+class SSHFP(RD):
+    """
+        SSHFP record as specified in RFC 4255
+        https://www.rfc-editor.org/rfc/rfc4255.html
+    """
+
+    algorithm = B('algorithm')
+    fp_type = B('fp_type')
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            (algorithm,fp_type) = buffer.unpack("!BB")
+            fingerprint = buffer.get(length - 2)
+            return cls(algorithm,fp_type,fingerprint)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking DS [offset=%d]: %s" %
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(int(rd[0]),int(rd[1]),
+                   binascii.unhexlify("".join(rd[2:]).encode('ascii')))
+
+    def __init__(self,algorithm,fp_type,fingerprint):
+        self.algorithm = algorithm
+        self.fp_type = fp_type
+        self.fingerprint = _force_bytes(fingerprint)
+
+    def pack(self,buffer):
+        buffer.pack("!BB",self.algorithm,self.fp_type)
+        buffer.append(self.fingerprint)
+
+    def __repr__(self):
+        return "%d %d %s" % (
+                        self.algorithm,
+                        self.fp_type,
+                        binascii.hexlify(self.fingerprint).decode().upper())
+
+    attrs = ('algorithm','fp_type','fingerprint')
+
+class TLSA(RD):
+    """
+        TLSA record as specified in RFC 6698
+        https://www.rfc-editor.org/rfc/rfc6698
+    """
+
+    cert_usage = B('cert_usage')
+    selector = B('selector')
+    matching_type = B('matching_type')
+
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            (cert_usage,selector,matching_type) = buffer.unpack("!BBB")
+            cert_data = buffer.get(length - 3)
+            return cls(cert_usage,selector,matching_type,cert_data)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking DS [offset=%d]: %s" %
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(int(rd[0]),int(rd[1]),int(rd[2]),
+                   binascii.unhexlify("".join(rd[3:]).encode('ascii')))
+
+    def __init__(self,cert_usage,selector,matching_type,cert_data):
+        self.cert_usage = cert_usage
+        self.selector = selector
+        self.matching_type = matching_type
+        self.cert_data = _force_bytes(cert_data)
+
+    def pack(self,buffer):
+        buffer.pack("!BBB",self.cert_usage,self.selector,self.matching_type)
+        buffer.append(self.cert_data)
+
+    def __repr__(self):
+        return "%d %d %d %s" % (
+                        self.cert_usage,
+                        self.selector,
+                        self.matching_type,
+                        binascii.hexlify(self.cert_data).decode().upper())
+
+    attrs = ('cert_usage','selector','matching_type','cert_data')
+
 # Map from RD type to class (used to pack/unpack records)
 # If you add a new RD class you must add to RDMAP
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX,
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
           'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 'NSEC':NSEC, 'CAA':CAA,
-          'HTTPS': HTTPS
+          'HTTPS': HTTPS, 'DS':DS, 'SSHFP':SSHFP, 'TLSA':TLSA
         }
 
 ##
