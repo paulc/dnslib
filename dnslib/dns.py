@@ -2248,13 +2248,67 @@ class TLSA(RD):
 
     attrs = ('cert_usage','selector','matching_type','cert_data')
 
+class RP(RD):
+    """
+    RP record as specified in RFC 1183.
+    https://datatracker.ietf.org/doc/html/rfc1183
+    """
+    @classmethod
+    def parse(cls,buffer,length):
+        try:
+            mbox = buffer.decode_name()
+            txt = buffer.decode_name()
+            return cls(mbox, txt)
+        except (BufferError,BimapError) as e:
+            raise DNSError("Error unpacking RP [offset=%d]: %s" %
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls,rd,origin=None):
+        return cls(label(rd[0],origin),label(rd[1],origin))
+
+    def __init__(self,mbox=None, txt=None):
+        self.mbox = mbox
+        self.txt = txt
+
+    def set_mbox(self,mbox):
+        if isinstance(mbox,DNSLabel):
+            self._mbox = mbox
+        else:
+            self._mbox = DNSLabel(mbox)
+
+    def get_mbox(self):
+        return self._mbox
+
+    mbox = property(get_mbox,set_mbox)
+
+    def set_txt(self,txt):
+        if isinstance(txt,DNSLabel):
+            self._txt = txt
+        else:
+            self._txt = DNSLabel(txt)
+
+    def get_txt(self):
+        return self._txt
+
+    txt = property(get_txt,set_txt)
+
+    def pack(self,buffer):
+        buffer.encode_name(self.mbox)
+        buffer.encode_name(self.txt)
+
+    def __repr__(self):
+        return "%s %s" % (self.mbox,self.txt)
+
+    attrs = ('mbox','txt')
+
 # Map from RD type to class (used to pack/unpack records)
 # If you add a new RD class you must add to RDMAP
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX,
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
           'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 'NSEC':NSEC, 'CAA':CAA,
-          'HTTPS': HTTPS, 'DS':DS, 'SSHFP':SSHFP, 'TLSA':TLSA
+          'HTTPS': HTTPS, 'DS':DS, 'SSHFP':SSHFP, 'TLSA':TLSA, 'RP': RP
         }
 
 ##
