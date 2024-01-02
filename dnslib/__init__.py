@@ -420,7 +420,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.23"
+version = "0.9.24"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap
