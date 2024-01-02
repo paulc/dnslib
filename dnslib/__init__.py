@@ -4,11 +4,13 @@
 
 ## From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to the original BitBucket repository as this will no longer be maintained.
 
+## Release 0.9.24 (2024-01-02) will be the last release supporting Python 2.7 and Python <3.7. Supporting old Python versions is increasingly painful and holds back adoption of new features so it's probably time to move on. 
+
+A library to encode/decode DNS wire-format packets supporting both
 
 dnslib
 ------
 
-A library to encode/decode DNS wire-format packets supporting both
 Python 2.7 and Python 3.2+.
 
 The library provides:
@@ -389,6 +391,13 @@ Changelog:
                             dynamically map from rtype <-> TYPExxxx for unknown record types
                             RR zone representation updated to match RFC3597
                          Pull Request #47: Add support for DS, SSHFP, and TLSA records (thanks to @rmbolger)
+ *   0.9.24  2024-01-02  Merge multiple PRs
+                            #49 - Generate README.md (via symlink)
+                            #51 - Update Github CI checkout & setup-python actions (and remove Python 2.7 CI support)
+                                  (thanks to @SpencerIsGiddy)
+                            #54 - Support for RP records (thanks to @ryan-gang)
+                            #57 - Support for LOC records (thanks to @valentinesd)
+                         (Note that this will be the last release supporting Python 2.7 and Python <3.7)
 
 License:
 --------
