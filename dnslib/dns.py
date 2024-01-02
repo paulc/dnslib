@@ -2264,9 +2264,9 @@ class LOC(RD):
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1456
         ;; flags: rd; QUERY: 0, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
         ;; ANSWER SECTION:
-        area51.local.             60      IN      LOC     37 14 12.094 N 115 48 14.649 W 1381.00m
-        area51.local.             60      IN      LOC     37 N 115 48 W 1381.00m
-        area51.local.             60      IN      LOC     37 14 12.094 N 115 48 14.649 W 1381.00m
+        area51.local.           60      IN      LOC     37 14 12.094 N 115 48 14.649 W 1381.00m
+        area51.local.           60      IN      LOC     37 N 115 48 W 1381.00m
+        area51.local.           60      IN      LOC     37 14 12.094 N 115 48 14.649 W 1381.00m
     """
 
     @classmethod
@@ -2289,10 +2289,11 @@ class LOC(RD):
     @classmethod
     def fromZone(cls, rd, origin=None):
         args = []
-        idx = 0
+        # We still support Python 2.7 so use nonlocal workaround 
+        class context:
+            idx = 0
         tofloat = lambda x: float(x[:-1])  # get float from "100.0m"
         def todecimal(chars):
-            nonlocal idx
             decimal = 0.0
             multiplier = 1
             for c in chars:
@@ -2302,10 +2303,10 @@ class LOC(RD):
                         multiplier = -1
                     break
             else:
-                raise DNSError(f'Missing cardinality [{chars}]')
-            for n, d in zip(rd[idx:nxt], (1, 60, 3600)):
+                raise DNSError('Missing cardinality [{chars}]'.format(chars=chars))
+            for n, d in zip(rd[context.idx:nxt], (1, 60, 3600)):
                 decimal += float(n) / d
-            idx = nxt + 1
+            context.idx = nxt + 1
             return decimal * multiplier
 
         args.append(todecimal('NS'))
@@ -2313,8 +2314,8 @@ class LOC(RD):
 
         try:
             while True:
-                args.append(tofloat(rd[idx]))
-                idx += 1
+                args.append(tofloat(rd[context.idx]))
+                context.idx += 1
         except IndexError:
             return cls(*args)
 
@@ -2361,28 +2362,28 @@ class LOC(RD):
         base = abs(pow(2, 31) - value)
         d = base // 3600000
         m = base % 3600000 // 60000
-        s = base % 3600000 % 60000 / 1000
+        s = base % 3600000 % 60000 / 1000.0
 
         if int(s) == 0:
             if m == 0:
-                return f'{d} {c}'
+                return '{d} {c}'.format(c=c,d=d)
             else:
-                return f'{d} {m} {c}'
-        return f'{d} {m} {s:.3f} {c}'
+                return '{d} {m} {c}'.format(d=d,m=m,c=c)
+        return '{d} {m} {s:.3f} {c}'.format(d=d,m=m,s=s,c=c)
 
     def __repr__(self):
         DEFAULT_SIZ = 0x12  # 1m
         DEFAULT_HP = 0x16   # 10,000m
         DEFAULT_VP = 0x13   # 10m
 
-        result = f'{self.lat} {self.lon} {self.alt:.2f}m'
+        result = '{self.lat} {self.lon} {self.alt:.2f}m'.format(self=self)
 
         if self._vp != DEFAULT_VP:
-            result += f' {self.siz:.2f}m {self.hp:.2f}m {self.vp:.2f}m'
+            result += ' {self.siz:.2f}m {self.hp:.2f}m {self.vp:.2f}m'.format(self=self)
         elif self._hp != DEFAULT_HP:
-            result += f' {self.siz:.2f}m {self.hp:.2f}m'
+            result += ' {self.siz:.2f}m {self.hp:.2f}m'.format(self=self)
         elif self._siz != DEFAULT_SIZ:
-            result += f' {self.siz:.2f}m'
+            result += ' {self.siz:.2f}m'.format(self=self)
 
         return result
 
@@ -2395,7 +2396,7 @@ class LOC(RD):
         while v >= 10 and e < 9:
             v /= 10
             e += 1
-        v = round(v)
+        v = int(round(v))
         if v >= 10:
             raise DNSError("Value out of range")
         return v << 4 | e
