@@ -2248,13 +2248,173 @@ class TLSA(RD):
 
     attrs = ('cert_usage','selector','matching_type','cert_data')
 
+class LOC(RD):
+    """
+        LOC record as specified in RFC 1876
+
+        >>> LOC(37.236693, -115.804069, 1381.0)
+        37 14 12.094 N 115 48 14.649 W 1381.00m
+        >>> LOC(37.236693, -115.804069, 1381.0, 3000.0, 1.0, 1.0)
+        37 14 12.094 N 115 48 14.649 W 1381.00m 3000.00m 1.00m 1.00m
+        >>> a = DNSRecord(DNSHeader(id=1456))
+        >>> a.add_answer(*RR.fromZone('area51.local. 60 IN LOC 37 14 12.094 N 115 48 14.649 W 1381.00m'))
+        >>> a.add_answer(*RR.fromZone('area51.local. 60 IN LOC 37 N 115 48 W 1381.00m'))
+        >>> a.add_answer(*RR.fromZone('area51.local. 60 IN LOC 37 14 12.094 N 115 48 14.649 W 1381.00m 1m 10000m 10m'))
+        >>> print(a)
+        ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1456
+        ;; flags: rd; QUERY: 0, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
+        ;; ANSWER SECTION:
+        area51.local.             60      IN      LOC     37 14 12.094 N 115 48 14.649 W 1381.00m
+        area51.local.             60      IN      LOC     37 N 115 48 W 1381.00m
+        area51.local.             60      IN      LOC     37 14 12.094 N 115 48 14.649 W 1381.00m
+    """
+
+    @classmethod
+    def parse(cls, buffer, length):
+        try:
+            (_, siz, hp, vp) = buffer.unpack('!BBBB')
+            (lat, lon, alt) = buffer.unpack('!III')
+            self = cls.__new__(cls)
+            self._lat = lat
+            self._lon = lon
+            self._alt = alt
+            self._siz = siz
+            self._hp = hp
+            self._vp = vp
+            return self
+        except (BufferError, BimapError) as e:
+            raise DNSError("Error unpacking LOC [offset=%d]: %s" %
+                                        (buffer.offset,e))
+
+    @classmethod
+    def fromZone(cls, rd, origin=None):
+        args = []
+        idx = 0
+        tofloat = lambda x: float(x[:-1])  # get float from "100.0m"
+        def todecimal(chars):
+            nonlocal idx
+            decimal = 0.0
+            multiplier = 1
+            for c in chars:
+                if c in rd:
+                    nxt = rd.index(c)
+                    if c in ('S', 'W'):
+                        multiplier = -1
+                    break
+            else:
+                raise DNSError(f'Missing cardinality [{chars}]')
+            for n, d in zip(rd[idx:nxt], (1, 60, 3600)):
+                decimal += float(n) / d
+            idx = nxt + 1
+            return decimal * multiplier
+
+        args.append(todecimal('NS'))
+        args.append(todecimal('EW'))
+
+        try:
+            while True:
+                args.append(tofloat(rd[idx]))
+                idx += 1
+        except IndexError:
+            return cls(*args)
+
+    def __init__(self, lat, lon, alt, siz=1.0, hp=10000.0, vp=10.0):
+        self._lat = int(lat * 3600000 + pow(2, 31))
+        self._lon = int(lon * 3600000 + pow(2, 31))
+        self._alt = int((alt + 100000) * 100)
+        self._siz = LOC.__tosiz(siz)
+        self._hp = LOC.__tosiz(hp)
+        self._vp = LOC.__tosiz(vp)
+
+    def pack(self, buffer):
+        buffer.pack("!BBBB", 0, self._siz, self._hp, self._vp)
+        buffer.pack("!III", self._lat, self._lon, self._alt)
+
+    @property
+    def siz(self):
+        return self.__reprsiz(self._siz)
+
+    @property
+    def hp(self):
+        return self.__reprsiz(self._hp)
+
+    @property
+    def vp(self):
+        return self.__reprsiz(self._vp)
+
+    @property
+    def lat(self):
+        c = 'N' if self._lat > pow(2, 31) else 'S'
+        return self._reprcoord(self._lat, c)
+
+    @property
+    def lon(self):
+        c = 'E' if self._lon > pow(2, 31) else 'W'
+        return self._reprcoord(self._lon, c)
+
+    @property
+    def alt(self):
+        return self._alt / 100 - 100000
+
+    @staticmethod
+    def _reprcoord(value, c):
+        base = abs(pow(2, 31) - value)
+        d = base // 3600000
+        m = base % 3600000 // 60000
+        s = base % 3600000 % 60000 / 1000
+
+        if int(s) == 0:
+            if m == 0:
+                return f'{d} {c}'
+            else:
+                return f'{d} {m} {c}'
+        return f'{d} {m} {s:.3f} {c}'
+
+    def __repr__(self):
+        DEFAULT_SIZ = 0x12  # 1m
+        DEFAULT_HP = 0x16   # 10,000m
+        DEFAULT_VP = 0x13   # 10m
+
+        result = f'{self.lat} {self.lon} {self.alt:.2f}m'
+
+        if self._vp != DEFAULT_VP:
+            result += f' {self.siz:.2f}m {self.hp:.2f}m {self.vp:.2f}m'
+        elif self._hp != DEFAULT_HP:
+            result += f' {self.siz:.2f}m {self.hp:.2f}m'
+        elif self._siz != DEFAULT_SIZ:
+            result += f' {self.siz:.2f}m'
+
+        return result
+
+    @staticmethod
+    def __tosiz(v):
+        if int(v) == 0:
+            return 0
+        e = 0
+        v *= 100
+        while v >= 10 and e < 9:
+            v /= 10
+            e += 1
+        v = round(v)
+        if v >= 10:
+            raise DNSError("Value out of range")
+        return v << 4 | e
+
+    @staticmethod
+    def __reprsiz(v):
+        b = v >> 4
+        e = v & 0x0F
+        if b > 9 or e > 9 or (b == 0 and e > 0):
+            raise DNSError("Value out of range")
+        return b * pow(10, e) / 100
+
 # Map from RD type to class (used to pack/unpack records)
 # If you add a new RD class you must add to RDMAP
 
 RDMAP = { 'CNAME':CNAME, 'A':A, 'AAAA':AAAA, 'TXT':TXT, 'MX':MX,
           'PTR':PTR, 'SOA':SOA, 'NS':NS, 'NAPTR': NAPTR, 'SRV':SRV,
           'DNSKEY':DNSKEY, 'RRSIG':RRSIG, 'NSEC':NSEC, 'CAA':CAA,
-          'HTTPS': HTTPS, 'DS':DS, 'SSHFP':SSHFP, 'TLSA':TLSA
+          'HTTPS': HTTPS, 'DS':DS, 'SSHFP':SSHFP, 'TLSA':TLSA, 'LOC':LOC
         }
 
 ##
