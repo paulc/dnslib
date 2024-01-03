@@ -10,7 +10,7 @@ do
     for py in $VERSIONS
     do
         echo "Testing:" $($py --version 2>&1)
-        $py dnslib/$src
+        $py src/dnslib/$src
     done
 done
 
