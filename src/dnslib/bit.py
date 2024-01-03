@@ -5,9 +5,10 @@
 """
 from __future__ import print_function
 
-FILTER = bytearray([ (i < 32 or i > 127) and 46 or i for i in range(256) ])
+FILTER = bytearray([(i < 32 or i > 127) and 46 or i for i in range(256)])
 
-def hexdump(src, length=16, prefix=''):
+
+def hexdump(src, length=16, prefix=""):
     """
     Print hexdump of string
 
@@ -23,66 +24,70 @@ def hexdump(src, length=16, prefix=''):
     n = 0
     left = length // 2
     right = length - left
-    result= []
+    result = []
     src = bytearray(src)
     while src:
-        s,src = src[:length],src[length:]
-        l,r = s[:left],s[left:]
-        hexa = "%-*s" % (left*3,' '.join(["%02x"%x for x in l]))
-        hexb = "%-*s" % (right*3,' '.join(["%02x"%x for x in r]))
+        s, src = src[:length], src[length:]
+        l, r = s[:left], s[left:]
+        hexa = "%-*s" % (left * 3, " ".join(["%02x" % x for x in l]))
+        hexb = "%-*s" % (right * 3, " ".join(["%02x" % x for x in r]))
         lf = l.translate(FILTER)
         rf = r.translate(FILTER)
-        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb,
-                                               lf.decode(), rf.decode()))
+        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb, lf.decode(), rf.decode()))
         n += length
     return "\n".join(result)
 
-def get_bits(data,offset,bits=1):
-    """
-        Get specified bits from integer
 
-        >>> bin(get_bits(0b0011100,2))
-        '0b1'
-        >>> bin(get_bits(0b0011100,0,4))
-        '0b1100'
+def get_bits(data, offset, bits=1):
+    """
+    Get specified bits from integer
+
+    >>> bin(get_bits(0b0011100,2))
+    '0b1'
+    >>> bin(get_bits(0b0011100,0,4))
+    '0b1100'
 
     """
     mask = ((1 << bits) - 1) << offset
     return (data & mask) >> offset
 
-def set_bits(data,value,offset,bits=1):
-    """
-        Set specified bits in integer
 
-        >>> bin(set_bits(0,0b1010,0,4))
-        '0b1010'
-        >>> bin(set_bits(0,0b1010,3,4))
-        '0b1010000'
+def set_bits(data, value, offset, bits=1):
+    """
+    Set specified bits in integer
+
+    >>> bin(set_bits(0,0b1010,0,4))
+    '0b1010'
+    >>> bin(set_bits(0,0b1010,3,4))
+    '0b1010000'
     """
     mask = ((1 << bits) - 1) << offset
-    clear = 0xffff ^ mask
+    clear = 0xFFFF ^ mask
     data = (data & clear) | ((value << offset) & mask)
     return data
 
-def binary(n,count=16,reverse=False):
-    """
-        Display n in binary (only difference from built-in `bin` is
-        that this function returns a fixed width string and can
-        optionally be reversed
 
-        >>> binary(6789)
-        '0001101010000101'
-        >>> binary(6789,8)
-        '10000101'
-        >>> binary(6789,reverse=True)
-        '1010000101011000'
+def binary(n, count=16, reverse=False):
+    """
+    Display n in binary (only difference from built-in `bin` is
+    that this function returns a fixed width string and can
+    optionally be reversed
+
+    >>> binary(6789)
+    '0001101010000101'
+    >>> binary(6789,8)
+    '10000101'
+    >>> binary(6789,reverse=True)
+    '1010000101011000'
 
     """
-    bits = [str((n >> y) & 1) for y in range(count-1, -1, -1)]
+    bits = [str((n >> y) & 1) for y in range(count - 1, -1, -1)]
     if reverse:
         bits.reverse()
     return "".join(bits)
 
-if __name__ == '__main__':
-    import doctest,sys
+
+if __name__ == "__main__":
+    import doctest, sys
+
     sys.exit(0 if doctest.testmod().failed == 0 else 1)
