@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     Bimap - bidirectional mapping between code/value
 """
@@ -11,7 +9,7 @@ class BimapError(Exception):
     pass
 
 
-class Bimap(object):
+class Bimap:
 
     """
     Bi-directional mapping between code/text.
@@ -91,7 +89,7 @@ class Bimap(object):
         self.name = name
         self.error = error
         self.forward = forward.copy()
-        self.reverse = dict([(v, k) for (k, v) in list(forward.items())])
+        self.reverse = {v: k for (k, v) in list(forward.items())}
 
     def get(self, k, default=None):
         try:
@@ -106,7 +104,7 @@ class Bimap(object):
             if isinstance(self.error, types.FunctionType):
                 return self.error(self.name, k, True)
             else:
-                raise self.error("%s: Invalid forward lookup: [%s]" % (self.name, k))
+                raise self.error(f"{self.name}: Invalid forward lookup: [{k}]")
 
     def __getattr__(self, k):
         try:
@@ -118,7 +116,7 @@ class Bimap(object):
             if isinstance(self.error, types.FunctionType):
                 return self.error(self.name, k, False)
             else:
-                raise self.error("%s: Invalid reverse lookup: [%s]" % (self.name, k))
+                raise self.error(f"{self.name}: Invalid reverse lookup: [{k}]")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 try:
     from subprocess import getoutput
 except ImportError:

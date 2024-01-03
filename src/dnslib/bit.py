@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """
     Some basic bit mainpulation utilities
 """
-from __future__ import print_function
 
 FILTER = bytearray([(i < 32 or i > 127) and 46 or i for i in range(256)])
 
@@ -33,7 +30,7 @@ def hexdump(src, length=16, prefix=""):
         hexb = "%-*s" % (right * 3, " ".join(["%02x" % x for x in r]))
         lf = l.translate(FILTER)
         rf = r.translate(FILTER)
-        result.append("%s%04x  %s %s %s %s" % (prefix, n, hexa, hexb, lf.decode(), rf.decode()))
+        result.append(f"{prefix}{n:04x}  {hexa} {hexb} {lf.decode()} {rf.decode()}")
         n += length
     return "\n".join(result)
 

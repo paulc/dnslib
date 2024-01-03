@@ -4,7 +4,6 @@
     Contains core DNS packet handling code
 """
 
-from __future__ import print_function
 
 import base64, binascii, calendar, collections, copy, os.path, random, socket, string, struct, textwrap, time
 
@@ -35,14 +34,14 @@ def unknown_qtype(name, key, forward):
         try:
             return "TYPE%d" % (key,)
         except:
-            raise DNSError("%s: Invalid forward lookup: [%s]" % (name, key))
+            raise DNSError(f"{name}: Invalid forward lookup: [{key}]")
     else:
         if key.startswith("TYPE"):
             try:
                 return int(key[4:])
             except:
                 pass
-        raise DNSError("%s: Invalid reverse lookup: [%s]" % (name, key))
+        raise DNSError(f"{name}: Invalid reverse lookup: [{key}]")
 
 
 QTYPE = Bimap(
@@ -135,7 +134,7 @@ def label(label, origin=None):
         return (origin if isinstance(origin, DNSLabel) else DNSLabel(origin)).add(label)
 
 
-class DNSRecord(object):
+class DNSRecord:
 
     """
     Main DNS class - corresponds to DNS packet & comprises DNSHeader,
@@ -513,8 +512,8 @@ class DNSRecord(object):
                 k = lambda x: tuple(map(str, (x.qname, x.qtype)))
             else:
                 k = lambda x: tuple(map(str, (x.rname, x.rtype, x.rdata)))
-            a = dict([(k(rr), rr) for rr in getattr(self, section)])
-            b = dict([(k(rr), rr) for rr in getattr(other, section)])
+            a = {k(rr): rr for rr in getattr(self, section)}
+            b = {k(rr): rr for rr in getattr(other, section)}
             sa = set(a)
             sb = set(b)
             for e in sorted(sa.intersection(sb)):
@@ -533,7 +532,7 @@ class DNSRecord(object):
         return self.toZone()
 
 
-class DNSHeader(object):
+class DNSHeader:
 
     """
     DNSHeader section
@@ -759,7 +758,7 @@ class DNSHeader(object):
             return all([getattr(self, x) == getattr(other, x) for x in attrs])
 
 
-class DNSQuestion(object):
+class DNSQuestion:
 
     """
     DNSQuestion section
@@ -798,7 +797,7 @@ class DNSQuestion(object):
         return ";%-30s %-7s %s" % (self.qname, CLASS.get(self.qclass), QTYPE[self.qtype])
 
     def __repr__(self):
-        return "<DNS Question: '%s' qtype=%s qclass=%s>" % (
+        return "<DNS Question: '{}' qtype={} qclass={}>".format(
             self.qname,
             QTYPE.get(self.qtype),
             CLASS.get(self.qclass),
@@ -819,7 +818,7 @@ class DNSQuestion(object):
             return all([getattr(self, x) == getattr(other, x) for x in attrs])
 
 
-class EDNSOption(object):
+class EDNSOption:
 
     """
     EDNSOption pseudo-section
@@ -859,7 +858,7 @@ class EDNSOption(object):
         )
 
     def toZone(self):
-        return "; EDNS: code: %s; data: %s" % (self.code, binascii.hexlify(self.data).decode())
+        return f"; EDNS: code: {self.code}; data: {binascii.hexlify(self.data).decode()}"
 
     def __str__(self):
         return self.toZone()
@@ -876,7 +875,7 @@ class EDNSOption(object):
             return all([getattr(self, x) == getattr(other, x) for x in attrs])
 
 
-class RR(object):
+class RR:
 
     """
     DNS Resource Record
@@ -1073,10 +1072,10 @@ class EDNS0(RR):
         ttl = (ext_rcode << 24) + (version << 16) + flag_bitmap
         if opts and not all([isinstance(o, EDNSOption) for o in opts]):
             raise ValueError("Option must be instance of EDNSOption")
-        super(EDNS0, self).__init__(rname, rtype, udp_len, ttl, opts or [])
+        super().__init__(rname, rtype, udp_len, ttl, opts or [])
 
 
-class RD(object):
+class RD:
     """
     Base RD object - also used as placeholder for unknown RD types
 
@@ -1171,7 +1170,7 @@ def _bytes_to_printable(b):
     return (
         '"'
         + "".join(
-            [(c if _isprint(c) else "\\{0:03o}".format(ord(c))) for c in b.decode(errors="replace")]
+            [(c if _isprint(c) else f"\\{ord(c):03o}") for c in b.decode(errors="replace")]
         )
         + '"'
     )
@@ -1505,7 +1504,7 @@ class SOA(RD):
         buffer.pack("!IIIII", *self.times)
 
     def __repr__(self):
-        return "%s %s %s" % (self.mname, self.rname, " ".join(map(str, self.times)))
+        return "{} {} {}".format(self.mname, self.rname, " ".join(map(str, self.times)))
 
     attrs = ("mname", "rname", "times")
 
@@ -1891,7 +1890,7 @@ class NSEC(RD):
         buffer.append(encode_type_bitmap(self.rrlist))
 
     def __repr__(self):
-        return "%s %s" % (self.label, " ".join(self.rrlist))
+        return "{} {}".format(self.label, " ".join(self.rrlist))
 
     attrs = ("label", "rrlist")
 
@@ -2446,7 +2445,7 @@ class LOC(RD):
                         multiplier = -1
                     break
             else:
-                raise DNSError("Missing cardinality [{chars}]".format(chars=chars))
+                raise DNSError(f"Missing cardinality [{chars}]")
             for n, d in zip(rd[context.idx : nxt], (1, 60, 3600)):
                 decimal += float(n) / d
             context.idx = nxt + 1
@@ -2509,10 +2508,10 @@ class LOC(RD):
 
         if int(s) == 0:
             if m == 0:
-                return "{d} {c}".format(c=c, d=d)
+                return f"{d} {c}"
             else:
-                return "{d} {m} {c}".format(d=d, m=m, c=c)
-        return "{d} {m} {s:.3f} {c}".format(d=d, m=m, s=s, c=c)
+                return f"{d} {m} {c}"
+        return f"{d} {m} {s:.3f} {c}"
 
     def __repr__(self):
         DEFAULT_SIZ = 0x12  # 1m
@@ -2526,7 +2525,7 @@ class LOC(RD):
         elif self._hp != DEFAULT_HP:
             result += " {self.siz:.2f}m {self.hp:.2f}m".format(self=self)
         elif self._siz != DEFAULT_SIZ:
-            result += " {self.siz:.2f}m".format(self=self)
+            result += f" {self.siz:.2f}m"
 
         return result
 
@@ -2603,7 +2602,7 @@ class RP(RD):
         buffer.encode_name(self.txt)
 
     def __repr__(self):
-        return "%s %s" % (self.mbox, self.txt)
+        return f"{self.mbox} {self.txt}"
 
     attrs = ("mbox", "txt")
 
@@ -2680,7 +2679,7 @@ class ZoneParser:
     def expect(self, expect):
         t, val = next(self.i)
         if t != expect:
-            raise ValueError("Invalid Token: %s (expecting: %s)" % (t, expect))
+            raise ValueError(f"Invalid Token: {t} (expecting: {expect})")
         return val
 
     def parse_label(self, label):

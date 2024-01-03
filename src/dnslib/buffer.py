@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     Buffer - simple data buffer
 """
@@ -11,7 +9,7 @@ class BufferError(Exception):
     pass
 
 
-class Buffer(object):
+class Buffer:
 
     """
     A simple data buffer - supports packing/unpacking in struct format
@@ -108,7 +106,7 @@ class Buffer(object):
             return struct.unpack(fmt, data)
         except struct.error as e:
             raise BufferError(
-                "Error unpacking struct '%s' <%s>" % (fmt, binascii.hexlify(data).decode())
+                f"Error unpacking struct '{fmt}' <{binascii.hexlify(data).decode()}>"
             )
 
     def __len__(self):

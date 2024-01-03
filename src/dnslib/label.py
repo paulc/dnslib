@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """
     DNSLabel/DNSBuffer - DNS label handling & encoding/decoding
 """
 
-from __future__ import print_function
 
 import fnmatch, re, string
 
@@ -22,7 +19,7 @@ class DNSLabelError(Exception):
     pass
 
 
-class DNSLabel(object):
+class DNSLabel:
 
     """
     Container for DNS label
@@ -88,12 +85,12 @@ class DNSLabel(object):
             if not label or label in (b".", "."):
                 self.label = ()
             elif type(label) is not bytes:
-                if type("") != type(b""):
+                if str != bytes:
                     # Py3
                     label = ESCAPE.sub(lambda m: chr(int(m[1])), label)
                 self.label = tuple(label.encode("idna").rstrip(b".").split(b"."))
             else:
-                if type("") == type(b""):
+                if str == bytes:
                     # Py2
                     label = ESCAPE.sub(lambda m: chr(int(m.groups()[0])), label)
                 self.label = tuple(label.rstrip(b".").split(b"."))
@@ -225,7 +222,7 @@ class DNSBuffer(Buffer):
         """
         Add 'names' dict to cache stored labels
         """
-        super(DNSBuffer, self).__init__(data)
+        super().__init__(data)
         self.names = {}
 
     def decode_name(self, last=-1):

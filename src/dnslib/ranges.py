@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     Wrapper around property builtin to restrict attribute to defined
     integer value range (throws ValueError).
@@ -65,7 +63,7 @@ else:
 
 def check_instance(name, val, types):
     if not isinstance(val, types):
-        raise ValueError("Attribute '%s' must be instance of %s [%s]" % (name, types, type(val)))
+        raise ValueError(f"Attribute '{name}' must be instance of {types} [{type(val)}]")
 
 
 def check_bytes(name, val):
@@ -81,7 +79,7 @@ def instance_property(attr, types):
             setattr(obj, "_%s" % attr, val)
         else:
             raise ValueError(
-                "Attribute '%s' must be instance of %s [%s]" % (attr, types, type(val))
+                f"Attribute '{attr}' must be instance of {types} [{type(val)}]"
             )
 
     return property(getter, setter)

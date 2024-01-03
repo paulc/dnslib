@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
     Test dnslib packet encoding/decoding
 
@@ -47,7 +46,6 @@
 
 """
 
-from __future__ import print_function
 
 from dnslib.dns import DNSRecord, EDNS0
 from dnslib.digparser import DigParser
@@ -112,9 +110,9 @@ def new_test(domain, qtype, address="8.8.8.8", port=53, nodig=False, dnssec=Fals
             return
 
     if dnssec:
-        fname = "%s-%s-dnssec" % (domain, qtype)
+        fname = f"{domain}-{qtype}-dnssec"
     else:
-        fname = "%s-%s" % (domain, qtype)
+        fname = f"{domain}-{qtype}"
     print("Writing test file: %s" % (fname))
     with open(fname, "w") as f:
         print(";; Sending:", file=f)

@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import collections, string
 
 try:
@@ -10,7 +6,7 @@ except ImportError:
     from io import StringIO
 
 
-class Lexer(object):
+class Lexer:
 
     """
     Simple Lexer base class. Provides basic lexer framework and
@@ -345,7 +341,7 @@ if __name__ == "__main__":
             # Test if we have /dev/urandom
             open("/dev/urandom")
             sys.exit(0 if doctest.testmod().failed == 0 else 1)
-        except IOError:
+        except OSError:
             # Don't run stream test
             doctest.run_docstring_examples(Lexer, globals())
             doctest.run_docstring_examples(WordLexer, globals())

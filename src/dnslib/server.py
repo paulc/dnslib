@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     DNS server framework - intended to simplify creation of custom resolvers.
 
@@ -99,7 +97,6 @@
 
 
 """
-from __future__ import print_function
 
 import binascii, socket, struct, threading, time
 
@@ -111,7 +108,7 @@ except ImportError:
 from dnslib import DNSRecord, DNSError, QTYPE, RCODE, RR
 
 
-class BaseResolver(object):
+class BaseResolver:
     """
     Base resolver implementation. Provides 'resolve' method which is
     called by DNSHandler with the decode request (DNSRecord instance)
@@ -259,7 +256,7 @@ class DNSLogger:
 
     def log_prefix(self, handler):
         if self.prefix:
-            return "%s [%s:%s] " % (
+            return "{} [{}:{}] ".format(
                 time.strftime("%Y-%m-%d %X"),
                 handler.__class__.__name__,
                 handler.server.resolver.__class__.__name__,
@@ -367,25 +364,25 @@ class DNSLogger:
         self.logf("\n%s\n" % (dnsobj.toZone("    ")))
 
 
-class UDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer, object):
+class UDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     def __init__(self, server_address, handler):
         self.allow_reuse_address = True
         self.daemon_threads = True
         if server_address[0] != "" and ":" in server_address[0]:
             self.address_family = socket.AF_INET6
-        super(UDPServer, self).__init__(server_address, handler)
+        super().__init__(server_address, handler)
 
 
-class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer, object):
+class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     def __init__(self, server_address, handler):
         self.allow_reuse_address = True
         self.daemon_threads = True
         if server_address[0] != "" and ":" in server_address[0]:
             self.address_family = socket.AF_INET6
-        super(TCPServer, self).__init__(server_address, handler)
+        super().__init__(server_address, handler)
 
 
-class DNSServer(object):
+class DNSServer:
 
     """
     Convenience wrapper for socketserver instance allowing

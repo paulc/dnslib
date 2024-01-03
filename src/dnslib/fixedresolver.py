@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """
     FixedResolver - example resolver which responds with fixed response
                     to all requests
 """
 
-from __future__ import print_function
 
 import copy
 

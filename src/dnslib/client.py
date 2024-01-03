@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
     DNS Client - DiG-like CLI utility.
 
@@ -11,7 +9,6 @@
     See --help for usage.
 """
 
-from __future__ import print_function
 
 try:
     from subprocess import getoutput, getstatusoutput

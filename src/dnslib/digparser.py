@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
     digparser
@@ -69,7 +68,6 @@
 
 """
 
-from __future__ import print_function
 
 import glob, os.path, string, re
 
@@ -117,7 +115,7 @@ class DigParser:
     def expect(self, expect):
         t, val = next(self.i)
         if t != expect:
-            raise ValueError("Invalid Token: %s (expecting: %s)" % (t, expect))
+            raise ValueError(f"Invalid Token: {t} (expecting: {expect})")
         return val
 
     def parseQuestions(self, q, dns):
@@ -155,13 +153,13 @@ class DigParser:
 
     def parseEDNS(self, edns, dns):
         args = {}
-        m = re.search("version: (\d+),", edns)
+        m = re.search(r"version: (\d+),", edns)
         if m:
             args["version"] = int(m.group(1))
-        m = re.search("flags:\s*(.*?);", edns)
+        m = re.search(r"flags:\s*(.*?);", edns)
         if m:
             args["flags"] = m.group(1)
-        m = re.search("udp: (\d+)", edns)
+        m = re.search(r"udp: (\d+)", edns)
         if m:
             args["udp_len"] = int(m.group(1))
         dns.add_ar(EDNS0(**args))
