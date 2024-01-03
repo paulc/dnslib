@@ -98,12 +98,12 @@
 
 """
 
-import binascii, socket, struct, threading, time
-
-try:
-    import socketserver
-except ImportError:
-    import SocketServer as socketserver
+import binascii
+import socket
+import socketserver
+import struct
+import threading
+import time
 
 from dnslib import DNSRecord, DNSError, QTYPE, RCODE, RR
 
@@ -361,7 +361,7 @@ class DNSLogger:
         )
 
     def log_data(self, dnsobj):
-        self.logf("\n%s\n" % (dnsobj.toZone("    ")))
+        self.logf("\n{dnsobj.toZone('    ')}\n")
 
 
 class UDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):

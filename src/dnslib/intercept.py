@@ -4,7 +4,11 @@
 
 """
 
-import binascii, copy, socket, struct, sys
+import binascii
+import copy
+import socket
+import struct
+import sys
 
 from dnslib import DNSRecord, RR, QTYPE, RCODE, parse_time
 from dnslib.server import DNSServer, DNSHandler, BaseResolver, DNSLogger

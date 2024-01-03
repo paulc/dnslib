@@ -2,7 +2,8 @@
     Buffer - simple data buffer
 """
 
-import binascii, struct
+import binascii
+import struct
 
 
 class BufferError(Exception):
@@ -61,8 +62,7 @@ class Buffer:
         """
         if length > self.remaining():
             raise BufferError(
-                "Not enough bytes [offset=%d,remaining=%d,requested=%d]"
-                % (self.offset, self.remaining(), length)
+                f"Not enough bytes [offset={self.offset},remaining={self.remaining()},requested={length}]"
             )
         start = self.offset
         end = self.offset + length
@@ -105,9 +105,7 @@ class Buffer:
             data = self.get(struct.calcsize(fmt))
             return struct.unpack(fmt, data)
         except struct.error as e:
-            raise BufferError(
-                f"Error unpacking struct '{fmt}' <{binascii.hexlify(data).decode()}>"
-            )
+            raise BufferError(f"Error unpacking struct '{fmt}' <{binascii.hexlify(data).decode()}>")
 
     def __len__(self):
         return len(self.data)

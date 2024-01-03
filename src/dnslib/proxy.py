@@ -1,4 +1,6 @@
-import binascii, socket, struct
+import binascii
+import socket
+import struct
 
 from dnslib import DNSRecord, RCODE, QTYPE
 from dnslib.server import DNSServer, DNSHandler, BaseResolver, DNSLogger

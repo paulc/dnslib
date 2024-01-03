@@ -379,7 +379,7 @@ Changelog:
                             (Pull-Request #35 - thanks to @jkl-caliber)
                          Fix display of non-printable characters in TXT records
                             (Issue #32 - thanks to @sbv-csis)
-                         Add --strip-aaaa option to dnslib.proxy 
+                         Add --strip-aaaa option to dnslib.proxy
  *   0.9.21  2022-09-19  Minor clean-up / add wheels to distro
  *   0.9.22  2022-09027  Issue #43 (0.9.21 Raises TypeError instead of DNSError when failing to parse HTTPS records)
                          Note that we just fix the exception - there still seems to be a problem with parsing HTTPS records

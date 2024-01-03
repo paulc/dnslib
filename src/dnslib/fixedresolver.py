@@ -84,8 +84,7 @@ if __name__ == "__main__":
     logger = DNSLogger(args.log, prefix=args.log_prefix)
 
     print(
-        "Starting Fixed Resolver (%s:%d) [%s]"
-        % (args.address or "*", args.port, "UDP/TCP" if args.tcp else "UDP")
+        f"Starting Fixed Resolver ({args.address or '*'}:{args.port}) [{'UDP/TCP' if args.tcp else 'UDP'}]"
     )
 
     for rr in resolver.rrs:

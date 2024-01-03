@@ -3,7 +3,9 @@
 """
 
 
-import fnmatch, re, string
+import fnmatch
+import re
+import string
 
 from dnslib.bit import get_bits, set_bits
 from dnslib.buffer import Buffer, BufferError
@@ -60,11 +62,13 @@ class DNSLabel:
 
     # Too hard to get unicode doctests to work on Python 3.2
     # (works on 3.3)
-    # >>> u1 = DNSLabel(u'\u2295.com')
-    # >>> u1.__str__() == u'\u2295.com.'
-    # True
-    # >>> u1.label == ( b"xn--keh", b"com" )
-    # True
+    >>> u1 = DNSLabel("⊕.com")
+    >>> str(u1) == "xn--keh.com."
+    True
+    >>> u1.idna() == "⊕.com."
+    True
+    >>> u1.label == ( b"xn--keh", b"com" )
+    True
 
     """
 
@@ -141,7 +145,7 @@ class DNSLabel:
         return ".".join([self._decode(bytearray(s)) for s in self.label]) + "."
 
     def __repr__(self):
-        return "<DNSLabel: '%s'>" % str(self)
+        return f"<DNSLabel: '{self}'>"
 
     def __hash__(self):
         return hash(tuple(map(lambda x: x.lower(), self.label)))
@@ -241,16 +245,14 @@ class DNSBuffer(Buffer):
                 save = self.offset
                 if last == save:
                     raise BufferError(
-                        "Recursive pointer in DNSLabel [offset=%d,pointer=%d,length=%d]"
-                        % (self.offset, pointer, len(self.data))
+                        f"Recursive pointer in DNSLabel [offset={self.offset},pointer={pointer},length={len(self.data)}]"
                     )
                 if pointer < self.offset:
                     self.offset = pointer
                 else:
                     # Pointer can't point forwards
                     raise BufferError(
-                        "Invalid pointer in DNSLabel [offset=%d,pointer=%d,length=%d]"
-                        % (self.offset, pointer, len(self.data))
+                        f"Invalid pointer in DNSLabel [offset={self.offset},pointer={pointer},length={len(self.data)}]"
                     )
                 label.extend(self.decode_name(save).label)
                 self.offset = save
@@ -261,7 +263,7 @@ class DNSBuffer(Buffer):
                     try:
                         l.decode()
                     except UnicodeDecodeError:
-                        raise BufferError("Invalid label <%s>" % l)
+                        raise BufferError(f"Invalid label <{l}>")
                     label.append(l)
                 else:
                     done = True
@@ -276,7 +278,7 @@ class DNSBuffer(Buffer):
         if not isinstance(name, DNSLabel):
             name = DNSLabel(name)
         if len(name) > 253:
-            raise DNSLabelError("Domain label too long: %r" % name)
+            raise DNSLabelError(f"Domain label too long: {name}")
         name = list(name.label)
         while name:
             if tuple(name) in self.names:
@@ -289,7 +291,7 @@ class DNSBuffer(Buffer):
                 self.names[tuple(name)] = self.offset
                 element = name.pop(0)
                 if len(element) > 63:
-                    raise DNSLabelError("Label component too long: %r" % element)
+                    raise DNSLabelError(f"Label component too long: {element!r}")
                 self.pack("!B", len(element))
                 self.append(element)
         self.append(b"\x00")
@@ -302,12 +304,12 @@ class DNSBuffer(Buffer):
         if not isinstance(name, DNSLabel):
             name = DNSLabel(name)
         if len(name) > 253:
-            raise DNSLabelError("Domain label too long: %r" % name)
+            raise DNSLabelError(f"Domain label too long: {name!r}")
         name = list(name.label)
         while name:
             element = name.pop(0)
             if len(element) > 63:
-                raise DNSLabelError("Label component too long: %r" % element)
+                raise DNSLabelError(f"Label component too long: {element!r}")
             self.pack("!B", len(element))
             self.append(element)
         self.append(b"\x00")

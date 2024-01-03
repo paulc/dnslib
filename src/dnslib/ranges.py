@@ -48,17 +48,8 @@
 
 """
 
-import sys
-
-if sys.version < "3":
-    int_types = (
-        int,
-        long,
-    )
-    byte_types = (str, bytearray)
-else:
-    int_types = (int,)
-    byte_types = (bytes, bytearray)
+int_types = (int,)
+byte_types = (bytes, bytearray)
 
 
 def check_instance(name, val, types):
@@ -72,15 +63,13 @@ def check_bytes(name, val):
 
 def instance_property(attr, types):
     def getter(obj):
-        return getattr(obj, "_%s" % attr)
+        return getattr(obj, f"_{attr}")
 
     def setter(obj, val):
         if isinstance(val, types):
-            setattr(obj, "_%s" % attr, val)
+            setattr(obj, f"_{attr}", val)
         else:
-            raise ValueError(
-                f"Attribute '{attr}' must be instance of {types} [{type(val)}]"
-            )
+            raise ValueError(f"Attribute '{attr}' must be instance of {types} [{type(val)}]")
 
     return property(getter, setter)
 
@@ -91,18 +80,18 @@ def BYTES(attr):
 
 def check_range(name, val, min, max):
     if not (isinstance(val, int_types) and min <= val <= max):
-        raise ValueError("Attribute '%s' must be between %d-%d [%s]" % (name, min, max, val))
+        raise ValueError(f"Attribute {name!r} must be between {min}-{max} [{val}]")
 
 
 def range_property(attr, min, max):
     def getter(obj):
-        return getattr(obj, "_%s" % attr)
+        return getattr(obj, f"_{attr}")
 
     def setter(obj, val):
         if isinstance(val, int_types) and min <= val <= max:
-            setattr(obj, "_%s" % attr, val)
+            setattr(obj, f"_{attr}", val)
         else:
-            raise ValueError("Attribute '%s' must be between %d-%d [%s]" % (attr, min, max, val))
+            raise ValueError(f"Attribute {attr!r} must be between {min}-{max} [{val}]")
 
     return property(getter, setter)
 
@@ -132,17 +121,15 @@ def ntuple_range(attr, n, min, max):
     f = lambda x: isinstance(x, int_types) and min <= x <= max
 
     def getter(obj):
-        return getattr(obj, "_%s" % attr)
+        return getattr(obj, f"_{attr}")
 
     def setter(obj, val):
         if len(val) != n:
-            raise ValueError("Attribute '%s' must be tuple with %d elements [%s]" % (attr, n, val))
+            raise ValueError(f"Attribute {attr!r} must be tuple with {n} elements [{val}]")
         if all(map(f, val)):
-            setattr(obj, "_%s" % attr, val)
+            setattr(obj, f"_{attr}", val)
         else:
-            raise ValueError(
-                "Attribute '%s' elements must be between %d-%d [%s]" % (attr, min, max, val)
-            )
+            raise ValueError(f"Attribute {attr!r} elements must be between {min}-{max} [{val}]")
 
     return property(getter, setter)
 

@@ -1,9 +1,6 @@
-import collections, string
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+import collections
+from io import StringIO
+import string
 
 
 class Lexer:
@@ -84,7 +81,7 @@ class Lexer:
         if s == "":
             self.eof = True
         if self.debug:
-            print("Read: >%s<" % repr(s))
+            print(f"Read: >{s!r}<")
         return s
 
     def peek(self, n=1):
@@ -99,7 +96,7 @@ class Lexer:
             self.eof = True
         self.q.extend(r)
         if self.debug:
-            print("Peek : >%s<" % repr(s + r))
+            print(f"Peek : >{s+r!r}<")
         return s + r
 
     def pushback(self, s):
@@ -115,17 +112,17 @@ class Lexer:
             if n.isdigit():
                 n = self.read(3)
                 if self.debug:
-                    print("Escape: >%s<" % n)
+                    print(f"Escape: >{n}<")
                 return chr(int(n, 8))
             elif n[0] in "x":
                 x = self.read(3)
                 if self.debug:
-                    print("Escape: >%s<" % x)
+                    print(f"Escape: >{x}<")
                 return chr(int(x[1:], 16))
             else:
                 c = self.read(1)
                 if self.debug:
-                    print("Escape: >%s<" % c)
+                    print(f"Escape: >{c}<")
                 return self.escape.get(c, c)
         else:
             self.escaped = False
@@ -184,7 +181,7 @@ class WordLexer(Lexer):
             elif c in self.wordchars:
                 return tok(self.lexWord)
             elif c:
-                raise ValueError("Invalid input [%d]: %s" % (self.f.tell(), c))
+                raise ValueError(f"Invalid input [{self.f.tell()}]: {c}")
         return (None, None)
 
     def lexNL(self):
@@ -223,7 +220,7 @@ class WordLexer(Lexer):
             elif c in self.wordchars:
                 s.append(self.read())
             elif c:
-                raise ValueError("Invalid input [%d]: %s" % (self.f.tell(), c))
+                raise ValueError(f"Invalid input [{self.f.tell()}]: {c}")
         return tok(None)
 
     def lexQuote(self):

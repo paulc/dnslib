@@ -9,13 +9,11 @@
     See --help for usage.
 """
 
-
-try:
-    from subprocess import getoutput, getstatusoutput
-except ImportError:
-    from commands import getoutput, getstatusoutput
-
-import binascii, code, pprint, sys
+import binascii
+import code
+import pprint
+from subprocess import getoutput, getstatusoutput
+import sys
 
 from dnslib.dns import DNSRecord, DNSHeader, DNSQuestion, DNSError, QTYPE, EDNS0
 from dnslib.digparser import DigParser
@@ -91,7 +89,7 @@ if __name__ == "__main__":
         port = int(port or 53)
 
         if args.query:
-            print(";; Sending%s:" % (" (TCP)" if args.tcp else ""))
+            print(f";; Sending{' (TCP)' if args.tcp else ''}:")
             if args.hex:
                 print(";; QUERY:", binascii.hexlify(q.pack()).decode())
             print(q)
@@ -116,15 +114,11 @@ if __name__ == "__main__":
             if args.dig:
                 if getstatusoutput("dig -v")[0] != 0:
                     p.error("DiG not found")
-                if args.dnssec:
-                    dig = getoutput(
-                        "dig +qr +dnssec -p %d %s %s @%s" % (port, args.domain, args.qtype, address)
-                    )
-                else:
-                    dig = getoutput(
-                        "dig +qr +noedns +noadflag -p %d %s %s @%s"
-                        % (port, args.domain, args.qtype, address)
-                    )
+
+                dig_opts = "+dnssec" if args.dnssec else "+noedns +noadflag"
+                dig = getoutput(
+                    f"dig +qr {dig_opts} -p {port} {args.domain} {args.qtype} @{address}"
+                )
                 dig_reply = list(iter(DigParser(dig)))
                 # DiG might have retried in TCP mode so get last q/a
                 q_diff = dig_reply[-2]
@@ -157,16 +151,16 @@ if __name__ == "__main__":
                     print(";;; ERROR: Diff Question differs")
                     for d1, d2 in q.diff(q_diff):
                         if d1:
-                            print(";; - %s" % d1)
+                            print(f";; - {d1}")
                         if d2:
-                            print(";; + %s" % d2)
+                            print(f";; + {d2}")
                 if a != a_diff:
                     print(";;; ERROR: Diff Response differs")
                     for d1, d2 in a.diff(a_diff):
                         if d1:
-                            print(";; - %s" % d1)
+                            print(f";; - {d1}")
                         if d2:
-                            print(";; + %s" % d2)
+                            print(f";; + {d2}")
 
         if args.debug:
             code.interact(local=locals())

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-
-from __future__ import print_function
-
-import argparse,binascii,os,pprint,traceback,sys
+import argparse
+import binascii
+import os
+import pprint
 from random import randrange
+import sys
+import traceback
+
 from dnslib import DNSRecord,DNSQuestion,QTYPE,DNSError
 
 def fuzz_delete(b):

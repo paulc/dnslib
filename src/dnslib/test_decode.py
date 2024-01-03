@@ -47,20 +47,18 @@
 """
 
 
+import argparse
+import binascii
+import code
+import glob
+import os
+import os.path
+import sys
+import unittest
+from subprocess import getoutput
+
 from dnslib.dns import DNSRecord, EDNS0
 from dnslib.digparser import DigParser
-
-import argparse, binascii, code, glob, os, os.path, sys, unittest
-
-try:
-    from subprocess import getoutput
-except ImportError:
-    from commands import getoutput
-
-try:
-    input = raw_input
-except NameError:
-    pass
 
 
 class TestContainer(unittest.TestCase):
@@ -81,12 +79,8 @@ def new_test(domain, qtype, address="8.8.8.8", port=53, nodig=False, dnssec=Fals
         a = DNSRecord.parse(a_pkt)
 
     if not nodig:
-        if dnssec:
-            dig = getoutput("dig +qr +dnssec -p %d %s %s @%s" % (port, domain, qtype, address))
-        else:
-            dig = getoutput(
-                "dig +qr +noedns +noadflag -p %d %s %s @%s" % (port, domain, qtype, address)
-            )
+        dig_opts = "+dnssec" if dnssec else "+noedns +noadflag"
+        dig = getoutput(f"dig +qr {dig_opts} -p {port} {domain} {qtype} @{address}")
         dig_reply = list(iter(DigParser(dig)))
         # DiG might have retried in TCP mode so get last q/a
         q_dig = dig_reply[-2]
@@ -97,23 +91,23 @@ def new_test(domain, qtype, address="8.8.8.8", port=53, nodig=False, dnssec=Fals
                 print(";;; ERROR: Diff Question differs")
                 for d1, d2 in q.diff(q_dig):
                     if d1:
-                        print(";; - %s" % d1)
+                        print(f";; - {d1}")
                     if d2:
-                        print(";; + %s" % d2)
+                        print(f";; + {d2}")
             if a != a_dig:
                 print(";;; ERROR: Diff Response differs")
                 for d1, d2 in a.diff(a_dig):
                     if d1:
-                        print(";; - %s" % d1)
+                        print(f";; - {d1}")
                     if d2:
-                        print(";; + %s" % d2)
+                        print(f";; + {d2}")
             return
 
     if dnssec:
         fname = f"{domain}-{qtype}-dnssec"
     else:
         fname = f"{domain}-{qtype}"
-    print("Writing test file: %s" % (fname))
+    print(f"Writing test file: {fname}")
     with open(fname, "w") as f:
         print(";; Sending:", file=f)
         print(";; QUERY:", binascii.hexlify(q.pack()).decode(), file=f)
@@ -193,16 +187,16 @@ def print_errors(errors):
             print("Question error:")
             for d1, d2 in err_data:
                 if d1:
-                    print(";; - %s" % d1)
+                    print(f";; - {d1}")
                 if d2:
-                    print(";; + %s" % d2)
+                    print(f";; + {d2}")
         elif err == "Reply":
             print("Reply error:")
             for d1, d2 in err_data:
                 if d1:
-                    print(";; - %s" % d1)
+                    print(f";; - {d1}")
                 if d2:
-                    print(";; + %s" % d2)
+                    print(f";; + {d2}")
         elif err == "Question Pack":
             print("Question pack error")
             print("QDATA:", binascii.hexlify(err_data[0]))
@@ -273,7 +267,7 @@ if __name__ == "__main__":
         elif args.interactive:
             for f in glob.iglob(args.glob):
                 if os.path.isfile(f):
-                    print("-- %s: " % f, end="")
+                    print(f"-- {f}: ", end="")
                     e = check_decode(f, args.debug)
                     if not args.debug:
                         if e:
@@ -285,7 +279,7 @@ if __name__ == "__main__":
         elif args.unittest:
             for f in glob.iglob(args.glob):
                 if os.path.isfile(f):
-                    test_name = "test_%s" % f
+                    test_name = f"test_{f}"
                     test = test_generator(f)
                     setattr(TestContainer, test_name, test)
             unittest.main(

@@ -5,14 +5,21 @@
 """
 
 
-import base64, binascii, calendar, collections, copy, os.path, random, socket, string, struct, textwrap, time
+import base64
+import binascii
+import calendar
+import collections
+import copy
+from itertools import chain, zip_longest
+import os.path
+import random
+import socket
+import string
+import struct
+import textwrap
+import time
+from typing import Type, Union
 
-from itertools import chain
-
-try:
-    from itertools import zip_longest
-except ImportError:
-    from itertools import izip_longest as zip_longest
 
 from dnslib.bit import get_bits, set_bits
 from dnslib.bimap import Bimap, BimapError
@@ -31,10 +38,9 @@ class DNSError(Exception):
 
 def unknown_qtype(name, key, forward):
     if forward:
-        try:
-            return "TYPE%d" % (key,)
-        except:
-            raise DNSError(f"{name}: Invalid forward lookup: [{key}]")
+        if isinstance(key, int):
+            return "TYPE{key}"
+        raise DNSError(f"{name}: Invalid forward lookup: [{key}]")
     else:
         if key.startswith("TYPE"):
             try:
@@ -134,6 +140,22 @@ def label(label, origin=None):
         return (origin if isinstance(origin, DNSLabel) else DNSLabel(origin)).add(label)
 
 
+def make_parse_error(name: Union[str, Type], buffer, error: Exception) -> DNSError:
+    """Generate a standardised DNSError for errors when parsing/unpacking from a buffer
+
+    Args:
+        name: name of the thing being parsed/unpacked (e.g. `DNSQuestion`, `MX`)
+        buffer: the buffer being parsed/unpacked
+        error: the exception that was thrown
+
+    Returns:
+        Prepared `DNSError`
+    """
+    if isinstance(name, type):
+        name = name.__name__
+    return DNSError(f"Error unpacking {name} [offset={buffer.offset}]: {error!r}")
+
+
 class DNSRecord:
 
     """
@@ -185,7 +207,7 @@ class DNSRecord:
         except DNSError:
             raise
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DNSRecord [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def question(cls, qname, qtype="A", qclass="IN"):
@@ -399,9 +421,9 @@ class DNSRecord:
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
-        >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
-        >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
-        >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
+        >>> a.add_answer(*RR.fromZone(f"abc.com IN TXT {'x' *255}"))
+        >>> a.add_answer(*RR.fromZone(f"abc.com IN TXT {'x' *255}"))
+        >>> a.add_answer(*RR.fromZone(f"abc.com IN TXT {'x' *255}"))
         >>> len(a.pack())
         829
         >>> t = a.truncate()
@@ -425,7 +447,7 @@ class DNSRecord:
             sock = None
             if tcp:
                 if len(data) > 65535:
-                    raise ValueError("Packet length too long: %d" % len(data))
+                    raise ValueError(f"Packet length too long: {len(data)}")
                 data = struct.pack("!H", len(data)) + data
                 sock = socket.socket(inet, socket.SOCK_STREAM)
                 if timeout is not None:
@@ -555,7 +577,7 @@ class DNSHeader:
             (id, bitmap, q, a, auth, ar) = buffer.unpack("!HHHHHH")
             return cls(id, bitmap, q, a, auth, ar)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DNSHeader [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     def __init__(self, id=None, bitmap=None, q=0, a=0, auth=0, ar=0, **args):
         if id is None:
@@ -729,19 +751,12 @@ class DNSHeader:
             self.ad and "ad",
             self.cd and "cd",
         ]
-        z1 = ";; ->>HEADER<<- opcode: %s, status: %s, id: %d" % (
-            OPCODE.get(self.opcode),
-            RCODE.get(self.rcode),
-            self.id,
+        zone = (
+            f";; ->>HEADER<<- opcode: {OPCODE.get(self.opcode)}, status: {RCODE.get(self.rcode)}, id: {self.id}"
+            "\n"
+            f";; flags: {' '.join(filter(None, f))}; QUERY: {self.q}, ANSWER: {self.a}, AUTHORITY: {self.auth}, ADDITIONAL: {self.ar}"
         )
-        z2 = ";; flags: %s; QUERY: %d, ANSWER: %d, AUTHORITY: %d, ADDITIONAL: %d" % (
-            " ".join(filter(None, f)),
-            self.q,
-            self.a,
-            self.auth,
-            self.ar,
-        )
-        return z1 + "\n" + z2
+        return zone
 
     def __str__(self):
         return self.toZone()
@@ -771,7 +786,7 @@ class DNSQuestion:
             qtype, qclass = buffer.unpack("!HH")
             return cls(qname, qtype, qclass)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DNSQuestion [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     def __init__(self, qname=None, qtype=1, qclass=1):
         self.qname = qname
@@ -797,11 +812,7 @@ class DNSQuestion:
         return ";%-30s %-7s %s" % (self.qname, CLASS.get(self.qclass), QTYPE[self.qtype])
 
     def __repr__(self):
-        return "<DNS Question: '{}' qtype={} qclass={}>".format(
-            self.qname,
-            QTYPE.get(self.qtype),
-            CLASS.get(self.qclass),
-        )
+        return f"<DNS Question: '{self.qname}' qtype={QTYPE.get(self.qtype)} qclass={CLASS.get(self.qclass)}>"
 
     def __str__(self):
         return self.toZone()
@@ -852,10 +863,7 @@ class EDNSOption:
         buffer.append(self.data)
 
     def __repr__(self):
-        return "<EDNS Option: Code=%d Data='%s'>" % (
-            self.code,
-            binascii.hexlify(self.data).decode(),
-        )
+        return f"<EDNS Option: Code={self.code} Data='{binascii.hexlify(self.data).decode()}'>"
 
     def toZone(self):
         return f"; EDNS: code: {self.code}; data: {binascii.hexlify(self.data).decode()}"
@@ -907,7 +915,7 @@ class RR:
                     rdata = ""
             return cls(rname, rtype, rclass, ttl, rdata)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking RR [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, zone, origin="", ttl=0):
@@ -1103,7 +1111,7 @@ class RD:
             data = buffer.get(length)
             return cls(data)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking RD [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1131,7 +1139,7 @@ class RD:
         Default 'repr' format should be equivalent to RD zone format
         """
         if len(self.data) > 0:
-            return "\\# %d %s" % (len(self.data), binascii.hexlify(self.data).decode().upper())
+            return f"\\# {len(self.data)} {binascii.hexlify(self.data).decode().upper()}"
         else:
             return "\\# 0"
 
@@ -1169,9 +1177,7 @@ def _isprint(c):
 def _bytes_to_printable(b):
     return (
         '"'
-        + "".join(
-            [(c if _isprint(c) else f"\\{ord(c):03o}") for c in b.decode(errors="replace")]
-        )
+        + "".join([(c if _isprint(c) else f"\\{ord(c):03o}") for c in b.decode(errors="replace")])
         + '"'
     )
 
@@ -1215,10 +1221,10 @@ class TXT(RD):
                     now_length += txtlength
                     data.append(buffer.get(txtlength))
                 else:
-                    raise DNSError("Invalid TXT record: len(%d) > RD len(%d)" % (txtlength, length))
+                    raise DNSError(f"Invalid TXT record: len({txtlength}) > RD len({lenght})")
             return cls(data)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking TXT [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1230,12 +1236,12 @@ class TXT(RD):
         else:
             self.data = [_force_bytes(data)]
         if any([len(x) > 255 for x in self.data]):
-            raise DNSError("TXT record too long: %s" % self.data)
+            raise DNSError("TXT record too long: {self.data!r}")
 
     def pack(self, buffer):
         for ditem in self.data:
             if len(ditem) > 255:
-                raise DNSError("TXT record too long: %s" % ditem)
+                raise DNSError("TXT record too long: {self.ditem!r}")
             buffer.pack("!B", len(ditem))
             buffer.append(ditem)
 
@@ -1255,7 +1261,7 @@ class A(RD):
             data = buffer.unpack("!BBBB")
             return cls(data)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking A [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1346,7 +1352,7 @@ class AAAA(RD):
             data = buffer.unpack("!16B")
             return cls(data)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking AAAA [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1375,7 +1381,7 @@ class MX(RD):
             mx = buffer.decode_name()
             return cls(mx, preference)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking MX [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1401,7 +1407,7 @@ class MX(RD):
         buffer.encode_name(self.label)
 
     def __repr__(self):
-        return "%d %s" % (self.preference, self.label)
+        return f"{self.preference} {self.label}"
 
     attrs = ("preference", "label")
 
@@ -1413,7 +1419,7 @@ class CNAME(RD):
             label = buffer.decode_name()
             return cls(label)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking CNAME [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1437,7 +1443,7 @@ class CNAME(RD):
         buffer.encode_name(self.label)
 
     def __repr__(self):
-        return "%s" % (self.label)
+        return str(self.label)
 
     attrs = ("label",)
 
@@ -1465,7 +1471,7 @@ class SOA(RD):
             times = buffer.unpack("!IIIII")
             return cls(mname, rname, times)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking SOA [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1504,7 +1510,7 @@ class SOA(RD):
         buffer.pack("!IIIII", *self.times)
 
     def __repr__(self):
-        return "{} {} {}".format(self.mname, self.rname, " ".join(map(str, self.times)))
+        return f"{self.mname} {self.rname} {' '.join(map(str, self.times))}"
 
     attrs = ("mname", "rname", "times")
 
@@ -1521,7 +1527,7 @@ class SRV(RD):
             target = buffer.decode_name()
             return cls(priority, weight, port, target)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking SRV [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1549,7 +1555,7 @@ class SRV(RD):
         buffer.encode_name(self.target)
 
     def __repr__(self):
-        return "%d %d %d %s" % (self.priority, self.weight, self.port, self.target)
+        return f"{self.priority} {self.weight} {self.port} {self.target}"
 
     attrs = ("priority", "weight", "port", "target")
 
@@ -1571,7 +1577,7 @@ class NAPTR(RD):
             replacement = buffer.decode_name()
             return cls(order, preference, flags, service, regexp, replacement)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking NAPTR [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1639,7 +1645,7 @@ class DS(RD):
             digest = buffer.get(length - 4)
             return cls(key_tag, algorithm, digest_type, digest)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DS [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1658,11 +1664,16 @@ class DS(RD):
         buffer.append(self.digest)
 
     def __repr__(self):
-        return "%d %d %d %s" % (
-            self.key_tag,
-            self.algorithm,
-            self.digest_type,
-            binascii.hexlify(self.digest).decode().upper(),
+        return " ".join(
+            map(
+                str,
+                (
+                    self.key_tag,
+                    self.algorithm,
+                    self.digest_type,
+                    binascii.hexlify(self.digest).decode().upper(),
+                ),
+            )
         )
 
     attrs = ("key_tag", "algorithm", "digest_type", "digest")
@@ -1680,7 +1691,7 @@ class DNSKEY(RD):
             key = buffer.get(length - 4)
             return cls(flags, protocol, algorithm, key)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DNSKEY [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1699,11 +1710,16 @@ class DNSKEY(RD):
         buffer.append(self.key)
 
     def __repr__(self):
-        return "%d %d %d %s" % (
-            self.flags,
-            self.protocol,
-            self.algorithm,
-            base64.b64encode(self.key).decode(),
+        return " ".join(
+            map(
+                str,
+                (
+                    self.flags,
+                    self.protocol,
+                    self.algorithm,
+                    base64.b64encode(self.key).decode(),
+                ),
+            )
         )
 
     attrs = ("flags", "protocol", "algorithm", "key")
@@ -1729,7 +1745,7 @@ class RRSIG(RD):
             sig = buffer.get(length - (buffer.offset - start))
             return cls(covered, algorithm, labels, orig_ttl, sig_exp, sig_inc, key_tag, name, sig)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DNSKEY [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1774,16 +1790,21 @@ class RRSIG(RD):
         timestamp_fmt = (
             "{0.tm_year}{0.tm_mon:02}{0.tm_mday:02}{0.tm_hour:02}{0.tm_min:02}{0.tm_sec:02}"
         )
-        return "%s %d %d %d %s %s %d %s %s" % (
-            QTYPE.get(self.covered),
-            self.algorithm,
-            self.labels,
-            self.orig_ttl,
-            timestamp_fmt.format(time.gmtime(self.sig_exp)),
-            timestamp_fmt.format(time.gmtime(self.sig_inc)),
-            self.key_tag,
-            self.name,
-            base64.b64encode(self.sig).decode(),
+        return " ".join(
+            map(
+                str,
+                (
+                    QTYPE.get(self.covered),
+                    self.algorithm,
+                    self.labels,
+                    self.orig_ttl,
+                    timestamp_fmt.format(time.gmtime(self.sig_exp)),
+                    timestamp_fmt.format(time.gmtime(self.sig_inc)),
+                    self.key_tag,
+                    self.name,
+                    base64.b64encode(self.sig).decode(),
+                ),
+            )
         )
 
     attrs = (
@@ -1864,7 +1885,7 @@ class NSEC(RD):
             rrlist = decode_type_bitmap(buffer.get(end - buffer.offset))
             return cls(name, rrlist)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking NSEC [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1918,7 +1939,7 @@ class CAA(RD):
             value = buffer.get(length - tag_length - 2).decode()
             return cls(flags, tag, value)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking CAA [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -1949,10 +1970,10 @@ class CAA(RD):
         buffer.append(self.value.encode())
 
     def toZone(self):
-        return '%d %s "%s"' % (self.flags, self.tag, self.value)
+        return repr(self)
 
     def __repr__(self):
-        return '%d %s "%s"' % (self.flags, self.tag, self.value)
+        return f'{self.flags} {self.tag} "{self.value}"'
 
 
 class HTTPS(RD):
@@ -2317,7 +2338,7 @@ class SSHFP(RD):
             fingerprint = buffer.get(length - 2)
             return cls(algorithm, fp_type, fingerprint)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DS [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -2359,7 +2380,7 @@ class TLSA(RD):
             cert_data = buffer.get(length - 3)
             return cls(cert_usage, selector, matching_type, cert_data)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking DS [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -2423,7 +2444,7 @@ class LOC(RD):
             self._vp = vp
             return self
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking LOC [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):
@@ -2565,7 +2586,7 @@ class RP(RD):
             txt = buffer.decode_name()
             return cls(mbox, txt)
         except (BufferError, BimapError) as e:
-            raise DNSError("Error unpacking RP [offset=%d]: %s" % (buffer.offset, e))
+            raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd, origin=None):

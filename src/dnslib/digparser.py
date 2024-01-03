@@ -69,7 +69,10 @@
 """
 
 
-import glob, os.path, string, re
+import glob
+import os.path
+import re
+import string
 
 from dnslib.lex import WordLexer
 from dnslib.dns import (

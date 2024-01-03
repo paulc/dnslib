@@ -2,7 +2,8 @@
     Bimap - bidirectional mapping between code/value
 """
 
-import sys, types
+import sys
+import types
 
 
 class BimapError(Exception):
@@ -54,17 +55,16 @@ class Bimap:
     # Test with callable error
     >>> def _error(name,key,forward):
     ...     if forward:
-    ...         try:
-    ...             return "TEST%d" % (key,)
-    ...         except:
-    ...             raise TestError("%s: Invalid forward lookup: [%s]" % (name,key))
+    ...         if isinstance(key, int):
+    ...             return f"TEST{key}"
+    ...         raise TestError(f"{name}: Invalid forward lookup: [{key}]")
     ...     else:
     ...         if key.startswith("TEST"):
     ...             try:
     ...                 return int(key[4:])
     ...             except:
     ...                 pass
-    ...         raise TestError("%s: Invalid reverse lookup: [%s]" % (name,key))
+    ...         raise TestError(f"{name}: Invalid reverse lookup: [{key}]")
     >>> TEST2 = Bimap('TEST2',{1:'A', 2:'B', 3:'C'},_error)
     >>> TEST2[1]
     'A'
