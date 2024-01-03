@@ -91,7 +91,7 @@ if __name__ == "__main__":
         if args.query:
             print(f";; Sending{' (TCP)' if args.tcp else ''}:")
             if args.hex:
-                print(";; QUERY:", binascii.hexlify(q.pack()).decode())
+                print(";; QUERY:", q.pack().hex())
             print(q)
             print()
 
@@ -140,9 +140,9 @@ if __name__ == "__main__":
         else:
             print(";; Got answer:")
             if args.hex:
-                print(";; RESPONSE:", binascii.hexlify(a_pkt).decode())
+                print(";; RESPONSE:", a_pkt.hex())
                 if args.diff and not args.dig:
-                    print(";; DIFF    :", binascii.hexlify(diff).decode())
+                    print(";; DIFF    :", diff.hex())
             print(a)
             print()
 

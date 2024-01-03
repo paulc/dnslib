@@ -5,9 +5,8 @@
 FILTER = bytearray([(i < 32 or i > 127) and 46 or i for i in range(256)])
 
 
-def hexdump(src, length=16, prefix=""):
-    """
-    Print hexdump of string
+def hexdump(src: bytes, length: int = 16, prefix: str = "") -> str:
+    """Format a pretty hexdump of a byte string
 
     >>> print(hexdump(b"abcd" * 4))
     0000  61 62 63 64 61 62 63 64  61 62 63 64 61 62 63 64  abcdabcd abcdabcd
@@ -35,9 +34,8 @@ def hexdump(src, length=16, prefix=""):
     return "\n".join(result)
 
 
-def get_bits(data, offset, bits=1):
-    """
-    Get specified bits from integer
+def get_bits(data: int, offset: int, bits: int = 1) -> int:
+    """Get specified bits from integer
 
     >>> bin(get_bits(0b0011100,2))
     '0b1'
@@ -49,7 +47,7 @@ def get_bits(data, offset, bits=1):
     return (data & mask) >> offset
 
 
-def set_bits(data, value, offset, bits=1):
+def set_bits(data: str, value: int, offset: int, bits: int = 1) -> int:
     """
     Set specified bits in integer
 
@@ -64,11 +62,11 @@ def set_bits(data, value, offset, bits=1):
     return data
 
 
-def binary(n, count=16, reverse=False):
-    """
-    Display n in binary (only difference from built-in `bin` is
-    that this function returns a fixed width string and can
-    optionally be reversed
+def binary(n: int, count: int = 16, reverse: bool = False) -> str:
+    """Convert an integer to a binary string
+
+    (only difference from built-in `bin` is that this function returns a fixed
+    width string and can optionally be reversed
 
     >>> binary(6789)
     '0001101010000101'

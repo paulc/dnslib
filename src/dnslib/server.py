@@ -98,7 +98,6 @@
 
 """
 
-import binascii
 import socket
 import socketserver
 import struct
@@ -273,7 +272,7 @@ class DNSLogger:
                 handler.client_address[1],
                 handler.protocol,
                 len(data),
-                binascii.hexlify(data),
+                data.hex(),
             )
         )
 
@@ -286,7 +285,7 @@ class DNSLogger:
                 handler.client_address[1],
                 handler.protocol,
                 len(data),
-                binascii.hexlify(data),
+                data.hex(),
             )
         )
 

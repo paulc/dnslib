@@ -1,27 +1,17 @@
-"""
-    Bimap - bidirectional mapping between code/value
-"""
-
 import sys
 import types
+from typing import Dict, Callable, Type, Union, Optional, cast
 
 
 class BimapError(Exception):
     pass
 
 
+ErrorCallable = Callable[[str, Union[int, str], bool], Union[str, int]]
+
+
 class Bimap:
-
-    """
-    Bi-directional mapping between code/text.
-
-    Initialised using:
-
-        name:   Used for exceptions
-        dict:   Dict mapping from code (numeric) to text
-        error:  Error type to raise if key not found
-                _or_ callable which either generates mapping
-                return error
+    """Bi-directional mapping between numerical codes and text.
 
     The class provides:
 
@@ -85,38 +75,47 @@ class Bimap:
 
     """
 
-    def __init__(self, name, forward, error=AttributeError):
+    def __init__(
+        self,
+        name: str,
+        forward: Dict[int, str],
+        error: Union[ErrorCallable, Type[Exception]] = AttributeError,
+    ) -> None:
+        """
+        Args:
+            name: name of this Bimap (used in exceptions)
+            forward: mapping from code (numeric) to text
+            error: Error type to raise if key not found
+                _or_ callable which either generates mapping
+                or raises an error
+
+        """
         self.name = name
         self.error = error
         self.forward = forward.copy()
-        self.reverse = {v: k for (k, v) in list(forward.items())}
+        self.reverse: Dict[str, int] = {v: k for (k, v) in list(forward.items())}
 
-    def get(self, k, default=None):
-        try:
-            return self.forward[k]
-        except KeyError as e:
-            return default or str(k)
+    def get(self, key: str, default: Optional[str] = None) -> str:
+        return self.forward.get(key, default or str(key))
 
-    def __getitem__(self, k):
+    def __getitem__(self, key: int) -> str:
         try:
-            return self.forward[k]
+            return self.forward[key]
         except KeyError as e:
             if isinstance(self.error, types.FunctionType):
-                return self.error(self.name, k, True)
-            else:
-                raise self.error(f"{self.name}: Invalid forward lookup: [{k}]")
+                return cast(str, self.error(self.name, key, True))
+            raise self.error(f"{self.name}: Invalid forward lookup: [{key}]")
 
-    def __getattr__(self, k):
+    def __getattr__(self, key: str) -> int:
         try:
             # Python 3.7 inspect module (called by doctest) checks for __wrapped__ attribute
-            if k == "__wrapped__":
+            if key == "__wrapped__":
                 raise AttributeError()
-            return self.reverse[k]
+            return self.reverse[key]
         except KeyError as e:
             if isinstance(self.error, types.FunctionType):
-                return self.error(self.name, k, False)
-            else:
-                raise self.error(f"{self.name}: Invalid reverse lookup: [{k}]")
+                return cast(int, self.error(self.name, key, False))
+            raise self.error(f"{self.name}: Invalid reverse lookup: [{key}]")
 
 
 if __name__ == "__main__":

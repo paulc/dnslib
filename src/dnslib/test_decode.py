@@ -48,7 +48,6 @@
 
 
 import argparse
-import binascii
 import code
 import glob
 import os
@@ -110,11 +109,11 @@ def new_test(domain, qtype, address="8.8.8.8", port=53, nodig=False, dnssec=Fals
     print(f"Writing test file: {fname}")
     with open(fname, "w") as f:
         print(";; Sending:", file=f)
-        print(";; QUERY:", binascii.hexlify(q.pack()).decode(), file=f)
+        print(";; QUERY:", q.pack().hex(), file=f)
         print(q, file=f)
         print(file=f)
         print(";; Got answer:", file=f)
-        print(";; RESPONSE:", binascii.hexlify(a_pkt).decode(), file=f)
+        print(";; RESPONSE:", a_pkt.hex(), file=f)
         print(a, file=f)
         print(file=f)
 
@@ -127,12 +126,12 @@ def check_decode(f, debug=False):
         q, r = DigParser(x)
 
     # Grab the hex data
-    with open(f, "rb") as x:
-        for l in x.readlines():
-            if l.startswith(b";; QUERY:"):
-                qdata = binascii.unhexlify(l.split()[-1])
-            elif l.startswith(b";; RESPONSE:"):
-                rdata = binascii.unhexlify(l.split()[-1])
+    with open(f, "rt") as digfile:
+        for line in digfile:
+            if line.startswith(";; QUERY:"):
+                qdata = bytes.fromhex(line.split()[-1])
+            elif line.startswith(";; RESPONSE:"):
+                rdata = bytes.fromhex(line.split()[-1])
 
     # Parse the hex data
     qparse = DNSRecord.parse(qdata)
@@ -199,15 +198,15 @@ def print_errors(errors):
                     print(f";; + {d2}")
         elif err == "Question Pack":
             print("Question pack error")
-            print("QDATA:", binascii.hexlify(err_data[0]))
+            print("QDATA:", err_data[0].hex())
             print(DNSRecord.parse(err_data[0]))
-            print("QPACK:", binascii.hexlify(err_data[1]))
+            print("QPACK:", err_data[1].hex())
             print(DNSRecord.parse(err_data[1]))
         elif err == "Reply Pack":
             print("Response pack error")
-            print("RDATA:", binascii.hexlify(err_data[0]))
+            print("RDATA:", err_data[0].hex())
             print(DNSRecord.parse(err_data[0]))
-            print("RPACK:", binascii.hexlify(err_data[1]))
+            print("RPACK:", err_data[1].hex())
             print(DNSRecord.parse(err_data[1]))
 
 

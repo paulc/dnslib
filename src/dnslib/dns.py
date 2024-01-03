@@ -18,7 +18,7 @@ import string
 import struct
 import textwrap
 import time
-from typing import Type, Union
+from typing import overload, Type, Optional, Union, List, Any
 
 
 from dnslib.bit import get_bits, set_bits
@@ -33,21 +33,47 @@ class DNSError(Exception):
     pass
 
 
+def make_parse_error(name: Union[str, Type], buffer, error: Exception) -> DNSError:
+    """Generate a standardised DNSError for errors when parsing/unpacking from a buffer
+
+    Args:
+        name: name of the thing being parsed/unpacked (e.g. `DNSQuestion`, `MX`)
+        buffer: the buffer being parsed/unpacked
+        error: the exception that was thrown
+
+    Returns:
+        Prepared `DNSError`
+    """
+    if isinstance(name, type):
+        name = name.__name__
+    return DNSError(f"Error unpacking {name} [offset={buffer.offset}]: {error!r}")
+
+
 # DNS codes
 
 
-def unknown_qtype(name, key, forward):
+@overload
+def unknown_qtype(name: str, key: str, forward: bool) -> int:
+    ...
+
+
+@overload
+def unknown_qtype(name: str, key: int, forward: bool) -> str:
+    ...
+
+
+def unknown_qtype(name: str, key: Union[str, int], forward: bool) -> Union[str, int]:
     if forward:
         if isinstance(key, int):
             return "TYPE{key}"
         raise DNSError(f"{name}: Invalid forward lookup: [{key}]")
-    else:
-        if key.startswith("TYPE"):
-            try:
-                return int(key[4:])
-            except:
-                pass
-        raise DNSError(f"{name}: Invalid reverse lookup: [{key}]")
+
+    if key.startswith("TYPE"):
+        try:
+            return int(key.removeprefix("TYPE"))
+        except:
+            pass
+    raise DNSError(f"{name}: Invalid reverse lookup: [{key}]")
 
 
 QTYPE = Bimap(
@@ -133,34 +159,24 @@ RCODE = Bimap(
 OPCODE = Bimap("OPCODE", {0: "QUERY", 1: "IQUERY", 2: "STATUS", 4: "NOTIFY", 5: "UPDATE"}, DNSError)
 
 
-def label(label, origin=None):
-    if label.endswith("."):
-        return DNSLabel(label)
-    else:
-        return (origin if isinstance(origin, DNSLabel) else DNSLabel(origin)).add(label)
-
-
-def make_parse_error(name: Union[str, Type], buffer, error: Exception) -> DNSError:
-    """Generate a standardised DNSError for errors when parsing/unpacking from a buffer
+def label(label: str, origin: Union[str, DNSLabel, None] = None) -> DNSLabel:
+    """Create a DNSLabel from a label
 
     Args:
-        name: name of the thing being parsed/unpacked (e.g. `DNSQuestion`, `MX`)
-        buffer: the buffer being parsed/unpacked
-        error: the exception that was thrown
-
-    Returns:
-        Prepared `DNSError`
+        label:
+        origin: base of label if label is not connected to root (`.`).
     """
-    if isinstance(name, type):
-        name = name.__name__
-    return DNSError(f"Error unpacking {name} [offset={buffer.offset}]: {error!r}")
+    if label.endswith("."):
+        return DNSLabel(label)
+    if not isinstance(origin, DNSLabel):
+        origin = DNSLabel(origin)
+    return origin.add(label)
 
 
 class DNSRecord:
+    """A DNS Record - corresponds to DNS packet
 
-    """
-    Main DNS class - corresponds to DNS packet & comprises DNSHeader,
-    DNSQuestion and RR sections (answer,ns,ar)
+    Comprises of `DNSHeader`, `DNSQuestion`, and `RR` sections (answer,authority,additional)
 
     >>> d = DNSRecord()
     >>> d.add_question(DNSQuestion("abc.com")) # Or DNSRecord.question("abc.com")
@@ -183,10 +199,15 @@ class DNSRecord:
     """
 
     @classmethod
-    def parse(cls, packet):
-        """
-        Parse DNS packet data and return DNSRecord instance
+    def parse(cls, packet: bytes) -> "DNSRecord":
+        """Parse a DNS packet data into DNSRecord instance
         Recursively parses sections (calling appropriate parse method)
+
+        Args:
+            packet: DNS packet to parse
+
+        Raises:
+            DNSError: invalid DNS packet
         """
         buffer = DNSBuffer(packet)
         try:
@@ -209,10 +230,14 @@ class DNSRecord:
         except (BufferError, BimapError) as e:
             raise make_parse_error(cls, buffer, e)
 
-    @classmethod
-    def question(cls, qname, qtype="A", qclass="IN"):
-        """
-        Shortcut to create question
+    @staticmethod
+    def question(qname: str, qtype: str = "A", qclass: str = "IN") -> "DNSRecord":
+        """Shortcut to create question
+
+        Args:
+            qname: name to query
+            qtype: type to query
+            qclass: class of query
 
         >>> q = DNSRecord.question("www.google.com")
         >>> print(q)
@@ -230,25 +255,45 @@ class DNSRecord:
         """
         return DNSRecord(q=DNSQuestion(qname, getattr(QTYPE, qtype), getattr(CLASS, qclass)))
 
-    def __init__(self, header=None, questions=None, rr=None, q=None, a=None, auth=None, ar=None):
+    def __init__(
+        self,
+        header: "Optional[DNSHeader]" = None,
+        questions: "Optional[List[DNSQuestion]]" = None,
+        rr: "Optional[List[RR]]" = None,
+        q: "Optional[DNSQuestion]" = None,
+        a: "Optional[RR]" = None,
+        auth: "Optional[List[RR]]" = None,
+        ar: "Optional[List[RR]]" = None,
+    ):
         """
-        Create new DNSRecord
+        Args:
+            header: header
+            questions: questions
+            rr: response (answer) records
+            q: shortcut for single question
+            a: shortcut for single answer
+            auth: authority records
+            ar: additional records
         """
-        self.header = header or DNSHeader()
-        self.questions = questions or []
-        self.rr = rr or []
-        self.auth = auth or []
-        self.ar = ar or []
+        self.header: DNSHeader = header or DNSHeader()
+        self.questions: List[DNSQuestion] = questions or []
+        self.rr: List[RR] = rr or []
+        self.auth: List[RR] = auth or []
+        self.ar: List[RR] = ar or []
         # Shortcuts to add a single Question/Answer
         if q:
             self.questions.append(q)
         if a:
             self.rr.append(a)
         self.set_header_qa()
+        return
 
-    def reply(self, ra=1, aa=1):
-        """
-        Create skeleton reply packet
+    def reply(self, ra: int = 1, aa: int = 1) -> "DNSRecord":
+        """Create skeleton reply packet
+
+        Args:
+            ra: `DNSHeader.ra`
+            aa: `DNSHeader.aa`
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
@@ -265,9 +310,14 @@ class DNSRecord:
             DNSHeader(id=self.header.id, bitmap=self.header.bitmap, qr=1, ra=ra, aa=aa), q=self.q
         )
 
-    def replyZone(self, zone, ra=1, aa=1):
-        """
-        Create reply with response data in zone-file format
+    def replyZone(self, zone: str, ra: int = 1, aa: int = 1) -> "DNSRecord":
+        """Create a reply with response data in zone-file format
+
+        Args:
+            zone: zone to parse into answer
+            ra: `DNSHeader.ra`
+            aa: `DNSHeader.aa`
+
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.replyZone("abc.com 60 A 1.2.3.4")
         >>> print(a)
@@ -284,9 +334,11 @@ class DNSRecord:
             rr=RR.fromZone(zone),
         )
 
-    def add_question(self, *q):
-        """
-        Add question(s)
+    def add_question(self, *q: "DNSQuestion") -> None:
+        """Add question(s) to this record
+
+        Args:
+            q: question(s) to add
 
         >>> q = DNSRecord()
         >>> q.add_question(DNSQuestion("abc.com"),
@@ -300,10 +352,13 @@ class DNSRecord:
         """
         self.questions.extend(q)
         self.set_header_qa()
+        return
 
-    def add_answer(self, *rr):
-        """
-        Add answer(s)
+    def add_answer(self, *rr: "RR") -> None:
+        """Add answer(s)
+
+        Args:
+            rr: records to add to answer section
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
@@ -318,10 +373,13 @@ class DNSRecord:
         """
         self.rr.extend(rr)
         self.set_header_qa()
+        return
 
-    def add_auth(self, *auth):
-        """
-        Add authority records
+    def add_auth(self, *auth: "RR") -> None:
+        """Add authority records
+
+        Args:
+            rr: records to add to authority section
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
@@ -339,10 +397,13 @@ class DNSRecord:
         """
         self.auth.extend(auth)
         self.set_header_qa()
+        return
 
-    def add_ar(self, *ar):
-        """
-        Add additional records
+    def add_ar(self, *ar: "RR") -> None:
+        """Add additional records
+
+        Args:
+            ar: records to add to additional section
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
@@ -360,33 +421,33 @@ class DNSRecord:
         """
         self.ar.extend(ar)
         self.set_header_qa()
+        return
 
-    def set_header_qa(self):
-        """
-        Reset header q/a/auth/ar counts to match number of records
-        (normally done transparently)
+    def set_header_qa(self) -> None:
+        """Reset header q/a/auth/ar counts to match number of records
+
+        This is normally done transparently, however if you've manually modified
+        the the question, answer, authority, or additional lists in this record
+        then you *might* need to call this function.
         """
         self.header.q = len(self.questions)
         self.header.a = len(self.rr)
         self.header.auth = len(self.auth)
         self.header.ar = len(self.ar)
+        return
 
-    # Shortcut to get first question
-    def get_q(self):
+    @property
+    def q(self) -> "DNSQuestion":
+        """Get first question from this record if it exists, otherwise empty question"""
         return self.questions[0] if self.questions else DNSQuestion()
 
-    q = property(get_q)
-
-    # Shortcut to get first answer
-    def get_a(self):
+    @property
+    def a(self) -> "RR":
+        """Get the first answer from this record if exists otherwise empty resource"""
         return self.rr[0] if self.rr else RR()
 
-    a = property(get_a)
-
-    def pack(self):
-        """
-        Pack record into binary packet
-        (recursively packs each section into buffer)
+    def pack(self) -> bytes:
+        """Pack record into binary packet
 
         >>> q = DNSRecord.question("abc.com")
         >>> q.header.id = 1234
@@ -414,10 +475,10 @@ class DNSRecord:
             ar.pack(buffer)
         return buffer.data
 
-    def truncate(self):
-        """
-        Return truncated copy of DNSRecord (with TC flag set)
-        (removes all Questions & RRs and just returns header)
+    def truncate(self) -> "DNSRecord":
+        """Return truncated copy of DNSRecord (with TC flag set)
+
+        The truncated copy will have all questions & RRs removed
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
@@ -434,9 +495,22 @@ class DNSRecord:
         """
         return DNSRecord(DNSHeader(id=self.header.id, bitmap=self.header.bitmap, tc=1))
 
-    def send(self, dest, port=53, tcp=False, timeout=None, ipv6=False):
-        """
-        Send packet to nameserver and return response
+    def send(
+        self,
+        dest: str,
+        port: int = 53,
+        tcp: bool = False,
+        timeout: Optional[int] = None,
+        ipv6: bool = False,
+    ):
+        """Send packet to a nameserver and return the response
+
+        Args:
+            dest: hostname of nameserver
+            port: port to connect to on nameserver
+            tcp: If `True` uses TCP, otherwise UDP
+            timeout: socket timeout
+            ipv6: if `True` uses IPv6, otherwise IPv4
         """
         data = self.pack()
         if ipv6:
@@ -471,10 +545,12 @@ class DNSRecord:
 
         return response
 
-    def format(self, prefix="", sort=False):
-        """
-        Formatted 'repr'-style representation of record
-        (optionally with prefix and/or sorted RRs)
+    def format(self, prefix: str = "", sort: bool = False) -> str:
+        """Formatted 'repr'-style representation of record
+
+        Args:
+            prefix: add this prefix to each section
+            sort: if `True` sort each section first
         """
         s = sorted if sort else lambda x: x
         sections = [repr(self.header)]
@@ -484,10 +560,11 @@ class DNSRecord:
         sections.extend(s([repr(rr) for rr in self.ar]))
         return prefix + ("\n" + prefix).join(sections)
 
-    def toZone(self, prefix=""):
-        """
-        Formatted 'DiG' (zone) style output
-        (with optional prefix)
+    def toZone(self, prefix="") -> str:
+        """Formatted 'DiG' (zone) style output
+
+        Args:
+            prefix: add this prefix to each line
         """
         z = self.header.toZone().split("\n")
         if self.questions:
@@ -504,27 +581,27 @@ class DNSRecord:
             [z.extend(rr.toZone().split("\n")) for rr in self.ar]
         return prefix + ("\n" + prefix).join(z)
 
-    def short(self):
-        """
-        Just return RDATA
-        """
+    def short(self) -> str:
+        """Return RDATA with Zone formatting"""
         return "\n".join([rr.rdata.toZone() for rr in self.rr])
 
-    def __eq__(self, other):
-        """
-        Test for equality by diffing records
-        """
+    def __eq__(self, other: Any) -> bool:
+        # Note: we compare classes to prevent allowing subclasses
         if type(other) != type(self):
             return False
-        else:
-            return self.diff(other) == []
+        return not self.diff(other)
 
-    def __ne__(self, other):
-        return not (self.__eq__(other))
+    def __ne__(self, other: Any) -> bool:
+        return not self.__eq__(other)
 
-    def diff(self, other):
-        """
-        Diff records - recursively diff sections (sorting RRs)
+    def diff(self, other: "DNSRecord") -> List:
+        """Diff records - recursively diff sections (sorting RRs)
+
+        Args:
+            other: record to diff against
+
+        Returns:
+            differences between the two records
         """
         err = []
         if self.header != other.header:
@@ -547,18 +624,15 @@ class DNSRecord:
                 err.append((None, b[e]))
         return err
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.format()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.toZone()
 
 
 class DNSHeader:
-
-    """
-    DNSHeader section
-    """
+    """DNSRecord Header"""
 
     # Ensure attribute values match packet
     id = H("id")
@@ -569,7 +643,7 @@ class DNSHeader:
     ar = H("ar")
 
     @classmethod
-    def parse(cls, buffer):
+    def parse(cls, buffer: Buffer) -> "DNSHeader":
         """
         Implements parse interface
         """
@@ -863,10 +937,10 @@ class EDNSOption:
         buffer.append(self.data)
 
     def __repr__(self):
-        return f"<EDNS Option: Code={self.code} Data='{binascii.hexlify(self.data).decode()}'>"
+        return f"<EDNS Option: Code={self.code} Data='{self.data.hex()}'>"
 
     def toZone(self):
-        return f"; EDNS: code: {self.code}; data: {binascii.hexlify(self.data).decode()}"
+        return f"; EDNS: code: {self.code}; data: {self.data.hex()}"
 
     def __str__(self):
         return self.toZone()
@@ -903,7 +977,7 @@ class RR:
             if rtype == QTYPE.OPT:
                 options = []
                 option_buffer = Buffer(buffer.get(rdlength))
-                while option_buffer.remaining() > 4:
+                while option_buffer.remaining > 4:
                     code, length = option_buffer.unpack("!HH")
                     data = option_buffer.get(length)
                     options.append(EDNSOption(code, data))
@@ -1103,7 +1177,7 @@ class RD:
     """
 
     @classmethod
-    def parse(cls, buffer, length):
+    def parse(cls, buffer: Buffer, length: int):
         """
         Unpack from buffer
         """
@@ -1114,14 +1188,14 @@ class RD:
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def fromZone(cls, rd: List[str], origin=None):
         """
         Create new record from zone format data
         RD is a list of strings parsed from DiG output
         """
         # Unknown rata - assume hexdump in zone format
         # (DiG prepends "\\# <len>" to the hexdump so get last item)
-        return cls(binascii.unhexlify(rd[-1].encode("ascii")))
+        return cls(bytes.fromhex(rd[-1]))
 
     def __init__(self, data=b""):
         # Assume raw bytes
@@ -1139,7 +1213,7 @@ class RD:
         Default 'repr' format should be equivalent to RD zone format
         """
         if len(self.data) > 0:
-            return f"\\# {len(self.data)} {binascii.hexlify(self.data).decode().upper()}"
+            return f"\\# {len(self.data)} {self.data.hex().upper()}"
         else:
             return "\\# 0"
 
@@ -1159,7 +1233,7 @@ class RD:
             return all([getattr(self, x) == getattr(other, x) for x in self.attrs])
 
     def __ne__(self, other):
-        return not (self.__eq__(other))
+        return not self.__eq__(other)
 
 
 def _force_bytes(x):
@@ -1221,7 +1295,7 @@ class TXT(RD):
                     now_length += txtlength
                     data.append(buffer.get(txtlength))
                 else:
-                    raise DNSError(f"Invalid TXT record: len({txtlength}) > RD len({lenght})")
+                    raise DNSError(f"Invalid TXT record: len({txtlength}) > RD len({length})")
             return cls(data)
         except (BufferError, BimapError) as e:
             raise make_parse_error(cls, buffer, e)
@@ -1648,9 +1722,9 @@ class DS(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def fromZone(cls, rd: List[str], origin=None):
         return cls(
-            int(rd[0]), int(rd[1]), int(rd[2]), binascii.unhexlify("".join(rd[3:]).encode("ascii"))
+            int(rd[0]), int(rd[1]), int(rd[2]), bytes.fromhex("".join(rd[3:]))
         )
 
     def __init__(self, key_tag, algorithm, digest_type, digest):
@@ -1671,7 +1745,7 @@ class DS(RD):
                     self.key_tag,
                     self.algorithm,
                     self.digest_type,
-                    binascii.hexlify(self.digest).decode().upper(),
+                    self.digest.hex().upper(),
                 ),
             )
         )
@@ -1824,14 +1898,14 @@ def decode_type_bitmap(type_bitmap):
     """
     Parse RR type bitmap in NSEC record
 
-    >>> decode_type_bitmap(binascii.unhexlify(b'0006400080080003'))
+    >>> decode_type_bitmap(bytes.fromhex('0006400080080003'))
     ['A', 'TXT', 'AAAA', 'RRSIG', 'NSEC']
-    >>> decode_type_bitmap(binascii.unhexlify(b'000762008008000380'))
+    >>> decode_type_bitmap(bytes.fromhex('000762008008000380'))
     ['A', 'NS', 'SOA', 'TXT', 'AAAA', 'RRSIG', 'NSEC', 'DNSKEY']
     """
     rrlist = []
     buf = DNSBuffer(type_bitmap)
-    while buf.remaining():
+    while buf.remaining:
         winnum, winlen = buf.unpack("BB")
         bitmap = bytearray(buf.get(winlen))
         for pos, value in enumerate(bitmap):
@@ -1846,7 +1920,7 @@ def encode_type_bitmap(rrlist):
     """
     Encode RR type bitmap in NSEC record
 
-    >>> p = lambda x: print(binascii.hexlify(x).decode())
+    >>> p = lambda x: print(x.hex())
     >>> p(encode_type_bitmap(['A','TXT','AAAA','RRSIG','NSEC']))
     0006400080080003
     >>> p(encode_type_bitmap(['A','NS','SOA','TXT','AAAA','RRSIG','NSEC','DNSKEY']))
@@ -1998,7 +2072,7 @@ class HTTPS(RD):
     1 . ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5
     >>> HTTPS.fromZone(["1", ".", "key9999=X"])
     1 . key9999=X
-    >>> pcap = binascii.unhexlify(b"0001000001000c0268330568332d323902683200040008681084e5681085e500060020260647000000000000000000681084e5260647000000000000000000681085e5")
+    >>> pcap = bytes.fromhex("0001000001000c0268330568332d323902683200040008681084e5681085e500060020260647000000000000000000681084e5260647000000000000000000681085e5")
     >>> obj = HTTPS.parse(Buffer(pcap), len(pcap))
     >>> obj
     1 . alpn=h3,h3-29,h2 ipv4hint=104.16.132.229,104.16.133.229 ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5
@@ -2006,7 +2080,7 @@ class HTTPS(RD):
     >>> obj.pack(b)
     >>> b.data == pcap
     True
-    >>> pcap = binascii.unhexlify(b"00010000040004c0a80126")
+    >>> pcap = bytes.fromhex("00010000040004c0a80126")
     >>> obj = HTTPS.parse(Buffer(pcap), len(pcap))
     >>> obj
     1 . ipv4hint=192.168.1.38
@@ -2016,7 +2090,7 @@ class HTTPS(RD):
     True
 
     # Issue 43: HTTPS reads after RD end
-    >>> msg = binascii.unhexlify("93088410000100020000000107646973636f726403636f6d0000410001c00c004100010000012c002b0001000001000c0268330568332d323902683200040014a29f80e9a29f87e8a29f88e8a29f89e8a29f8ae8c00c002e00010000012c005f00410d020000012c632834e5632575c586c907646973636f726403636f6d0044d488ce4a5b9085289c671f0296b2b06cffaca28880c57643befd43d6de433d84ae078b282fc2cdd744f3bea2f201042a7a0d6f3e17ebd887b082bbe30dfda100002904d0000080000000")
+    >>> msg = bytes.fromhex("93088410000100020000000107646973636f726403636f6d0000410001c00c004100010000012c002b0001000001000c0268330568332d323902683200040014a29f80e9a29f87e8a29f88e8a29f89e8a29f8ae8c00c002e00010000012c005f00410d020000012c632834e5632575c586c907646973636f726403636f6d0044d488ce4a5b9085289c671f0296b2b06cffaca28880c57643befd43d6de433d84ae078b282fc2cdd744f3bea2f201042a7a0d6f3e17ebd887b082bbe30dfda100002904d0000080000000")
     >>> print(DNSRecord.parse(msg))
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37640
     ;; flags: qr aa cd; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
@@ -2058,11 +2132,7 @@ class HTTPS(RD):
                 params.append((k, v))
             return cls(priority, target, params)
         except (BufferError, BimapError) as e:
-            raise DNSError(
-                "Error unpacking HTTPS: "
-                + str(e)
-                + str(binascii.hexlify(buffer.data[buffer.offset :]))
-            )
+            raise DNSError("Error unpacking HTTPS: {e!r} [buffer={buffer.data[buffer.offset:].hex()}]")
 
     def pack(self, buffer):
         buffer.pack("!H", self.priority)
@@ -2280,18 +2350,18 @@ class HTTPS(RD):
         k = cls.zf_format_key(i)
         if i == 0:  # mandatory
             ret = []
-            while b.remaining() > 0:
+            while b.remaining:
                 (ki,) = b.unpack("!H")
                 ret.append(cls.zf_format_key(ki))
             ret = ",".join(ret)
         elif i == 1:  # alpn
             ret = []
-            while b.remaining() > 0:
+            while b.remaining:
                 (n,) = b.unpack("B")
                 ret.append(bytearray(b.get(n)))
             ret = cls.zf_format_valuelist(ret)
         elif i == 2:  # no-alpn
-            if b.remaining() > 0:
+            if b.remaining:
                 raise DNSError(
                     "Error decoding HTTPS SvcParamKey: no-default-alpn should not have a value"
                 )
@@ -2300,7 +2370,7 @@ class HTTPS(RD):
             ret = str(b.unpack("!H")[0])
         elif i == 4:  # ipv4
             ret = []
-            while b.remaining() > 0:
+            while b.remaining:
                 ip = "%d.%d.%d.%d" % b.unpack("!4B")
                 ret.append(ip)
             ret = ",".join(ret)
@@ -2308,7 +2378,7 @@ class HTTPS(RD):
             ret = cls.zf_tostr(binascii.b2a_base64(v).rstrip())
         elif i == 6:  # ipv6
             ret = []
-            while b.remaining() > 0:
+            while b.remaining:
                 ip = b.unpack("!16B")
                 ret.append(_format_ipv6(ip))
             ret = ",".join(ret)
@@ -2341,8 +2411,8 @@ class SSHFP(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
-        return cls(int(rd[0]), int(rd[1]), binascii.unhexlify("".join(rd[2:]).encode("ascii")))
+    def fromZone(cls, rd: List[str], origin=None):
+        return cls(int(rd[0]), int(rd[1]), bytes.fromhex("".join(rd[2:])))
 
     def __init__(self, algorithm, fp_type, fingerprint):
         self.algorithm = algorithm
@@ -2354,11 +2424,7 @@ class SSHFP(RD):
         buffer.append(self.fingerprint)
 
     def __repr__(self):
-        return "%d %d %s" % (
-            self.algorithm,
-            self.fp_type,
-            binascii.hexlify(self.fingerprint).decode().upper(),
-        )
+        return f"{self.algorithm} {self.fp_type} {self.fingerprint.hex().upper()}"
 
     attrs = ("algorithm", "fp_type", "fingerprint")
 
@@ -2385,7 +2451,7 @@ class TLSA(RD):
     @classmethod
     def fromZone(cls, rd, origin=None):
         return cls(
-            int(rd[0]), int(rd[1]), int(rd[2]), binascii.unhexlify("".join(rd[3:]).encode("ascii"))
+            int(rd[0]), int(rd[1]), int(rd[2]), bytes.fromhex("".join(rd[3:]))
         )
 
     def __init__(self, cert_usage, selector, matching_type, cert_data):
@@ -2399,12 +2465,7 @@ class TLSA(RD):
         buffer.append(self.cert_data)
 
     def __repr__(self):
-        return "%d %d %d %s" % (
-            self.cert_usage,
-            self.selector,
-            self.matching_type,
-            binascii.hexlify(self.cert_data).decode().upper(),
-        )
+        return f"{self.cert_usage} {self.selector} {self.matching_type} {self.cert_data.hex().upper()}"
 
     attrs = ("cert_usage", "selector", "matching_type", "cert_data")
 

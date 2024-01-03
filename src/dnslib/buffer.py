@@ -1,9 +1,5 @@
-"""
-    Buffer - simple data buffer
-"""
-
-import binascii
 import struct
+from typing import Any
 
 
 class BufferError(Exception):
@@ -11,15 +7,7 @@ class BufferError(Exception):
 
 
 class Buffer:
-
-    """
-    A simple data buffer - supports packing/unpacking in struct format
-
-    # Needed for Python 2/3 doctest compatibility
-    >>> def p(s):
-    ...     if not isinstance(s,str):
-    ...         return s.decode()
-    ...     return s
+    """A simple data buffer - supports packing/unpacking in struct format
 
     >>> b = Buffer()
     >>> b.pack("!BHI",1,2,3)
@@ -28,7 +16,7 @@ class Buffer:
     >>> b.append(b"0123456789")
     >>> b.offset
     17
-    >>> p(b.hex())
+    >>> b.hex()
     '0100020000000330313233343536373839'
     >>> b.offset = 0
     >>> b.unpack("!BHI")
@@ -43,69 +31,89 @@ class Buffer:
     bytearray(b'xx234')
     """
 
-    def __init__(self, data=b""):
+    def __init__(self, data: bytes = b"") -> None:
         """
-        Initialise Buffer from data
+        Args:
+            data: initial data
         """
         self.data = bytearray(data)
         self.offset = 0
+        return
 
-    def remaining(self):
-        """
-        Return bytes remaining
-        """
+    @property
+    def remaining(self) -> int:
+        """Number of bytes from the current offset until the end of the buffer"""
         return len(self.data) - self.offset
 
-    def get(self, length):
+    def get(self, length: int) -> bytes:
+        """Get bytes from the buffer starting at the current offset and increment offset
+
+        Args:
+            length: number of bytes to get
+
+        Raises:
+            BufferError: if length is greater than remaining bytes.
         """
-        Gen len bytes at current offset (& increment offset)
-        """
-        if length > self.remaining():
+        if length > self.remaining:
             raise BufferError(
-                f"Not enough bytes [offset={self.offset},remaining={self.remaining()},requested={length}]"
+                f"Not enough bytes [offset={self.offset},remaining={self.remaining},requested={length}]"
             )
         start = self.offset
         end = self.offset + length
         self.offset += length
         return bytes(self.data[start:end])
 
-    def hex(self):
-        """
-        Return data as hex string
-        """
-        return binascii.hexlify(self.data)
+    def hex(self) -> str:
+        """Return data as hex string"""
+        return self.data.hex()
 
-    def pack(self, fmt, *args):
-        """
-        Pack data at end of data according to fmt (from struct) & increment
-        offset
+    def pack(self, fmt: str, *args) -> None:
+        """Pack a struct and append it to the buffer
+
+        Args:
+            fmt: struct format
+            args: data to pack into the struct
         """
         self.offset += struct.calcsize(fmt)
         self.data += struct.pack(fmt, *args)
+        return
 
-    def append(self, s):
-        """
-        Append s to end of data & increment offset
+    def append(self, s: bytes) -> None:
+        """Append data to end of the buffer and increment offset
+
+        Args:
+            s: data to append
         """
         self.offset += len(s)
         self.data += s
+        return
 
-    def update(self, ptr, fmt, *args):
-        """
-        Modify data at offset `ptr`
+    def update(self, ptr: int, fmt: str, *args: Any) -> None:
+        """Modify data at offset `ptr`
+
+        Args:
+            ptr: the offset the start the modification at
+            fmt: struct format
+            args: data to pack into struct format
         """
         s = struct.pack(fmt, *args)
         self.data[ptr : ptr + len(s)] = s
+        return
 
-    def unpack(self, fmt):
-        """
-        Unpack data at current offset according to fmt (from struct)
+    def unpack(self, fmt: str):
+        """Unpack a struct from the current offset and increment offset
+
+        Args:
+            fmt: struct format to unpack
+
+        Raises:
+            struct.error: if could not unpack struct
         """
         try:
             data = self.get(struct.calcsize(fmt))
             return struct.unpack(fmt, data)
         except struct.error as e:
-            raise BufferError(f"Error unpacking struct '{fmt}' <{binascii.hexlify(data).decode()}>")
+            raise BufferError(f"Error unpacking struct {fmt!r} <{data.hex()}>")
 
     def __len__(self):
         return len(self.data)

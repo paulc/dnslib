@@ -59,13 +59,10 @@ class DNSLabel:
     True
     >>> l3.matchGlob("*.[abc]xx.bbb.ccc")
     False
-
-    # Too hard to get unicode doctests to work on Python 3.2
-    # (works on 3.3)
     >>> u1 = DNSLabel("⊕.com")
     >>> str(u1) == "xn--keh.com."
     True
-    >>> u1.idna() == "⊕.com."
+    >>> u1.idna == "⊕.com."
     True
     >>> u1.label == ( b"xn--keh", b"com" )
     True
@@ -130,7 +127,8 @@ class DNSLabel:
         else:
             return self
 
-    def idna(self):
+    @property
+    def idna(self) -> str:
         return ".".join([s.decode("idna") for s in self.label]) + "."
 
     def _decode(self, s):
