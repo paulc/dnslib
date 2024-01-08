@@ -5,6 +5,7 @@
     Intended to ensure that values packed with struct are in the
     correct range
 
+    ```pycon
     >>> class T(object):
     ...     a = range_property('a',-100,100)
     ...     b = B('b')
@@ -46,7 +47,12 @@
     ...
     ValueError: Attribute 'test' must be instance of ...
 
+    ```
+
 """
+
+from ipaddress import IPv4Address, IPv6Address
+from typing import Union
 
 int_types = (int,)
 byte_types = (bytes, bytearray)
@@ -54,7 +60,7 @@ byte_types = (bytes, bytearray)
 
 def check_instance(name, val, types):
     if not isinstance(val, types):
-        raise ValueError(f"Attribute '{name}' must be instance of {types} [{type(val)}]")
+        raise ValueError(f"Attribute {name!r} must be instance of {types} [{type(val)}]")
 
 
 def check_bytes(name, val):
@@ -68,8 +74,8 @@ def instance_property(attr, types):
     def setter(obj, val):
         if isinstance(val, types):
             setattr(obj, f"_{attr}", val)
-        else:
-            raise ValueError(f"Attribute '{attr}' must be instance of {types} [{type(val)}]")
+            return
+        raise ValueError(f"Attribute {attr!r} must be instance of {types} [{type(val)}]")
 
     return property(getter, setter)
 
@@ -96,50 +102,88 @@ def range_property(attr, min, max):
     return property(getter, setter)
 
 
-def B(attr):
+def B(attr: str):
+    """Create new Unsigned Byte (8 bit) property
+
+    Args:
+        attr: name of property attribute
     """
-    Unsigned Byte
-    """
-    return range_property(attr, 0, 255)
+    return range_property(attr, 0, 2**8 - 1)
 
 
-def H(attr):
+def H(attr: str):
+    """Create new Unsigned Short (16 bit) property
+
+    Args:
+        attr: name of property attribute
     """
-    Unsigned Short
-    """
-    return range_property(attr, 0, 65535)
+    return range_property(attr, 0, 2**16 - 1)
 
 
-def I(attr):
+def I(attr: str):
+    """create new Unsigned Long (32 bit) property
+
+    Args:
+        attr: name of property attribute
     """
-    Unsigned Long
-    """
-    return range_property(attr, 0, 4294967295)
+    return range_property(attr, 0, 2**32 - 1)
 
 
 def ntuple_range(attr, n, min, max):
     f = lambda x: isinstance(x, int_types) and min <= x <= max
 
     def getter(obj):
-        return getattr(obj, f"_{attr}")
+        return getattr(obj, "_%s" % attr)
 
     def setter(obj, val):
         if len(val) != n:
-            raise ValueError(f"Attribute {attr!r} must be tuple with {n} elements [{val}]")
+            raise ValueError("Attribute '%s' must be tuple with %d elements [%s]" % (attr, n, val))
         if all(map(f, val)):
-            setattr(obj, f"_{attr}", val)
+            setattr(obj, "_%s" % attr, val)
         else:
-            raise ValueError(f"Attribute {attr!r} elements must be between {min}-{max} [{val}]")
+            raise ValueError(
+                "Attribute '%s' elements must be between %d-%d [%s]" % (attr, min, max, val)
+            )
 
     return property(getter, setter)
 
 
-def IP4(attr):
-    return ntuple_range(attr, 4, 0, 255)
+def IP4(attr: str):
+    """Create new IPv4 property
+
+    Args:
+        attr: name of property attribute
+    """
+    obj_attr = f"_{attr}"
+
+    def getter(self) -> IPv4Address:
+        return getattr(self, obj_attr)
+
+    def setter(self, ip: Union[str, bytes, int, IPv4Address]) -> None:
+        if isinstance(ip, (str, bytes, int)):
+            ip = IPv4Address(ip)
+        setattr(self, obj_attr, ip)
+
+    return property(getter, setter)
 
 
-def IP6(attr):
-    return ntuple_range(attr, 16, 0, 255)
+def IP6(attr: str):
+    """Create new IPv6 property
+
+    Args:
+        attr: name of property attribute
+    """
+    obj_attr = f"_{attr}"
+
+    def getter(self) -> IPv6Address:
+        return getattr(self, obj_attr)
+
+    def setter(self, ip: Union[str, bytes, int, IPv6Address]) -> None:
+        if isinstance(ip, (str, bytes, int)):
+            ip = IPv6Address(ip)
+        setattr(self, obj_attr, ip)
+
+    return property(getter, setter)
 
 
 if __name__ == "__main__":

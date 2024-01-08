@@ -1,5 +1,4 @@
 import sys
-import types
 from typing import Dict, Callable, Type, Union, Optional, cast
 
 
@@ -7,7 +6,7 @@ class BimapError(Exception):
     pass
 
 
-ErrorCallable = Callable[[str, Union[int, str], bool], Union[str, int]]
+ErrorCallable = Callable[[str, Union[int, str]], Union[str, int]]
 
 
 class Bimap:
@@ -15,14 +14,15 @@ class Bimap:
 
     The class provides:
 
-        * A 'forward' map (code->text) which is accessed through
-          __getitem__ (bimap[code])
-        * A 'reverse' map (code>value) which is accessed through
-          __getattr__ (bimap.text)
-        * A 'get' method which does a forward lookup (code->text)
-          and returns a textual version of code if there is no
-          explicit mapping (or default provided)
+    * A 'forward' map (code->text) which is accessed through
+        `__getitem__` (`bimap[code]`)
+    * A 'reverse' map (code>value) which is accessed through
+        `__getattr__` (`bimap.text`)
+    * A 'get' method which does a forward lookup (code->text)
+        and returns a textual version of code if there is no
+        explicit mapping (or default provided)
 
+    ```pycon
     >>> class TestError(Exception):
     ...     pass
 
@@ -43,18 +43,15 @@ class Bimap:
     '99'
 
     # Test with callable error
-    >>> def _error(name,key,forward):
-    ...     if forward:
-    ...         if isinstance(key, int):
-    ...             return f"TEST{key}"
-    ...         raise TestError(f"{name}: Invalid forward lookup: [{key}]")
-    ...     else:
-    ...         if key.startswith("TEST"):
-    ...             try:
-    ...                 return int(key[4:])
-    ...             except:
-    ...                 pass
-    ...         raise TestError(f"{name}: Invalid reverse lookup: [{key}]")
+    >>> def _error(name,key):
+    ...     if isinstance(key, int):
+    ...         return f"TEST{key}"
+    ...     if key.startswith("TEST"):
+    ...         try:
+    ...             return int(key.removeprefix("TEST"))
+    ...         except:
+    ...             pass
+    ...     raise TestError(f"{name}: Invalid lookup: [{key!r}]")
     >>> TEST2 = Bimap('TEST2',{1:'A', 2:'B', 3:'C'},_error)
     >>> TEST2[1]
     'A'
@@ -63,7 +60,7 @@ class Bimap:
     >>> TEST2['abcd']
     Traceback (most recent call last):
     ...
-    TestError: TEST2: Invalid forward lookup: [abcd]
+    TestError: TEST2: Invalid lookup: ['abcd']
     >>> TEST2.A
     1
     >>> TEST2.TEST9999
@@ -71,8 +68,9 @@ class Bimap:
     >>> TEST2.X
     Traceback (most recent call last):
     ...
-    TestError: TEST2: Invalid reverse lookup: [X]
+    TestError: TEST2: Invalid lookup: ['X']
 
+    ```
     """
 
     def __init__(
@@ -88,34 +86,38 @@ class Bimap:
             error: Error type to raise if key not found
                 _or_ callable which either generates mapping
                 or raises an error
-
         """
         self.name = name
         self.error = error
         self.forward = forward.copy()
-        self.reverse: Dict[str, int] = {v: k for (k, v) in list(forward.items())}
+        self.reverse: Dict[str, int] = {v: k for k, v in forward.items()}
+        return
 
-    def get(self, key: str, default: Optional[str] = None) -> str:
+    def get(self, key: int, default: Optional[str] = None) -> str:
+        """Get string for given numerical key
+
+        Args:
+            key:
+            default: default value to return if key is missing
+        """
         return self.forward.get(key, default or str(key))
 
     def __getitem__(self, key: int) -> str:
-        try:
+        if key in self.forward:
             return self.forward[key]
-        except KeyError as e:
-            if isinstance(self.error, types.FunctionType):
-                return cast(str, self.error(self.name, key, True))
+        if isinstance(self.error, type) and issubclass(self.error, Exception):
             raise self.error(f"{self.name}: Invalid forward lookup: [{key}]")
+        return cast(str, self.error(self.name, key))
 
     def __getattr__(self, key: str) -> int:
-        try:
-            # Python 3.7 inspect module (called by doctest) checks for __wrapped__ attribute
-            if key == "__wrapped__":
-                raise AttributeError()
+        # Python 3.7 inspect module (called by doctest) checks for __wrapped__ attribute
+        if key == "__wrapped__":
+            raise AttributeError()
+        if key in self.reverse:
             return self.reverse[key]
-        except KeyError as e:
-            if isinstance(self.error, types.FunctionType):
-                return cast(int, self.error(self.name, key, False))
+        if isinstance(self.error, type) and issubclass(self.error, Exception):
             raise self.error(f"{self.name}: Invalid reverse lookup: [{key}]")
+        return cast(int, self.error(self.name, key))
 
 
 if __name__ == "__main__":

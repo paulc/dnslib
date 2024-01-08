@@ -1,12 +1,11 @@
 import collections
 from io import StringIO
 import string
+from typing import Union, Tuple
 
 
 class Lexer:
-
-    """
-    Simple Lexer base class. Provides basic lexer framework and
+    """Simple Lexer base class. Provides basic lexer framework and
     helper functionality (read/peek/pushback etc)
 
     Each state is implemented using a method (lexXXXX) which should
@@ -25,6 +24,7 @@ class Lexer:
     The approach is based loosely on Rob Pike's Go lexer presentation
     (using generators rather than channels).
 
+    ```pycon
     >>> p = Lexer("a bcd efgh")
     >>> p.read()
     'a'
@@ -37,12 +37,19 @@ class Lexer:
     >>> p.pushback('e')
     >>> p.read(4)
     'efgh'
+
+    ```
     """
 
     escape_chars = "\\"
     escape = {"n": "\n", "t": "\t", "r": "\r"}
 
     def __init__(self, f, debug=False):
+        """
+        Args:
+            f: ???
+            debug: ???
+        """
         if hasattr(f, "read"):
             self.f = f
         elif type(f) == str:
@@ -61,18 +68,21 @@ class Lexer:
         return self.parse()
 
     def next_token(self):
+        """next_token"""
         if self.debug:
             print("STATE", self.state)
         (tok, self.state) = self.state()
         return tok
 
     def parse(self):
+        """parse"""
         while self.state is not None and not self.eof:
             tok = self.next_token()
             if tok:
                 yield tok
 
     def read(self, n=1):
+        """read"""
         s = ""
         while self.q and n > 0:
             s += self.q.popleft()
@@ -85,6 +95,10 @@ class Lexer:
         return s
 
     def peek(self, n=1):
+        """peek
+        Args:
+            n: ???
+        """
         s = ""
         i = 0
         while len(self.q) > i and n > 0:
@@ -100,11 +114,17 @@ class Lexer:
         return s + r
 
     def pushback(self, s):
+        """pushback
+
+        Args:
+            s: ???
+        """
         p = collections.deque(s)
         p.extend(self.q)
         self.q = p
 
     def readescaped(self):
+        """readescaped"""
         c = self.read(1)
         if c in self.escape_chars:
             self.escaped = True
@@ -129,6 +149,7 @@ class Lexer:
             return c
 
     def lexStart(self):
+        """LexStart"""
         return (None, None)
 
 
@@ -156,8 +177,8 @@ class WordLexer(Lexer):
     commentchars = set("#")
     spacechars = set(" \t\x0b\x0c")
     nlchars = set("\r\n")
-    spacetok = None
-    nltok = None
+    spacetok: Union[Tuple[str, None], None] = None
+    nltok: Union[Tuple[str, None], None] = None
 
     def lexStart(self):
         return (None, self.lexSpace)
@@ -327,9 +348,9 @@ if __name__ == "__main__":
         if args.nlchars:
             l.nlchars = set(args.nlchars)
         if args.space:
-            l.spacetok = ("SPACE",)
+            l.spacetok = ("SPACE", None)
         if args.nl:
-            l.nltok = ("NL",)
+            l.nltok = ("NL", None)
 
         for tok in l:
             print(tok)

@@ -10,6 +10,7 @@
     Unsupported RR types are skipped (this is different from the packet
     parser which will store and encode the RDATA as a binary blob)
 
+    ```pycon
     >>> dig = os.path.join(os.path.dirname(__file__),"test","dig","google.com-A.dig")
     >>> with open(dig) as f:
     ...     l = DigParser(f)
@@ -66,6 +67,7 @@
     <DNS RR: 'google.com.' rtype=TXT rclass=IN ttl=3599 rdata='"v=spf1 include:_spf.google.com ~all"'>
     <DNS RR: 'google.com.' rtype=MX rclass=IN ttl=599 rdata='30 alt2.aspmx.l.google.com.'>
 
+    ```
 """
 
 
@@ -92,10 +94,7 @@ from dnslib.dns import (
 
 
 class DigParser:
-
-    """
-    Parse Dig output
-    """
+    """Parser for DiG output"""
 
     def __init__(self, dig, debug=False):
         self.debug = debug

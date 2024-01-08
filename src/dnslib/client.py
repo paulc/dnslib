@@ -166,4 +166,4 @@ if __name__ == "__main__":
             code.interact(local=locals())
 
     except DNSError as e:
-        p.error(e)
+        p.error(repr(e))

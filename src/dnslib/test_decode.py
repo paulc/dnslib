@@ -262,7 +262,7 @@ if __name__ == "__main__":
     else:
         os.chdir(args.testdir)
         if args.new:
-            new_test(*args.new, nodig=args.nodig, dnssec=args.dnssec)
+            new_test(args.new[0], args.new[1], nodig=args.nodig, dnssec=args.dnssec)
         elif args.interactive:
             for f in glob.iglob(args.glob):
                 if os.path.isfile(f):

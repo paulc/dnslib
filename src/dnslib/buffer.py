@@ -1,5 +1,5 @@
 import struct
-from typing import Any
+from typing import Tuple, Any
 
 
 class BufferError(Exception):
@@ -9,6 +9,7 @@ class BufferError(Exception):
 class Buffer:
     """A simple data buffer - supports packing/unpacking in struct format
 
+    ```pycon
     >>> b = Buffer()
     >>> b.pack("!BHI",1,2,3)
     >>> b.offset
@@ -29,6 +30,8 @@ class Buffer:
     >>> b.offset = 7
     >>> bytearray(b.get(5))
     bytearray(b'xx234')
+
+    ```
     """
 
     def __init__(self, data: bytes = b"") -> None:
@@ -40,6 +43,7 @@ class Buffer:
         self.offset = 0
         return
 
+    # TODO: This was converted to a property
     @property
     def remaining(self) -> int:
         """Number of bytes from the current offset until the end of the buffer"""
@@ -62,6 +66,20 @@ class Buffer:
         end = self.offset + length
         self.offset += length
         return bytes(self.data[start:end])
+
+    def get_with_length(self, fmt: str) -> bytes:
+        """Get bytes from the buffer using a length prefix
+
+        This is a shortcut to:
+
+        ```python
+        data = buffer.get(buffer.unpack_one("!H"))
+        ```
+
+        Args:
+            fmt: struct format of length prefix, must return a single value.
+        """
+        return self.get(self.unpack_one(fmt))
 
     def hex(self) -> str:
         """Return data as hex string"""
@@ -88,6 +106,26 @@ class Buffer:
         self.data += s
         return
 
+    def append_with_length(self, length_format: str, s: bytes) -> None:
+        """Append length prefixed data to the buffer.
+
+        Is a shortcut to calling:
+
+        ```python
+        buffer.pack("H", len(data))
+        buffer.append(data)
+        ```
+
+        Args:
+            length_format: struct format of the length
+            s: data to append
+
+        New in 1.0
+        """
+        self.pack(length_format, len(s))
+        self.append(s)
+        return
+
     def update(self, ptr: int, fmt: str, *args: Any) -> None:
         """Modify data at offset `ptr`
 
@@ -100,20 +138,36 @@ class Buffer:
         self.data[ptr : ptr + len(s)] = s
         return
 
-    def unpack(self, fmt: str):
+    def unpack(self, fmt: str) -> Tuple:
         """Unpack a struct from the current offset and increment offset
 
         Args:
             fmt: struct format to unpack
 
         Raises:
-            struct.error: if could not unpack struct
+            BufferError: if could not unpack struct
         """
         try:
             data = self.get(struct.calcsize(fmt))
             return struct.unpack(fmt, data)
         except struct.error as e:
             raise BufferError(f"Error unpacking struct {fmt!r} <{data.hex()}>")
+
+    def unpack_one(self, fmt: str) -> Any:
+        """Unpack a single value from the current offset and increment offset
+
+        This is this a shortcut to using `unpack` with a struct that returns a `tuple`
+        of length where you then need to extract the single value.
+
+        Args:
+            fmt: struct format to unpack
+
+        New in 1.0
+        """
+        unpacked = self.unpack(fmt)
+        if len(unpacked) != 1:
+            raise BufferError(f"unpacking {fmt!r} returned {unpacked!r} - expected single value")
+        return unpacked[0]
 
     def __len__(self):
         return len(self.data)

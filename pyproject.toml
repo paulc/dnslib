@@ -11,7 +11,9 @@ authors  = [
 
 # Dependency Information
 requires-python = ">=3.7"
-dependencies = []
+dependencies = [
+    "typing-extensions;python_version<'3.11'",
+]
 
 # Extra information
 readme = "README.md"

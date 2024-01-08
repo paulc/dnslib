@@ -42,6 +42,7 @@
             proxy.py            - DNS proxy
             intercept.py        - Intercepting DNS proxy
 
+        ```pycon
         >>> resolver = BaseResolver()
         >>> logger = DNSLogger(prefix=False)
         >>> server = DNSServer(resolver,port=8053,address="localhost",logger=logger)
@@ -57,8 +58,11 @@
         ;abc.def.                       IN      A
         >>> server.stop()
 
+        ```
+
         DNSLogger accepts custom logging function (logf)
 
+        ```pycon
         >>> resolver = BaseResolver()
         >>> logger = DNSLogger(prefix=False,logf=lambda s:print(s.upper()))
         >>> server = DNSServer(resolver,port=8054,address="localhost",logger=logger)
@@ -95,7 +99,7 @@
         abc.def.                60      IN      A       1.2.3.4
         >>> server.stop()
 
-
+        ```
 """
 
 import socket
@@ -108,8 +112,9 @@ from dnslib import DNSRecord, DNSError, QTYPE, RCODE, RR
 
 
 class BaseResolver:
-    """
-    Base resolver implementation. Provides 'resolve' method which is
+    """Base resolver implementation.
+
+    Provides 'resolve' method which is
     called by DNSHandler with the decode request (DNSRecord instance)
     and returns a DNSRecord instance as reply.
 
@@ -123,17 +128,16 @@ class BaseResolver:
     """
 
     def resolve(self, request, handler):
-        """
-        Example resolver - respond to all requests with NXDOMAIN
-        """
+        """Example resolver - respond to all requests with NXDOMAIN"""
         reply = request.reply()
         reply.header.rcode = getattr(RCODE, "NXDOMAIN")
         return reply
 
 
 class DNSHandler(socketserver.BaseRequestHandler):
-    """
-    Handler for socketserver. Transparently handles both TCP/UDP requests
+    """Handler for socketserver.
+
+    Transparently handles both TCP/UDP requests
     (TCP requests have length prepended) and hands off lookup to resolver
     instance specified in <SocketServer>.resolver
     """
@@ -141,6 +145,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
     udplen = 0  # Max udp packet length (0 = ignore)
 
     def handle(self):
+        """handle"""
         if self.server.socket_type == socket.SOCK_STREAM:
             self.protocol = "tcp"
             data = self.request.recv(8192)
@@ -174,6 +179,7 @@ class DNSHandler(socketserver.BaseRequestHandler):
             self.server.logger.log_error(self, e)
 
     def get_reply(self, data):
+        """get_reply"""
         request = DNSRecord.parse(data)
         self.server.logger.log_request(self, request)
 
@@ -194,7 +200,6 @@ class DNSHandler(socketserver.BaseRequestHandler):
 
 
 class DNSLogger:
-
     """
     The class provides a default set of logging functions for the various
     stages of the request handled by a DNSServer instance which are
@@ -382,7 +387,6 @@ class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 class DNSServer:
-
     """
     Convenience wrapper for socketserver instance allowing
     either UDP/TCP server to be started in blocking more

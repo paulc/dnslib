@@ -212,13 +212,6 @@ if __name__ == "__main__":
             print("    | ", "%s:%s:%s" % i, sep="")
     print()
 
-    DNSHandler.log = {
-        "log_request",  # DNS Request
-        "log_reply",  # DNS Response
-        "log_truncated",  # Truncated
-        "log_error",  # Decoding error
-    }
-
     udp_server = DNSServer(resolver, port=args.port, address=args.address, logger=logger)
     udp_server.start_thread()
 
