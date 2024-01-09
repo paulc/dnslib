@@ -20,7 +20,7 @@ import struct
 import sys
 import textwrap
 import time
-from typing import overload, Type, TypeVar, Optional, Union, List, Tuple, Dict, Any, Sequence, cast
+from typing import overload, Type, TypeVar, Optional, Union, List, Tuple, Dict, Any, Sequence, Generator, cast
 
 # Sequence deprecated in 3.9, keep track in case it is removed.
 
@@ -132,9 +132,14 @@ QTYPE = Bimap(
     },
     unknown_qtype,
 )
+"""QTYPE `Bimap` - allows bi-directional mapping between integer and text representations"""
 
 CLASS = Bimap("CLASS", {1: "IN", 2: "CS", 3: "CH", 4: "Hesiod", 254: "None", 255: "*"}, DNSError)
+"""CLASS `Bimap` - allows bi-directional mapping between integer and text representations"""
+
 QR = Bimap("QR", {0: "QUERY", 1: "RESPONSE"}, DNSError)
+"""QR `Bimap` - allows bi-directional mapping between integer and text representations"""
+
 RCODE = Bimap(
     "RCODE",
     {
@@ -152,7 +157,10 @@ RCODE = Bimap(
     },
     DNSError,
 )
+"""RCODE `Bimap` - allows bi-directional mapping between integer and text representations"""
+
 OPCODE = Bimap("OPCODE", {0: "QUERY", 1: "IQUERY", 2: "STATUS", 4: "NOTIFY", 5: "UPDATE"}, DNSError)
+"""OPCODE `Bimap` - allows bi-directional mapping between integer and text representations"""
 
 
 def create_label(label: str, origin: DNSLabelCreateTypes = None) -> DNSLabel:
@@ -236,7 +244,8 @@ class DNSRecord:
 
     @classmethod
     def parse(cls, packet: bytes) -> Self:
-        """Parse a DNS packet data into DNSRecord instance
+        """Parse a DNS packet data into `DNSRecord` instance
+
         Recursively parses sections (calling appropriate parse method)
 
         Args:
@@ -494,14 +503,14 @@ class DNSRecord:
         return
 
     @property
-    def q(self) -> "DNSQuestion":
-        """Get first question from this record if it exists, otherwise empty question"""
-        return self.questions[0] if self.questions else DNSQuestion()
+    def q(self) -> "Optional[DNSQuestion]":
+        """Get first question from this record if it exists"""
+        return self.questions[0] if self.questions else None
 
     @property
-    def a(self) -> "RR":
-        """Get the first answer from this record if exists otherwise empty resource"""
-        return self.rr[0] if self.rr else RR()
+    def a(self) -> "Optional[RR]":
+        """Get the first answer from this record if exists"""
+        return self.rr[0] if self.rr else None
 
     def pack(self) -> bytes:
         """Pack record into binary packet
@@ -736,7 +745,7 @@ class DNSHeader:
             Queries should generate this field, responses should copy this from
             the corresponding query.
 
-        bitmap: bytes containing combined qr,opcode,aa,tc,rd,ra,z,ad,cd,rcode fields
+        bitmap: bytes containing combined qr, opcode, aa, tc, rd, ra, z, ad, cd, and rcode fields
 
             warning: You should not work with the bitmap directly.
                 Instead use the corresponding property attributes.
@@ -783,11 +792,6 @@ class DNSHeader:
 
     @classmethod
     def parse(cls, buffer: DNSBuffer) -> Self:
-        """Implements parse interface
-
-        Args:
-            buffer: buffer to read from
-        """
         try:
             id, bitmap, q, a, auth, ar = buffer.unpack("!HHHHHH")
             return cls(id, bitmap, q, a, auth, ar)
@@ -835,11 +839,6 @@ class DNSHeader:
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack this header into a buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!HHHHHH", self.id, self.bitmap, self.q, self.a, self.auth, self.ar)
         return
 
@@ -884,7 +883,6 @@ class DNSHeader:
         )
 
     def toZone(self) -> str:
-        """Encode into Zone format"""
         f = [
             self.qr and "qr",
             self.aa and "aa",
@@ -957,17 +955,11 @@ class DNSQuestion:
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack this question into a buffer
-
-        Args:
-            buffer:
-        """
         buffer.encode_name(self.qname)
         buffer.pack("!HH", self.qtype, self.qclass)
         return
 
     def toZone(self) -> str:
-        """Encode into Zone format."""
         return ";%-30s %-7s %s" % (self.qname, CLASS.get(self.qclass), QTYPE[self.qtype])
 
     def __repr__(self) -> str:
@@ -1027,11 +1019,6 @@ class EDNSOption:
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!H", self.code)
         buffer.append_with_length("!H", self.data)
         return
@@ -1040,7 +1027,6 @@ class EDNSOption:
         return f"<EDNS Option: Code={self.code} Data='{self.data.hex()}'>"
 
     def toZone(self) -> str:
-        """Encode into Zone format"""
         return f"; EDNS: code: {self.code}; data: {self.data.hex()}"
 
     def __str__(self) -> str:
@@ -1082,29 +1068,24 @@ class RR:
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.2
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.2>
 
     Changed in 1.0:
 
         - remove `[get,set]_[rname,do]`
-        - EDNS Pseudo records (`QTYPE.OPT`) now use `EDNSRD` to hold options.
+        - EDNS Pseudo records (`QTYPE.OPT`) now use `OPT` to hold options.
         - `self.rdata` is now never `None`. If `rdata` is `None` then an empty `RD()` is used.
     """
 
-    rtype = H("rtype")
-    rclass = H("rclass")
-    ttl = I("ttl")
-    rdlength = H("rdlength")
+    rtype: int = H("rtype")
+    rclass: int = H("rclass")
+    ttl: int = I("ttl")
+    rdlength: int = H("rdlength")
 
-    rname = create_label_property("rname")
+    rname: DNSLabel = create_label_property("rname")
 
     @classmethod
     def parse(cls, buffer: DNSBuffer) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-        """
         try:
             rname = buffer.decode_name()
             rtype, rclass, ttl, rdlength = buffer.unpack("!HHIH")
@@ -1132,9 +1113,9 @@ class RR:
             rtype:
             rclass:
             ttl:
-            rdata: ???
+            rdata:
         """
-        self.rname = rname
+        self.rname = DNSLabel(rname)
         self.rtype = rtype
         self.rclass = rclass
         self.ttl = ttl
@@ -1160,7 +1141,6 @@ class RR:
         raise AttributeError("Cannot access edns_do on non-OPT QTYPE.")
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into a buffer"""
         buffer.encode_name(self.rname)
         buffer.pack("!HHI", self.rtype, self.rclass, self.ttl)
         rdlength_ptr = buffer.offset
@@ -1191,7 +1171,6 @@ class RR:
         )
 
     def toZone(self) -> str:
-        """Encode into Zone format"""
         if self.rtype == QTYPE.OPT:
             edns = [
                 ";; OPT PSEUDOSECTION",
@@ -1275,13 +1254,13 @@ class EDNS0(RR):
 
     def __init__(
         self,
-        rname=None,
-        rtype=QTYPE.OPT,
+        rname: DNSLabelCreateTypes = None,
+        rtype: int = QTYPE.OPT,
         ext_rcode: int = 0,
-        version=0,
-        flags="",
-        udp_len=0,
-        opts=None,
+        version: int = 0,
+        flags: str = "",
+        udp_len: int = 0,
+        opts: Optional[List[EDNSOption]] = None,
     ) -> None:
         """
         Args:
@@ -1298,9 +1277,7 @@ class EDNS0(RR):
         edns_flags = {"do": 1 << 15}
         flag_bitmap = sum([edns_flags[x] for x in flags.split()])
         ttl = (ext_rcode << 24) + (version << 16) + flag_bitmap
-        if opts and not all([isinstance(o, EDNSOption) for o in opts]):
-            raise ValueError("Option must be instance of EDNSOption")
-        super().__init__(rname, rtype, udp_len, ttl, EDNSRD(opts or []))
+        super().__init__(rname, rtype, udp_len, ttl, OPT(opts or []))
         return
 
 
@@ -1311,23 +1288,35 @@ class RD:
 
     Subclass should implement (as a minimum):
 
-        parse (parse from packet data)
-        __init__ (create class)
-        __repr__ (return in zone format)
-        fromZone (create from zone format)
-
-        (toZone uses __repr__ by default)
+    - [`parse`][dnslib.dns.RD.parse] (`classmethod`) - decode new instance from packet data
+    - [`fromZone`][dnslib.dns.RD.fromZone] - decode new instance from Zone file
+    - `__init__` - create class
+    - [`pack`][dnslib.dns.RD.pack] - encode to packet data
+    - [`toZone`][dnslib.dns.RD.toZone] - encode to zone format
 
     Unknown rdata types default to RD and store rdata as a binary
     blob (this allows round-trip encoding/decoding)
+
+    Changed in 1.0: `__repr__` now defaults to calling `toZone` (previously was
+    the opposite). Thus child classes should implement `toZone` for Zone file
+    formatting. This makes it explicit to the expected format and allows for
+    non-default `repr` formats without impacting the Zone formatting.
     """
 
     # Attributes for comparison
     attrs: Tuple[str, ...] = ("data",)
+    data: Union[bytes, Any]
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Unpack from buffer"""
+        """Unpack from buffer
+
+        Child classes should override this method
+
+        Args:
+            buffer: buffer to read from
+            length: length of rdata
+        """
         try:
             data = buffer.get(length)
             return cls(data)
@@ -1336,37 +1325,48 @@ class RD:
 
     @classmethod
     def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Create new record from zone format data
-        RD is a list of strings parsed from DiG output
+        """Parse RDATA from parsed Zone file
+
+        Child classes should override this method
+
+        Args:
+            rd: Zonefile entry as list of strings
+            origin: Zone File `$ORIGIN`
         """
-        # Unknown rata - assume hexdump in zone format
+        # Unknown rdata - assume hexdump in zone format
         # (DiG prepends "\\# <len>" to the hexdump so get last item)
         return cls(bytes.fromhex(rd[-1]))
 
     def __init__(self, data: bytes = b"") -> None:
         """
         Args:
-            data: raw resource record data
+            data: raw RDATA
         """
-        # Assume raw bytes
-        check_bytes("data", data)
-        self.data = bytes(data)
+        self.data = data
+        return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack record into buffer"""
+        """Pack record into buffer
+
+        Child classes should override this method
+
+        Args:
+            buffer:
+        """
         buffer.append(self.data)
         return
 
     def __repr__(self) -> str:
-        """
-        Default 'repr' format should be equivalent to RD zone format
+        return self.toZone()
+
+    def toZone(self) -> str:
+        """Encode this RDATA into Zone file format.
+
+        Child classes should override this method
         """
         if len(self.data) > 0:
             return f"\\# {len(self.data)} {self.data.hex().upper()}"
         return "\\# 0"
-
-    def toZone(self) -> str:
-        return repr(self)
 
     # Comparison operations - in most cases only need to override 'attrs'
     # in subclass (__eq__ will automatically compare defined attrs)
@@ -1380,11 +1380,10 @@ class RD:
         return not self.__eq__(other)
 
 
-class _LabelOnlyRd(RD):
+class LabelOnlyRd(RD):
     """Base class for RD types that only have a label
 
     Attributes:
-        attrs:
         label:
 
     New in 1.0
@@ -1395,12 +1394,6 @@ class _LabelOnlyRd(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             label = buffer.decode_name()
             return cls(label)
@@ -1408,13 +1401,7 @@ class _LabelOnlyRd(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
+    def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
         return cls(create_label(rd[0], origin))
 
     def __init__(self, label: DNSLabelCreateTypes = None) -> None:
@@ -1425,23 +1412,20 @@ class _LabelOnlyRd(RD):
         self.label = label
         return
 
-    def pack(self, buffer):
+    def pack(self, buffer: DNSBuffer) -> None:
         buffer.encode_name(self.label)
         return
 
     def toZone(self) -> str:
-        return repr(self)
-
-    def __repr__(self):
         return str(self.label)
 
 
-class EDNSRD(RD):
+class OPT(RD):
     """Pseudo RDATA for EDNS Options
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc6891#section-6.1.2
+    - <https://datatracker.ietf.org/doc/html/rfc6891#section-6.1.2>
 
     New in 1.0
     """
@@ -1450,12 +1434,6 @@ class EDNSRD(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             options: List[EDNSOption] = []
             option_buffer = Buffer(buffer.get(length))
@@ -1468,13 +1446,7 @@ class EDNSRD(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
+    def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
         raise NotImplementedError("Cannot parse EDNS Options from Zone")
 
     def __init__(self, options: Optional[List[EDNSOption]] = None) -> None:
@@ -1486,11 +1458,6 @@ class EDNSRD(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         for option in self.options:
             option.pack(buffer)
         return
@@ -1510,7 +1477,7 @@ class TXT(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.14
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.14>
 
     Note:
 
@@ -1546,12 +1513,6 @@ class TXT(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             texts = []
             remaining = length
@@ -1565,19 +1526,13 @@ class TXT(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Create from Zone
-
-        Args:
-            rd:
-            origin:
-        """
+    def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
         return cls(list(map(lambda x: x.encode(), rd)))
 
     def __init__(self, texts: Union[Sequence[bytes], Sequence[str], bytes, str]) -> None:
         """
         Args:
-            data:
+            texts:
         """
         self.texts: List[bytes]
         if isinstance(texts, bytes):
@@ -1592,11 +1547,6 @@ class TXT(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         for item in self.texts:
             if len(item) > 255:
                 raise DNSError("TXT record too long: {self.item!r}")
@@ -1604,7 +1554,6 @@ class TXT(RD):
         return
 
     def toZone(self) -> str:
-        """Encode into Zone format"""
         return " ".join([self._bytes_to_str(x) for x in self.texts])
 
     def __repr__(self) -> str:
@@ -1639,11 +1588,11 @@ class TXT(RD):
 
 
 class A(RD):
-    """(IPv4) Host Address
+    """IPv4 Host Address
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1>
 
     Changed in 1.0: `self.data` property is now an `IPv4Address`.
     """
@@ -1652,12 +1601,6 @@ class A(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             data = buffer.unpack_one("!4s")
             return cls(data)
@@ -1665,13 +1608,7 @@ class A(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Parse from Zone format
-
-        Args:
-            rd:
-            origin:
-        """
+    def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
         return cls(rd[0])
 
     def __init__(self, data: Union[str, bytes, int, IPv4Address]) -> None:
@@ -1686,24 +1623,19 @@ class A(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer:
-
-        Args:
-            buffer:
-        """
         buffer.pack("!4s", self.data.packed)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return str(self.data)
 
 
 class AAAA(RD):
-    """IPv6 host Address
+    """IPv6 Host Address
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc3596
+    - <https://datatracker.ietf.org/doc/html/rfc3596>
 
     Changed in 1.0: `self.data` property is now an `IPv46ddress`.
     """
@@ -1712,12 +1644,6 @@ class AAAA(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             data = buffer.unpack_one("!16s")
             return cls(data)
@@ -1726,12 +1652,6 @@ class AAAA(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(rd[0])
 
     def __init__(self, data: Union[str, bytes, int, IPv6Address]) -> None:
@@ -1746,20 +1666,15 @@ class AAAA(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer:
-
-        Args:
-            buffer:
-        """
         buffer.pack("!16s", self.data.packed)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return str(self.data)
 
 
 class MX(RD):
-    """Mail eXchange
+    """Mail exchange record
 
     Attributes:
         label:
@@ -1767,24 +1682,18 @@ class MX(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#autoid-27
+    - <https://datatracker.ietf.org/doc/html/rfc1035#autoid-27>
 
     Changed in 1.0: Removed `[get,set]_label`
     """
 
     attrs = ("preference", "label")
 
-    preference = H("preference")
-    label = create_label_property()
+    preference: int = H("preference")
+    label: DNSLabel = create_label_property()
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             preference = buffer.unpack_one("!H")
             mx = buffer.decode_name()
@@ -1793,13 +1702,7 @@ class MX(RD):
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
-    def fromZone(cls, rd: List[str], origin=None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
+    def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
         return cls(create_label(rd[1], origin), int(rd[0]))
 
     def __init__(self, label: DNSLabelCreateTypes = None, preference: int = 10) -> None:
@@ -1808,20 +1711,15 @@ class MX(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!H", self.preference)
         buffer.encode_name(self.label)
         return None
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return f"{self.preference} {self.label}"
 
 
-class CNAME(_LabelOnlyRd):
+class CNAME(LabelOnlyRd):
     """Canonical Name for an alias
 
     Attributes:
@@ -1829,13 +1727,13 @@ class CNAME(_LabelOnlyRd):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.1>
 
     Changed in 1.0: Removed `[get,set]_label`
     """
 
 
-class PTR(_LabelOnlyRd):
+class PTR(LabelOnlyRd):
     """Domain Name Pointer
 
     Attributes:
@@ -1843,13 +1741,13 @@ class PTR(_LabelOnlyRd):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.12
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.12>
 
     Changed in 1.0: Removed `[get,set]_label`
     """
 
 
-class NS(_LabelOnlyRd):
+class NS(LabelOnlyRd):
     """Authoritive Name Server
 
     Attributes:
@@ -1857,13 +1755,13 @@ class NS(_LabelOnlyRd):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.11>
 
     Changed in 1.0: Removed `[get,set]_label`
     """
 
 
-class DNAME(_LabelOnlyRd):
+class DNAME(LabelOnlyRd):
     """Domain NAME record
 
     Attributes:
@@ -1871,7 +1769,7 @@ class DNAME(_LabelOnlyRd):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc6672
+    - <https://datatracker.ietf.org/doc/html/rfc6672>
 
     Changed in 1.0: Removed `[get,set]_label`
     """
@@ -1886,7 +1784,7 @@ class SOA(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13
+    - <https://datatracker.ietf.org/doc/html/rfc1035#section-3.3.13>
 
     Changed in 1.0: Removed `[get,set]_[mname,rname]`
     """
@@ -1899,12 +1797,6 @@ class SOA(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             mname = buffer.decode_name()
             rname = buffer.decode_name()
@@ -1915,12 +1807,6 @@ class SOA(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(
             create_label(rd[0], origin),
             create_label(rd[1], origin),
@@ -1939,17 +1825,12 @@ class SOA(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.encode_name(self.mname)
         buffer.encode_name(self.rname)
         buffer.pack("!IIIII", *self.times)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return f"{self.mname} {self.rname} {' '.join(map(str, self.times))}"
 
 
@@ -1964,7 +1845,7 @@ class SRV(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc2782
+    - <https://datatracker.ietf.org/doc/html/rfc2782>
 
     Changed in 1.0: Removed `[get,set]_target`
     """
@@ -1978,12 +1859,6 @@ class SRV(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             priority, weight, port = buffer.unpack("!HHH")
             target = buffer.decode_name()
@@ -1993,12 +1868,6 @@ class SRV(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(int(rd[0]), int(rd[1]), int(rd[2]), rd[3])
 
     def __init__(
@@ -2017,16 +1886,11 @@ class SRV(RD):
         self.target = target
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!HHH", self.priority, self.weight, self.port)
         buffer.encode_name(self.target)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return f"{self.priority} {self.weight} {self.port} {self.target}"
 
 
@@ -2045,7 +1909,7 @@ class NAPTR(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc3403
+    - <https://datatracker.ietf.org/doc/html/rfc3403>
 
     Changed in 1.0: Removed `[get,set]_replacement`
     """
@@ -2058,12 +1922,6 @@ class NAPTR(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             order, preference = buffer.unpack("!HH")
             flags = buffer.get_with_length("!B")
@@ -2076,12 +1934,6 @@ class NAPTR(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         result = cls(
             int(rd[0]),
             int(rd[1]),
@@ -2119,11 +1971,6 @@ class NAPTR(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!HH", self.order, self.preference)
         buffer.append_with_length("!B", self.flags)
         buffer.append_with_length("!B", self.service)
@@ -2131,7 +1978,7 @@ class NAPTR(RD):
         buffer.encode_name(self.replacement)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return '%d %d "%s" "%s" "%s" %s' % (
             self.order,
             self.preference,
@@ -2155,7 +2002,7 @@ class DS(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc4034#section-5
+    - <https://datatracker.ietf.org/doc/html/rfc4034#section-5>
     """
 
     attrs = ("key_tag", "algorithm", "digest_type", "digest")
@@ -2166,12 +2013,6 @@ class DS(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             key_tag, algorithm, digest_type = buffer.unpack("!HBB")
             digest = buffer.get(length - 4)
@@ -2181,12 +2022,6 @@ class DS(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(int(rd[0]), int(rd[1]), int(rd[2]), bytes.fromhex("".join(rd[3:])))
 
     def __init__(self, key_tag: int, algorithm: int, digest_type: int, digest: bytes) -> None:
@@ -2204,16 +2039,11 @@ class DS(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!HBB", self.key_tag, self.algorithm, self.digest_type)
         buffer.append(self.digest)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return " ".join(
             map(
                 str,
@@ -2232,7 +2062,7 @@ class DNSKEY(RD):
 
     `DNSKEY` records are a part of DNSSEC
 
-    Atrributes:
+    Attributes:
         flags:
         protocol:
         algorithm:
@@ -2240,23 +2070,18 @@ class DNSKEY(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc4034#section-2
+    - <https://datatracker.ietf.org/doc/html/rfc4034#section-2>
     """
 
     attrs = ("flags", "protocol", "algorithm", "key")
 
-    flags = H("flags")
-    protocol = B("protocol")
-    algorithm = B("algorithm")
+    flags: int = H("flags")
+    protocol: int = B("protocol")
+    algorithm: int = B("algorithm")
+    key: bytes
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             flags, protocol, algorithm = buffer.unpack("!HBB")
             key = buffer.get(length - 4)
@@ -2266,12 +2091,6 @@ class DNSKEY(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(
             int(rd[0]), int(rd[1]), int(rd[2]), base64.b64decode(("".join(rd[3:])).encode("ascii"))
         )
@@ -2284,16 +2103,11 @@ class DNSKEY(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!HBB", self.flags, self.protocol, self.algorithm)
         buffer.append(self.key)
         return
 
-    def __repr__(self):
+    def toZone(self):
         return " ".join(
             map(
                 str,
@@ -2323,7 +2137,7 @@ class RRSIG(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc4034#section-3
+    - <https://datatracker.ietf.org/doc/html/rfc4034#section-3>
     """
 
     attrs = (
@@ -2349,12 +2163,6 @@ class RRSIG(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             start = buffer.offset
             covered, algorithm, labels, orig_ttl, sig_exp, sig_inc, key_tag = buffer.unpack(
@@ -2368,12 +2176,6 @@ class RRSIG(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(
             getattr(QTYPE, rd[0]),
             int(rd[1]),
@@ -2422,11 +2224,6 @@ class RRSIG(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack(
             "!HBBIIIH",
             self.covered,
@@ -2441,7 +2238,7 @@ class RRSIG(RD):
         buffer.append(self.sig)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         timestamp_fmt = (
             "{0.tm_year}{0.tm_mon:02}{0.tm_mday:02}{0.tm_hour:02}{0.tm_min:02}{0.tm_sec:02}"
         )
@@ -2484,28 +2281,16 @@ class NSEC(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             end = buffer.offset + length
             name = buffer.decode_name()
-            rrlist = cls.decode_type_bitmap(buffer.get(end - buffer.offset))
+            rrlist = cls._decode_type_bitmap(buffer.get(end - buffer.offset))
             return cls(name, rrlist)
         except (BufferError, BimapError) as e:
             raise make_parse_error(cls, buffer, e)
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(rd.pop(0), rd)
 
     def __init__(self, label: DNSLabelCreateTypes, rrlist: List[str]) -> None:
@@ -2519,29 +2304,24 @@ class NSEC(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.encode_name_nocompress(self.label)
-        buffer.append(self.encode_type_bitmap(self.rrlist))
+        buffer.append(self._encode_type_bitmap(self.rrlist))
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return f"{self.label} {' '.join(self.rrlist)}"
 
     @staticmethod
-    def decode_type_bitmap(type_bitmap: bytes) -> List[str]:
+    def _decode_type_bitmap(type_bitmap: bytes) -> List[str]:
         """Parse RR type bitmap in NSEC record
 
         Args:
             type_bitmap:
 
         ```pycon
-        >>> NSEC.decode_type_bitmap(bytes.fromhex('0006400080080003'))
+        >>> NSEC._decode_type_bitmap(bytes.fromhex('0006400080080003'))
         ['A', 'TXT', 'AAAA', 'RRSIG', 'NSEC']
-        >>> NSEC.decode_type_bitmap(bytes.fromhex('000762008008000380'))
+        >>> NSEC._decode_type_bitmap(bytes.fromhex('000762008008000380'))
         ['A', 'NS', 'SOA', 'TXT', 'AAAA', 'RRSIG', 'NSEC', 'DNSKEY']
 
         ```
@@ -2561,7 +2341,7 @@ class NSEC(RD):
         return rrlist
 
     @staticmethod
-    def encode_type_bitmap(rrlist: List[str]) -> bytes:
+    def _encode_type_bitmap(rrlist: List[str]) -> bytes:
         """Encode RR type bitmap in NSEC record
 
         Args:
@@ -2569,12 +2349,12 @@ class NSEC(RD):
 
         ```pycon
         >>> p = lambda x: print(x.hex())
-        >>> p(NSEC.encode_type_bitmap(['A','TXT','AAAA','RRSIG','NSEC']))
-        0006400080080003
-        >>> p(NSEC.encode_type_bitmap(['A','NS','SOA','TXT','AAAA','RRSIG','NSEC','DNSKEY']))
-        000762008008000380
-        >>> p(NSEC.encode_type_bitmap(['A','ANY','URI','CAA','TA','DLV']))
-        002040000000000000000000000000000000000000000000000000000000000000010101c08001c0
+        >>> NSEC._encode_type_bitmap(['A','TXT','AAAA','RRSIG','NSEC']).hex()
+        '0006400080080003'
+        >>> NSEC._encode_type_bitmap(['A','NS','SOA','TXT','AAAA','RRSIG','NSEC','DNSKEY']).hex()
+        '000762008008000380'
+        >>> NSEC._encode_type_bitmap(['A','ANY','URI','CAA','TA','DLV']).hex()
+        '002040000000000000000000000000000000000000000000000000000000000000010101c08001c0'
 
         ```
 
@@ -2612,7 +2392,7 @@ class CAA(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc6844
+    - <https://datatracker.ietf.org/doc/html/rfc6844>
 
     ```pycon
     >>> CAA(0, 'issue', 'letsencrypt.org')
@@ -2632,12 +2412,6 @@ class CAA(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             flags = buffer.unpack_one("!B")
             tag = buffer.get_with_length("!B").decode()
@@ -2648,12 +2422,6 @@ class CAA(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         if len(rd) == 1:
             hex_parsed = bytes.fromhex(rd[0])
             flags = hex_parsed[0]
@@ -2673,21 +2441,12 @@ class CAA(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!B", self.flags)
         buffer.append_with_length("!B", self.tag.encode())
         buffer.append(self.value.encode())
         return
 
     def toZone(self) -> str:
-        """Encode as Zone"""
-        return repr(self)
-
-    def __repr__(self) -> str:
         return f'{self.flags} {self.tag} "{self.value}"'
 
 
@@ -2703,7 +2462,7 @@ class HTTPS(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc9460
+    - <https://datatracker.ietf.org/doc/html/rfc9460>
 
     ```pycon
     >>> HTTPS.fromZone(["1", "cloudflare.com."])
@@ -2724,7 +2483,10 @@ class HTTPS(RD):
     1 . ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5
     >>> HTTPS.fromZone(["1", ".", "key9999=X"])
     1 . key9999=X
-    >>> pcap = bytes.fromhex("0001000001000c0268330568332d323902683200040008681084e5681085e500060020260647000000000000000000681084e5260647000000000000000000681085e5")
+    >>> pcap = bytes.fromhex(
+    ...     "0001000001000c0268330568332d323902683200040008681084e5681085e5000600202606470000"
+    ...     "00000000000000681084e5260647000000000000000000681085e5"
+    ... )
     >>> obj = HTTPS.parse(DNSBuffer(pcap), len(pcap))
     >>> obj
     1 . alpn=h3,h3-29,h2 ipv4hint=104.16.132.229,104.16.133.229 ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5
@@ -2742,7 +2504,14 @@ class HTTPS(RD):
     True
 
     # Issue 43: HTTPS reads after RD end
-    >>> msg = bytes.fromhex("93088410000100020000000107646973636f726403636f6d0000410001c00c004100010000012c002b0001000001000c0268330568332d323902683200040014a29f80e9a29f87e8a29f88e8a29f89e8a29f8ae8c00c002e00010000012c005f00410d020000012c632834e5632575c586c907646973636f726403636f6d0044d488ce4a5b9085289c671f0296b2b06cffaca28880c57643befd43d6de433d84ae078b282fc2cdd744f3bea2f201042a7a0d6f3e17ebd887b082bbe30dfda100002904d0000080000000")
+    >>> msg = bytes.fromhex(
+    ...     "93088410000100020000000107646973636f726403636f6d0000410001c00c004100010000012c00"
+    ...     "2b0001000001000c0268330568332d323902683200040014a29f80e9a29f87e8a29f88e8a29f89e8"
+    ...     "a29f8ae8c00c002e00010000012c005f00410d020000012c632834e5632575c586c907646973636f"
+    ...     "726403636f6d0044d488ce4a5b9085289c671f0296b2b06cffaca28880c57643befd43d6de433d84"
+    ...     "ae078b282fc2cdd744f3bea2f201042a7a0d6f3e17ebd887b082bbe30dfda100002904d000008000"
+    ...     "0000"
+    ... )
     >>> print(DNSRecord.parse(msg))
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37640
     ;; flags: qr aa cd; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
@@ -2776,12 +2545,6 @@ class HTTPS(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             end = buffer.offset + length
             priority = buffer.unpack_one("!H")
@@ -2797,19 +2560,12 @@ class HTTPS(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         priority = int(rd[0])
         target = rd[1]
-        # targ = [] if rd[1] == "." else cls.zf_tobytes(rd[1]).split(b".")[:-1]
         params = []
-        for kv in [cls.zf_tobytes(v) for v in rd[2:]]:
+        for kv in [cls._zf_tobytes(v) for v in rd[2:]]:
             k, v = kv.split(b"=", 1) if b"=" in kv else (kv, bytearray())
-            params.append(cls.zf_parse_param(k, v))
+            params.append(cls._zf_parse_param(k, v))
         return cls(priority, target, params)
 
     def __init__(
@@ -2827,11 +2583,6 @@ class HTTPS(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!H", self.priority)
         buffer.encode_name_nocompress(self.target)
         for k, v in self.params:
@@ -2839,25 +2590,25 @@ class HTTPS(RD):
             buffer.append_with_length("!H", v)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return " ".join(
             [str(self.priority), str(self.target)]
-            + [self.zf_format_param(k, v) for k, v in self.params]
+            + [self._zf_format_param(k, v) for k, v in self.params]
         )
 
     ## Zone File related
     ## -------------------------------------------------------------------------
     @staticmethod
-    def zf_parse_valuelist(s: bytearray) -> List[bytearray]:
+    def _zf_parse_valuelist(s: Union[bytes, bytearray]) -> List[bytearray]:
         """Parse value list from zone file
 
         Args:
             s:
 
         ```pycon
-        >>> HTTPS.zf_parse_valuelist(bytearray(b'"part1,part2\\\\,part3"'))
+        >>> HTTPS._zf_parse_valuelist(bytearray(b'"part1,part2\\\\,part3"'))
         [bytearray(b'part1'), bytearray(b'part2,part3')]
-        >>> HTTPS.zf_parse_valuelist(bytearray(b'part1,part2\\\\044part3'))
+        >>> HTTPS._zf_parse_valuelist(bytearray(b'part1,part2\\\\044part3'))
         [bytearray(b'part1'), bytearray(b'part2,part3')]
 
         ```
@@ -2901,16 +2652,16 @@ class HTTPS(RD):
         return ret
 
     @staticmethod
-    def zf_parse_charstr(s: bytearray) -> bytearray:
+    def _zf_parse_charstr(s: Union[bytes, bytearray]) -> bytearray:
         """Parse character string
 
         Args:
             s:
 
         ```pycon
-        >>> HTTPS.zf_parse_charstr(bytearray(b'"part1,part2\\\\,part3"'))
+        >>> HTTPS._zf_parse_charstr(bytearray(b'"part1,part2\\\\,part3"'))
         bytearray(b'part1,part2,part3')
-        >>> HTTPS.zf_parse_charstr(bytearray(b'part1,part2\\\\044part3'))
+        >>> HTTPS._zf_parse_charstr(bytearray(b'part1,part2\\\\044part3'))
         bytearray(b'part1,part2,part3')
 
         ```
@@ -2948,43 +2699,31 @@ class HTTPS(RD):
         return ret
 
     @staticmethod
-    def zf_tobytes(s: str) -> bytearray:
-        """Convert string to bytes
-
-        for py2-3 compatibility
-
-        Args:
-            s:
-        """
+    def _zf_tobytes(s: str) -> bytearray:
         return bytearray(s.encode("ASCII"))
 
     @staticmethod
-    def zf_tostr(b: bytes) -> str:
-        """bytes to string
-
-        Args:
-            b:
-        """
+    def _zf_tostr(b: bytes) -> str:
         return b.decode("ASCII")
 
     @classmethod
-    def zf_parse_key(cls, k: bytearray) -> int:
+    def _zf_parse_key(cls, k: Union[bytes, bytearray]) -> int:
         if k.startswith(b"key"):
             return int(k.removeprefix(b"key"))
         if bytes(k) in cls.paramkeys_reversed:
             return cls.paramkeys_reversed[bytes(k)]
-        raise DNSError(f"Error reading HTTPS from zone: unrecognized SvcParamKey [{k}]")
+        raise DNSError(f"Error reading HTTPS from zone: unrecognized SvcParamKey [{k!r}]")
 
     @classmethod
-    def zf_parse_param(cls, k, v) -> Tuple[int, bytearray]:
+    def _zf_parse_param(cls, k: Union[bytes, bytearray], v: bytes) -> Tuple[int, bytearray]:
         b = Buffer()
-        i = cls.zf_parse_key(k)
+        i = cls._zf_parse_key(k)
         if i == 0:  # mandatory
-            for s in cls.zf_parse_valuelist(v):
-                si = cls.zf_parse_key(s)
+            for s in cls._zf_parse_valuelist(v):
+                si = cls._zf_parse_key(s)
                 b.pack("!H", si)
         elif i == 1:  # alpn
-            for s in cls.zf_parse_valuelist(v):
+            for s in cls._zf_parse_valuelist(v):
                 b.pack("B", len(s))
                 b.append(s)
         elif i == 2:  # no alpn
@@ -2995,21 +2734,20 @@ class HTTPS(RD):
         elif i == 3:  # port
             b.pack("!H", int(v))
         elif i == 4:  # ipv4
-            for ip in cls.zf_parse_valuelist(v):
-                b.pack("!4B", *[int(x) for x in ip.split(b".")])
+            for ip in cls._zf_parse_valuelist(v):
+                b.pack("!4s", IPv4Address(cls._zf_tostr(ip)).packed)
         elif i == 5:  # ech
-            s = cls.zf_parse_charstr(v)
+            s = cls._zf_parse_charstr(v)
             b.data = bytearray(binascii.a2b_base64(s))
         elif i == 6:  # ipv6
-            for ip in cls.zf_parse_valuelist(v):
-                oc = tuple(map(int, IPv6Address(cls.zf_tostr(ip)).packed))
-                b.pack("!16B", *oc)
+            for ip in cls._zf_parse_valuelist(v):
+                b.pack("!16s", IPv6Address(cls._zf_tostr(ip)).packed)
         else:
-            b.data = v
+            return (i, bytearray(v))
         return (i, bytearray(b.data))
 
     @staticmethod
-    def zf_is_special(c: int) -> bool:
+    def _zf_is_special(c: int) -> bool:
         return not (
             c == 0x21
             or c >= 0x23
@@ -3023,84 +2761,95 @@ class HTTPS(RD):
         )
 
     @classmethod
-    def zf_escape_charstr(cls, s, escape_commas=False) -> str:
+    def _zf_escape_charstr(cls, s: bytes, escape_commas: bool = False) -> str:
         ret = bytearray()
         for c in s:
-            if cls.zf_is_special(c) or escape_commas and c == 0x2C:
+            if cls._zf_is_special(c) or escape_commas and c == 0x2C:
                 ret.extend(b"\\")
                 ret.extend(b"%.3d" % c)
             else:
                 ret.append(c)
-        return cls.zf_tostr(ret)
+        return cls._zf_tostr(ret)
 
     @classmethod
-    def zf_format_valuelist(cls, lst):
-        return ",".join(cls.zf_escape_charstr(s, True) for s in lst)
+    def _zf_format_valuelist(cls, lst: List[bytearray]) -> str:
+        return ",".join(cls._zf_escape_charstr(s, True) for s in lst)
 
     @classmethod
-    def zf_format_key(cls, k: int) -> str:
+    def _zf_format_key(cls, k: int) -> str:
         if k in cls.paramkeys:
-            return cls.zf_tostr(cls.paramkeys[k])
+            return cls._zf_tostr(cls.paramkeys[k])
         return "key" + str(k)
 
     @classmethod
-    def zf_format_param(cls, i, v):
+    def _zf_format_param(cls, i: int, v: bytearray) -> str:
         b = Buffer(v)
-        k = cls.zf_format_key(i)
+        k = cls._zf_format_key(i)
+        tmp: List[Any]
+
         if i == 0:  # mandatory
-            ret = []
+            tmp = []
             while b.remaining:
-                (ki,) = b.unpack("!H")
-                ret.append(cls.zf_format_key(ki))
-            ret = ",".join(ret)
+                tmp.append(cls._zf_format_key(b.unpack_one("!H")))
+            ret = ",".join(tmp)
+
         elif i == 1:  # alpn
-            ret = []
+            tmp = []
             while b.remaining:
-                (n,) = b.unpack("B")
-                ret.append(bytearray(b.get(n)))
-            ret = cls.zf_format_valuelist(ret)
+                tmp.append(bytearray(b.get_with_length("B")))
+            ret = cls._zf_format_valuelist(tmp)
+
         elif i == 2:  # no-alpn
             if b.remaining:
                 raise DNSError(
                     "Error decoding HTTPS SvcParamKey: no-default-alpn should not have a value"
                 )
             ret = ""
+
         elif i == 3:  # port
-            ret = str(b.unpack("!H")[0])
+            ret = str(b.unpack_one("!H"))
+
         elif i == 4:  # ipv4
-            ret = []
+            tmp = []
             while b.remaining:
-                ret.append(str(IPv4Address(bytes(b.unpack("!4B")))))
-            ret = ",".join(ret)
+                tmp.append(str(IPv4Address(b.unpack_one("!4s"))))
+            ret = ",".join(tmp)
+
         elif i == 5:  # ech
-            ret = cls.zf_tostr(binascii.b2a_base64(v).rstrip())
+            ret = cls._zf_tostr(binascii.b2a_base64(v).rstrip())
+
         elif i == 6:  # ipv6
-            ret = []
+            tmp = []
             while b.remaining:
-                ret.append(str(IPv6Address(bytes(b.unpack("!16B")))))
-            ret = ",".join(ret)
+                tmp.append(str(IPv6Address(b.unpack_one("!16s"))))
+            ret = ",".join(tmp)
+
         else:
-            ret = cls.zf_tostr(v)
-        return k + ("=" + ret if ret else "")
+            ret = cls._zf_tostr(v)
+
+        return f"{k}={ret}" if ret else k
 
 
 class SSHFP(RD):
+    """SSH Fingerprint record
+
+    Atrributes:
+        algorithm:
+        fp_type:
+        fingerprint:
+
+    References:
+
+    - <https://datatracker.ietf.org/doc/html/rfc4255>
     """
-    SSHFP record as specified in RFC 4255
-    https://www.rfc-editor.org/rfc/rfc4255.html
-    """
+
+    attrs = ("algorithm", "fp_type", "fingerprint")
 
     algorithm = B("algorithm")
     fp_type = B("fp_type")
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             algorithm, fp_type = buffer.unpack("!BB")
             fingerprint = buffer.get(length - 2)
@@ -3110,34 +2859,27 @@ class SSHFP(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(int(rd[0]), int(rd[1]), bytes.fromhex("".join(rd[2:])))
 
     def __init__(self, algorithm: int, fp_type: int, fingerprint: bytes):
+        """
+        Args:
+            algorithm:
+            fp_type:
+            fingerprint:
+        """
         self.algorithm = algorithm
         self.fp_type = fp_type
         self.fingerprint = fingerprint
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!BB", self.algorithm, self.fp_type)
         buffer.append(self.fingerprint)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return f"{self.algorithm} {self.fp_type} {self.fingerprint.hex().upper()}"
-
-    attrs = ("algorithm", "fp_type", "fingerprint")
 
 
 class TLSA(RD):
@@ -3154,7 +2896,7 @@ class TLSA(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc6698
+    - <https://datatracker.ietf.org/doc/html/rfc6698>
     """
 
     attrs = ("cert_usage", "selector", "matching_type", "cert_data")
@@ -3165,12 +2907,6 @@ class TLSA(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             cert_usage, selector, matching_type = buffer.unpack("!BBB")
             cert_data = buffer.get(length - 3)
@@ -3180,12 +2916,6 @@ class TLSA(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(int(rd[0]), int(rd[1]), int(rd[2]), bytes.fromhex("".join(rd[3:])))
 
     def __init__(
@@ -3197,16 +2927,11 @@ class TLSA(RD):
         self.cert_data = cert_data
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!BBB", self.cert_usage, self.selector, self.matching_type)
         buffer.append(self.cert_data)
         return
 
-    def __repr__(self) -> str:
+    def toZone(self) -> str:
         return (
             f"{self.cert_usage} {self.selector} {self.matching_type} {self.cert_data.hex().upper()}"
         )
@@ -3228,7 +2953,7 @@ class LOC(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1876
+    - <https://datatracker.ietf.org/doc/html/rfc1876>
 
     ```pycon
     >>> LOC(37.236693, -115.804069, 1381.0)
@@ -3254,12 +2979,6 @@ class LOC(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             version, siz, hp, vp, lat, lon, alt = buffer.unpack("!BBBBIII")
 
@@ -3281,12 +3000,6 @@ class LOC(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         args = []
         idx = 0
 
@@ -3326,7 +3039,6 @@ class LOC(RD):
         Args:
             lat:
             lon:
-            int:
             alt:
             siz:
             hp:
@@ -3341,11 +3053,6 @@ class LOC(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.pack("!BBBBIII", 0, self._siz, self._hp, self._vp, self._lat, self._lon, self._alt)
         return
 
@@ -3389,7 +3096,7 @@ class LOC(RD):
                 return f"{d} {m} {c}"
         return f"{d} {m} {s:.3f} {c}"
 
-    def __repr__(self):
+    def toZone(self):
         DEFAULT_SIZ = 0x12  # 1m
         DEFAULT_HP = 0x16  # 10,000m
         DEFAULT_VP = 0x13  # 10m
@@ -3431,9 +3138,6 @@ class LOC(RD):
 class RP(RD):
     """Responsible Person record
 
-    Note:
-        This record is classified as experimental
-
     Attributes:
         mbox: a domain name that specifies the mailbox for the responsible person.
             This is in the same format as the `RNAME` field in a `SOA` record.
@@ -3441,7 +3145,7 @@ class RP(RD):
 
     References:
 
-    - https://datatracker.ietf.org/doc/html/rfc1183
+    - <https://datatracker.ietf.org/doc/html/rfc1183>
 
     Changed in 1.0: Removed `[get,set]_[mbox,txt]`
     """
@@ -3453,12 +3157,6 @@ class RP(RD):
 
     @classmethod
     def parse(cls, buffer: DNSBuffer, length: int) -> Self:
-        """Parse from buffer
-
-        Args:
-            buffer:
-            length:
-        """
         try:
             mbox = buffer.decode_name()
             txt = buffer.decode_name()
@@ -3468,12 +3166,6 @@ class RP(RD):
 
     @classmethod
     def fromZone(cls, rd: List[str], origin: DNSLabelCreateTypes = None) -> Self:
-        """Parse from Zone
-
-        Args:
-            rd:
-            origin:
-        """
         return cls(create_label(rd[0], origin), create_label(rd[1], origin))
 
     def __init__(self, mbox: DNSLabelCreateTypes = None, txt: DNSLabelCreateTypes = None) -> None:
@@ -3487,16 +3179,11 @@ class RP(RD):
         return
 
     def pack(self, buffer: DNSBuffer) -> None:
-        """Pack into buffer
-
-        Args:
-            buffer:
-        """
         buffer.encode_name(self.mbox)
         buffer.encode_name(self.txt)
         return
 
-    def __repr__(self):
+    def toZone(self):
         return f"{self.mbox} {self.txt}"
 
 
@@ -3516,7 +3203,7 @@ RDMAP: Dict[str, Type[RD]] = {
     "NAPTR": NAPTR,
     "NSEC": NSEC,
     "NS": NS,
-    "OPT": EDNSRD,
+    "OPT": OPT,
     "PTR": PTR,
     "RP": RP,
     "RRSIG": RRSIG,
@@ -3613,8 +3300,9 @@ class ZoneParser:
     def __iter__(self):
         return self.parse()
 
-    def parse(self):
-        rr = []
+    def parse(self) -> Generator[RR, None, None]:
+        """Parse all records"""
+        rr: List[str] = []
         paren = False
         try:
             while True:

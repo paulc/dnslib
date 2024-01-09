@@ -7,7 +7,7 @@ import fnmatch
 import re
 import string
 import sys
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Any
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -119,62 +119,72 @@ class DNSLabel:
         return new
 
     def matchGlob(self, pattern: "DNSLabelCreateTypes") -> bool:
-        if type(pattern) != DNSLabel:
+        """Check if this label matches the given pattern
+
+        Args:
+            pattern: glob pattern to match on
+        """
+        if not isinstance(pattern, DNSLabel):
             pattern = DNSLabel(pattern)
         return fnmatch.fnmatch(str(self).lower(), str(pattern).lower())
 
-    def matchSuffix(self, suffix):
+    def matchSuffix(self, suffix: "DNSLabelCreateTypes") -> bool:
+        """Return True if label suffix matches
+
+        Args:
+            suffix: suffix to match
         """
-        Return True if label suffix matches
-        """
-        suffix = DNSLabel(suffix)
+        if not isinstance(suffix, DNSLabel):
+            suffix = DNSLabel(suffix)
         return DNSLabel(self.label[-len(suffix.label) :]) == suffix
 
-    def stripSuffix(self, suffix):
+    def stripSuffix(self, suffix: "DNSLabelCreateTypes") -> "DNSLabel":
+        """Strip suffix from label
+
+        Args:
+            suffix: suffix to strip
         """
-        Strip suffix from label
-        """
-        suffix = DNSLabel(suffix)
+        if not isinstance(suffix, DNSLabel):
+            suffix = DNSLabel(suffix)
         if self.matchSuffix(suffix):
             return DNSLabel(self.label[: -len(suffix.label)])
-        else:
-            return self
+        return self
 
     @property
     def idna(self) -> str:
+        """Label in unicode"""
         return ".".join([s.decode("idna") for s in self.label]) + "."
 
-    def _decode(self, s):
+    def _decode(self, s: bytes) -> str:
         if set(s).issubset(LDH):
             # All chars in LDH
             return s.decode()
-        else:
-            # Need to encode
-            return "".join([(chr(c) if (c in LDH) else "\\%03d" % c) for c in s])
+        # Need to encode
+        return "".join([(chr(c) if (c in LDH) else "\\%03d" % c) for c in s])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ".".join([self._decode(bytearray(s)) for s in self.label]) + "."
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<DNSLabel: '{self}'>"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(tuple(map(lambda x: x.lower(), self.label)))
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self == other
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if type(other) != DNSLabel:
             return self.__eq__(DNSLabel(other))
-        else:
-            return [l.lower() for l in self.label] == [l.lower() for l in other.label]
+        return [l.lower() for l in self.label] == [l.lower() for l in other.label]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(b".".join(self.label))
 
 
 DNSLabelCreateTypes = Union[List[bytes], Tuple[bytes, ...], str, bytes, DNSLabel, None]
+"""Type alias for types that can be used with `DNSLabel.__init__`"""
 
 
 class DNSBuffer(Buffer):
@@ -245,21 +255,24 @@ class DNSBuffer(Buffer):
         self.names: Dict[Tuple[bytes, ...], int] = {}
         return
 
-    def decode_name(self, last=-1) -> DNSLabel:
+    def decode_name(self, _last: int = -1) -> DNSLabel:
         """Decode label at current offset in buffer
 
         Follows pointers to cached elements where necessary
+
+        Args:
+            _last: Pointer to previous name. Used internally to allow following
+            compressed names wilst avoiding recursion.
         """
         label: List[bytes] = []
-        done = False
-        while not done:
+        while True:
             length = self.unpack_one("!B")
             if get_bits(length, 6, 2) == 3:
                 # Pointer
                 self.offset -= 1
                 pointer = get_bits(self.unpack_one("!H"), 0, 14)
                 save = self.offset
-                if last == save:
+                if _last == save:
                     raise BufferError(
                         f"Recursive pointer in DNSLabel [offset={self.offset},pointer={pointer},length={len(self.data)}]"
                     )
@@ -272,7 +285,7 @@ class DNSBuffer(Buffer):
                     )
                 label.extend(self.decode_name(save).label)
                 self.offset = save
-                done = True
+                break
             else:
                 if length > 0:
                     l = self.get(length)
@@ -282,13 +295,14 @@ class DNSBuffer(Buffer):
                         raise BufferError(f"Invalid label {l!r}")
                     label.append(l)
                 else:
-                    done = True
+                    break
         return DNSLabel(label)
 
     def encode_name(self, name: DNSLabelCreateTypes) -> None:
-        """Encode label and store at end of the buffer
+        """Encode label and store at end of the buffer using compression where possible
 
-        (compressing cached elements where needed) and store elements in 'names' dict
+        Args:
+            name: name to encode
         """
         if not isinstance(name, DNSLabel):
             name = DNSLabel(name)
@@ -315,6 +329,9 @@ class DNSBuffer(Buffer):
         """Encode and store label with no compression
 
         This is needed for `RRSIG`
+
+        Args:
+            name: name to encode
         """
         if not isinstance(name, DNSLabel):
             name = DNSLabel(name)
