@@ -3,12 +3,17 @@ from __future__ import annotations
 import sys
 from typing import Callable, cast
 
+if sys.version_info < (3, 10):
+    from typing_extensions import TypeAlias
+else:
+    from typing import TypeAlias
+
 
 class BimapError(Exception):
     pass
 
 
-ErrorCallable = Callable[[str, int | str], str | int]
+ErrorCallable: TypeAlias = "Callable[[str, int | str], str | int]"
 
 
 class Bimap:
