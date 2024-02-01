@@ -21,4 +21,4 @@ jobs:
       run: |
         pwd
         pip install -e .
-        run_tests.sh
+        ./run_tests.sh
