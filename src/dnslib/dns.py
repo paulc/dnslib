@@ -1528,7 +1528,9 @@ class TXT(RD):
     def fromZone(cls, rd: list[str], origin: DNSLabelCreateTypes = None) -> Self:
         return cls(list(map(lambda x: x.encode(), rd)))
 
-    def __init__(self, texts: list[bytes] | tuple[bytes, ...] | bytes | list[str] | tuple[str, ...] | str) -> None:
+    def __init__(
+        self, texts: list[bytes] | tuple[bytes, ...] | bytes | list[str] | tuple[str, ...] | str
+    ) -> None:
         """
         Args:
             texts:
