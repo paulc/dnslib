@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import collections
 from io import StringIO
 import string
-from typing import Union, Tuple
 
 
 class Lexer:
@@ -177,8 +178,8 @@ class WordLexer(Lexer):
     commentchars = set("#")
     spacechars = set(" \t\x0b\x0c")
     nlchars = set("\r\n")
-    spacetok: Union[Tuple[str, None], None] = None
-    nltok: Union[Tuple[str, None], None] = None
+    spacetok: tuple[str, None] | None = None
+    nltok: tuple[str, None] | None = None
 
     def lexStart(self):
         return (None, self.lexSpace)

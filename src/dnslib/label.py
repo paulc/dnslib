@@ -2,17 +2,23 @@
     DNSLabel/DNSBuffer - DNS label handling & encoding/decoding
 """
 
+from __future__ import annotations
 
 import fnmatch
 import re
 import string
 import sys
-from typing import List, Tuple, Dict, Union, Any
+from typing import Any
 
-if sys.version_info >= (3, 11):
-    from typing import Self
+if sys.version_info < (3, 10):
+    from typing_extensions import TypeAlias
 else:
+    from typing import TypeAlias
+
+if sys.version_info < (3, 11):
     from typing_extensions import Self
+else:
+    from typing import Self
 
 from dnslib.bit import get_bits, set_bits
 from dnslib.buffer import Buffer, BufferError
@@ -22,6 +28,10 @@ from dnslib.buffer import Buffer, BufferError
 # For compatibility we only escape non-printable characters
 LDH = set(range(33, 127))
 ESCAPE = re.compile(r"\\([0-9][0-9][0-9])")
+
+
+DNSLabelCreateTypes: TypeAlias = "list[bytes] | tuple[bytes, ...] | str | bytes | DNSLabel | None"
+"""Type alias for types that can be used with `DNSLabel.__init__`"""
 
 
 class DNSLabelError(Exception):
@@ -78,9 +88,9 @@ class DNSLabel:
     ```
     """
 
-    label: Tuple[bytes, ...]
+    label: tuple[bytes, ...]
 
-    def __init__(self, label: "DNSLabelCreateTypes") -> None:
+    def __init__(self, label: DNSLabelCreateTypes) -> None:
         """
         Args:
             label: Label can be specified as:
@@ -104,7 +114,7 @@ class DNSLabel:
             self.label = tuple(label.rstrip(b".").split(b"."))
         return
 
-    def add(self, name: "DNSLabelCreateTypes") -> "DNSLabel":
+    def add(self, name: DNSLabelCreateTypes) -> DNSLabel:
         """Prepend name to label
 
         Args:
@@ -118,7 +128,7 @@ class DNSLabel:
             new.label += self.label
         return new
 
-    def matchGlob(self, pattern: "DNSLabelCreateTypes") -> bool:
+    def matchGlob(self, pattern: DNSLabelCreateTypes) -> bool:
         """Check if this label matches the given pattern
 
         Args:
@@ -128,7 +138,7 @@ class DNSLabel:
             pattern = DNSLabel(pattern)
         return fnmatch.fnmatch(str(self).lower(), str(pattern).lower())
 
-    def matchSuffix(self, suffix: "DNSLabelCreateTypes") -> bool:
+    def matchSuffix(self, suffix: DNSLabelCreateTypes) -> bool:
         """Return True if label suffix matches
 
         Args:
@@ -138,7 +148,7 @@ class DNSLabel:
             suffix = DNSLabel(suffix)
         return DNSLabel(self.label[-len(suffix.label) :]) == suffix
 
-    def stripSuffix(self, suffix: "DNSLabelCreateTypes") -> "DNSLabel":
+    def stripSuffix(self, suffix: DNSLabelCreateTypes) -> DNSLabel:
         """Strip suffix from label
 
         Args:
@@ -181,10 +191,6 @@ class DNSLabel:
 
     def __len__(self) -> int:
         return len(b".".join(self.label))
-
-
-DNSLabelCreateTypes = Union[List[bytes], Tuple[bytes, ...], str, bytes, DNSLabel, None]
-"""Type alias for types that can be used with `DNSLabel.__init__`"""
 
 
 class DNSBuffer(Buffer):
@@ -252,7 +258,7 @@ class DNSBuffer(Buffer):
         """
 
         super().__init__(data)
-        self.names: Dict[Tuple[bytes, ...], int] = {}
+        self.names: dict[tuple[bytes, ...], int] = {}
         return
 
     def decode_name(self, _last: int = -1) -> DNSLabel:
@@ -264,7 +270,7 @@ class DNSBuffer(Buffer):
             _last: Pointer to previous name. Used internally to allow following
             compressed names wilst avoiding recursion.
         """
-        label: List[bytes] = []
+        label: list[bytes] = []
         while True:
             length = self.unpack_one("!B")
             if get_bits(length, 6, 2) == 3:

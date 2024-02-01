@@ -46,6 +46,7 @@
 
 """
 
+from __future__ import annotations
 
 import argparse
 import code
@@ -126,7 +127,7 @@ def check_decode(f, debug=False):
         q, r = DigParser(x)
 
     # Grab the hex data
-    with open(f, "rt") as digfile:
+    with open(f) as digfile:
         for line in digfile:
             if line.startswith(";; QUERY:"):
                 qdata = bytes.fromhex(line.split()[-1])

@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import struct
-from typing import Tuple, Any
+from typing import Any
 
 
 class BufferError(Exception):
@@ -138,7 +140,7 @@ class Buffer:
         self.data[ptr : ptr + len(s)] = s
         return
 
-    def unpack(self, fmt: str) -> Tuple:
+    def unpack(self, fmt: str) -> tuple:
         """Unpack a struct from the current offset and increment offset
 
         Args:

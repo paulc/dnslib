@@ -9,6 +9,8 @@
     See --help for usage.
 """
 
+from __future__ import annotations
+
 import binascii
 import code
 import pprint

@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import sys
-from typing import Dict, Callable, Type, Union, Optional, cast
+from typing import Callable, cast
 
 
 class BimapError(Exception):
     pass
 
 
-ErrorCallable = Callable[[str, Union[int, str]], Union[str, int]]
+ErrorCallable = Callable[[str, int | str], str | int]
 
 
 class Bimap:
@@ -76,8 +78,8 @@ class Bimap:
     def __init__(
         self,
         name: str,
-        forward: Dict[int, str],
-        error: Union[ErrorCallable, Type[Exception]] = AttributeError,
+        forward: dict[int, str],
+        error: ErrorCallable | type[Exception] = AttributeError,
     ) -> None:
         """
         Args:
@@ -90,10 +92,10 @@ class Bimap:
         self.name = name
         self.error = error
         self.forward = forward.copy()
-        self.reverse: Dict[str, int] = {v: k for k, v in forward.items()}
+        self.reverse: dict[str, int] = {v: k for k, v in forward.items()}
         return
 
-    def get(self, key: int, default: Optional[str] = None) -> str:
+    def get(self, key: int, default: str | None = None) -> str:
         """Get string for given numerical key
 
         Args:

@@ -51,8 +51,9 @@
 
 """
 
+from __future__ import annotations
+
 from ipaddress import IPv4Address, IPv6Address
-from typing import Union
 
 int_types = (int,)
 byte_types = (bytes, bytearray)
@@ -153,13 +154,15 @@ def IP4(attr: str):
 
     Args:
         attr: name of property attribute
+
+    Changed in 1.0: now exposes an `IPv4Address` instead of a tuple of bytes.
     """
     obj_attr = f"_{attr}"
 
     def getter(self) -> IPv4Address:
         return getattr(self, obj_attr)
 
-    def setter(self, ip: Union[str, bytes, int, IPv4Address]) -> None:
+    def setter(self, ip: str | bytes | int | IPv4Address) -> None:
         if isinstance(ip, (str, bytes, int)):
             ip = IPv4Address(ip)
         setattr(self, obj_attr, ip)
@@ -172,13 +175,15 @@ def IP6(attr: str):
 
     Args:
         attr: name of property attribute
+
+    Changed in 1.0: now exposes an `IPv6Address` instead of a tuple of bytes.
     """
     obj_attr = f"_{attr}"
 
     def getter(self) -> IPv6Address:
         return getattr(self, obj_attr)
 
-    def setter(self, ip: Union[str, bytes, int, IPv6Address]) -> None:
+    def setter(self, ip: str | bytes | int | IPv6Address) -> None:
         if isinstance(ip, (str, bytes, int)):
             ip = IPv6Address(ip)
         setattr(self, obj_attr, ip)

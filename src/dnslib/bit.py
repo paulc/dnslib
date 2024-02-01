@@ -1,5 +1,7 @@
 """Basic bit mainpulation utilities"""
 
+from __future__ import annotations
+
 FILTER = bytearray([(i < 32 or i > 127) and 46 or i for i in range(256)])
 
 

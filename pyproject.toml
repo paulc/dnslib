@@ -41,17 +41,10 @@ Homepage = "https://github.com/paulc/dnslib"
 
 [project.optional-dependencies]
 dev = [
-    ## Type Stubs
-    ### dev.sh dependencies
     ## Formatting / Linting
     "validate-pyproject[all]",
     "black",
-    "pylint",
     "mypy",
-    ## Testing
-    "pytest",
-    ## REPL
-    "bpython",
 ]
 
 docs = [
