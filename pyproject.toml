@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dnslib"
+description = "Simple library to encode/decode DNS wire-format packets"
+authors  = [
+    {name = "PaulC"},
+]
+
+# Dependency Information
+requires-python = ">=3.7"
+dependencies = [
+    "typing-extensions;python_version<'3.11'",
+]
+
+# Extra information
+readme = "README.md"
+license = {text = "BSD"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: BSD License",
+    "Intended Audience :: Developers",
+    "Topic :: Internet :: Name Service (DNS)",
+    "Typing :: Typed",
+]
+
+dynamic = ["version"]
+
+[project.urls]
+# Homepage = "https://paulc.github.io/dnslib/latest/"
+Homepage = "https://github.com/paulc/dnslib"
+
+[project.optional-dependencies]
+dev = [
+    ## Formatting / Linting
+    "validate-pyproject[all]",
+    "black",
+    "mypy",
+]
+
+docs = [
+    "black",
+    "mkdocs",
+    "mkdocs-material>=8.5",
+    "mkdocs-awesome-pages-plugin",
+    "mdx_truly_sane_lists",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mike",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "dnslib.version"}
+
+[tool.setuptools.package-data]
+dnslib = ["py.typed"]
+
+[tool.black]
+line-length = 100

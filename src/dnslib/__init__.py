@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 
 #### From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to the original BitBucket repository as this will no longer be maintained.
@@ -87,7 +85,7 @@ Usage
 
 To decode a DNS packet:
 
-    >>> packet = binascii.unhexlify(b'd5ad818000010005000000000377777706676f6f676c6503636f6d0000010001c00c0005000100000005000803777777016cc010c02c0001000100000005000442f95b68c02c0001000100000005000442f95b63c02c0001000100000005000442f95b67c02c0001000100000005000442f95b93')
+    >>> packet = bytes.fromhex('d5ad818000010005000000000377777706676f6f676c6503636f6d0000010001c00c0005000100000005000803777777016cc010c02c0001000100000005000442f95b68c02c0001000100000005000442f95b63c02c0001000100000005000442f95b67c02c0001000100000005000442f95b93')
     >>> d = DNSRecord.parse(packet)
     >>> d
     <DNS Header: id=0xd5ad type=RESPONSE opcode=QUERY flags=RD,RA rcode='NOERROR' q=1 a=5 ns=0 ar=0>
@@ -381,7 +379,7 @@ Changelog:
                             (Pull-Request #35 - thanks to @jkl-caliber)
                          Fix display of non-printable characters in TXT records
                             (Issue #32 - thanks to @sbv-csis)
-                         Add --strip-aaaa option to dnslib.proxy 
+                         Add --strip-aaaa option to dnslib.proxy
  *   0.9.21  2022-09-19  Minor clean-up / add wheels to distro
  *   0.9.22  2022-09027  Issue #43 (0.9.21 Raises TypeError instead of DNSError when failing to parse HTTPS records)
                          Note that we just fix the exception - there still seems to be a problem with parsing HTTPS records
@@ -422,8 +420,9 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.24"
+version = "1.0.0.dev1"
 
-if __name__ == '__main__':
-    import doctest,sys,textwrap
+if __name__ == "__main__":
+    import doctest, sys, textwrap
+
     sys.exit(0 if doctest.testmod(optionflags=doctest.ELLIPSIS).failed == 0 else 1)
