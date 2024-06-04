@@ -1292,7 +1292,7 @@ def _bytes_to_printable(b):
             [
                 (c if _isprint(c) else "\\{0:03o}".format(ord(c)))
                 for c in b.decode(errors="replace")
-            ]
+            ],
         )
         + '"'
     )
@@ -1607,7 +1607,9 @@ class SOA(RD):
     @classmethod
     def from_zone(cls, rd, origin=None):
         return cls(
-            label(rd[0], origin), label(rd[1], origin), [parse_time(t) for t in rd[2:]]
+            label(rd[0], origin),
+            label(rd[1], origin),
+            [parse_time(t) for t in rd[2:]],
         )
 
     def __init__(self, mname=None, rname=None, times=None):
@@ -2228,7 +2230,7 @@ class HTTPS(RD):
             raise DNSError(
                 "Error unpacking HTTPS: "
                 + str(e)
-                + str(binascii.hexlify(buffer.data[buffer.offset :]))
+                + str(binascii.hexlify(buffer.data[buffer.offset :])),
             )
 
     def pack(self, buffer):
@@ -2258,7 +2260,7 @@ class HTTPS(RD):
         if s[0] == quot:
             if len(s) < 2 or s[-1] != quot:
                 raise DNSError(
-                    'Error decoding HTTPS SvcParamKey value list: unmatched "'
+                    'Error decoding HTTPS SvcParamKey value list: unmatched "',
                 )
             s = s[1:-1]
         if len(s) == 0:
@@ -2305,7 +2307,7 @@ class HTTPS(RD):
         if s[0] == quot:
             if len(s) < 2 or s[-1] != quot:
                 raise DNSError(
-                    'Error decoding HTTPS SvcParamKey charstring: unmatched "'
+                    'Error decoding HTTPS SvcParamKey charstring: unmatched "',
                 )
             s = s[1:-1]
         esc = False
@@ -2375,7 +2377,7 @@ class HTTPS(RD):
         elif i == 2:  # no alpn
             if v:
                 raise DNSError(
-                    "Error encoding HTTPS SvcParamKey: no-default-alpn should not have a value"
+                    "Error encoding HTTPS SvcParamKey: no-default-alpn should not have a value",
                 )
         elif i == 3:  # port
             b.pack("!H", int(v))
@@ -2464,7 +2466,7 @@ class HTTPS(RD):
         elif i == 2:  # no-alpn
             if b.remaining() > 0:
                 raise DNSError(
-                    "Error decoding HTTPS SvcParamKey: no-default-alpn should not have a value"
+                    "Error decoding HTTPS SvcParamKey: no-default-alpn should not have a value",
                 )
             ret = ""
         elif i == 3:  # port
@@ -2491,7 +2493,7 @@ class HTTPS(RD):
         pri = str(self.priority)
         targ = ".".join([self.zf_tostr(t) for t in self.target]) + "."
         return " ".join(
-            [pri, targ] + [self.zf_format_param(k, v) for k, v in self.params]
+            [pri, targ] + [self.zf_format_param(k, v) for k, v in self.params],
         )
 
 
