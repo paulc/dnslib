@@ -1,5 +1,0 @@
-include README.github
-include run_tests.sh
-include fuzz.py
-include LICENSE
-recursive-include dnslib/test *

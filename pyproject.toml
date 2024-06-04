@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "dnslib3"
+version = "0.10.0"
+description = "Simple library to encode/decode DNS wire-format packets"
+authors = ["Paul Chakravarti", "Ivan Sitkin <alvinera@yandex.ru>", "Dmitry Orlov <me@mosquito.su>"]
+license = "BSD-2-Clause"
+readme = "README.md"
+classifiers = [
+  "Topic :: Internet :: Name Service (DNS)",
+  "Programming Language :: Python :: 3",
+]
+packages = [
+  {include = "dnslib"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
