@@ -1,5 +1,24 @@
-# -*- coding: utf-8 -*-
-"""
+import re
+import string
+
+from dnslib.dns import (
+    CLASS,
+    EDNS0,
+    QR,
+    QTYPE,
+    RCODE,
+    RD,
+    RDMAP,
+    RR,
+    DNSError,
+    DNSHeader,
+    DNSQuestion,
+    DNSRecord,
+)
+from dnslib.lex import WordLexer
+
+
+__doc__ = """
 
     digparser
     ---------
@@ -69,27 +88,6 @@
 
 """
 
-from __future__ import print_function
-
-import re
-import string
-
-from dnslib.dns import (
-    CLASS,
-    EDNS0,
-    QR,
-    QTYPE,
-    RCODE,
-    RD,
-    RDMAP,
-    RR,
-    DNSError,
-    DNSHeader,
-    DNSQuestion,
-    DNSRecord,
-)
-from dnslib.lex import WordLexer
-
 
 class DigParser:
 
@@ -104,7 +102,7 @@ class DigParser:
         self.l.nltok = ("NL", None)
         self.i = iter(self.l)
 
-    def parseHeader(self, l1, l2):
+    def parse_header(self, l1, l2):
         _, _, _, opcode, _, status, _, _id = l1.split()
         _, flags, _ = l2.split(";")
         header = DNSHeader(id=int(_id), bitmap=0)
@@ -121,7 +119,7 @@ class DigParser:
             raise ValueError("Invalid Token: %s (expecting: %s)" % (t, expect))
         return val
 
-    def parseQuestions(self, q, dns):
+    def parse_questions(self, q, dns):
         for qname, qclass, qtype in q:
             dns.add_question(
                 DNSQuestion(
@@ -131,7 +129,7 @@ class DigParser:
                 ),
             )
 
-    def parseAnswers(self, a, auth, ar, dns):
+    def parse_answers(self, a, auth, ar, dns):
         sect_map = {"a": "add_answer", "auth": "add_auth", "ar": "add_ar"}
         for sect in "a", "auth", "ar":
             f = getattr(dns, sect_map[sect])
@@ -150,7 +148,7 @@ class DigParser:
                                 ttl=int(ttl),
                                 rtype=getattr(QTYPE, rtype),
                                 rclass=getattr(CLASS, rclass),
-                                rdata=rd.fromZone(rdata),
+                                rdata=rd.from_zone(rdata),
                             ),
                         )
                 except DNSError as e:
@@ -160,7 +158,7 @@ class DigParser:
                         # Skip records we dont understand
                         pass
 
-    def parseEDNS(self, edns, dns):
+    def parse_edns(self, edns, dns):
         args = {}
         m = re.search("version: (\d+),", edns)
         if m:
@@ -189,14 +187,14 @@ class DigParser:
                         # Start new record
                         if dns:
                             # If we have a current record complete this
-                            self.parseQuestions(q, dns)
-                            self.parseAnswers(a, auth, ar, dns)
+                            self.parse_questions(q, dns)
+                            self.parse_answers(a, auth, ar, dns)
                             yield (dns)
                         dns = DNSRecord()
                         q, a, auth, ar = [], [], [], []
                         self.expect("NL")
                         val2 = self.expect("COMMENT")
-                        dns.header = self.parseHeader(val, val2)
+                        dns.header = self.parse_header(val, val2)
                     elif val.startswith("; QUESTION"):
                         section = q
                     elif val.startswith("; ANSWER"):
@@ -209,7 +207,7 @@ class DigParser:
                         # Only partial support for parsing EDNS records
                         self.expect("NL")
                         val2 = self.expect("COMMENT")
-                        self.parseEDNS(val2, dns)
+                        self.parse_edns(val2, dns)
                     elif val.startswith(";") or tok[1].startswith("<<>>"):
                         pass
                     elif dns and section == q:
@@ -230,8 +228,8 @@ class DigParser:
             if rr:
                 self.section.append(rr)
             if dns:
-                self.parseQuestions(q, dns)
-                self.parseAnswers(a, auth, ar, dns)
+                self.parse_questions(q, dns)
+                self.parse_answers(a, auth, ar, dns)
                 yield (dns)
 
 

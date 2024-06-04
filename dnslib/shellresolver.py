@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
-
-try:
-    from subprocess import getoutput
-except ImportError:
-    from commands import getoutput
+from subprocess import getoutput
 
 from dnslib import QTYPE, RCODE, RR, TXT, parse_time
 from dnslib.label import DNSLabel
@@ -167,5 +159,5 @@ if __name__ == "__main__":
         )
         tcp_server.start_thread()
 
-    while udp_server.isAlive():
+    while udp_server.is_alive():
         time.sleep(1)

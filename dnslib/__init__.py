@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
+__doc__ = """
 
 #### From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to the original BitBucket repository as this will no longer be maintained.
 
@@ -428,6 +426,5 @@ version = "0.9.24"
 if __name__ == "__main__":
     import doctest
     import sys
-    import textwrap
 
     sys.exit(0 if doctest.testmod(optionflags=doctest.ELLIPSIS).failed == 0 else 1)

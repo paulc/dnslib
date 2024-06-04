@@ -1,11 +1,3 @@
-"""
-    DNS - main dnslib module
-
-    Contains core DNS packet handling code
-"""
-
-from __future__ import print_function
-
 import base64
 import binascii
 import calendar
@@ -14,12 +6,6 @@ import socket
 import struct
 import time
 from itertools import chain
-
-
-try:
-    from itertools import zip_longest
-except ImportError:
-    pass
 
 from dnslib.bimap import Bimap, BimapError
 from dnslib.bit import get_bits, set_bits
@@ -37,6 +23,13 @@ from dnslib.ranges import (
     check_range,
     ntuple_range,
 )
+
+
+__doc__ = """
+    DNS - main dnslib module
+
+    Contains core DNS packet handling code
+"""
 
 
 class DNSError(Exception):
@@ -300,11 +293,11 @@ class DNSRecord(object):
             q=self.q,
         )
 
-    def replyZone(self, zone, ra=1, aa=1):
+    def reply_zone(self, zone, ra=1, aa=1):
         """
         Create reply with response data in zone-file format
         >>> q = DNSRecord.question("abc.com")
-        >>> a = q.replyZone("abc.com 60 A 1.2.3.4")
+        >>> a = q.reply_zone("abc.com 60 A 1.2.3.4")
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
@@ -322,7 +315,7 @@ class DNSRecord(object):
                 aa=aa,
             ),
             q=self.q,
-            rr=RR.fromZone(zone),
+            rr=RR.from_zone(zone),
         )
 
     def add_question(self, *q):
@@ -348,7 +341,7 @@ class DNSRecord(object):
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
-        >>> a.add_answer(*RR.fromZone("abc.com A 1.2.3.4"))
+        >>> a.add_answer(*RR.from_zone("abc.com A 1.2.3.4"))
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
@@ -366,8 +359,8 @@ class DNSRecord(object):
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
-        >>> a.add_answer(*RR.fromZone("abc.com 60 A 1.2.3.4"))
-        >>> a.add_auth(*RR.fromZone("abc.com 3600 NS nsa.abc.com"))
+        >>> a.add_answer(*RR.from_zone("abc.com 60 A 1.2.3.4"))
+        >>> a.add_auth(*RR.from_zone("abc.com 3600 NS nsa.abc.com"))
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 0
@@ -387,8 +380,8 @@ class DNSRecord(object):
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
-        >>> a.add_answer(*RR.fromZone("abc.com 60 CNAME x.abc.com"))
-        >>> a.add_ar(*RR.fromZone("x.abc.com 3600 A 1.2.3.4"))
+        >>> a.add_answer(*RR.from_zone("abc.com 60 CNAME x.abc.com"))
+        >>> a.add_ar(*RR.from_zone("x.abc.com 3600 A 1.2.3.4"))
         >>> print(a)
         ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
         ;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
@@ -431,7 +424,7 @@ class DNSRecord(object):
 
         >>> q = DNSRecord.question("abc.com")
         >>> q.header.id = 1234
-        >>> a = q.replyZone("abc.com A 1.2.3.4")
+        >>> a = q.reply_zone("abc.com A 1.2.3.4")
         >>> a.header.aa = 0
         >>> pkt = a.pack()
         >>> print(DNSRecord.parse(pkt))
@@ -462,9 +455,9 @@ class DNSRecord(object):
 
         >>> q = DNSRecord.question("abc.com")
         >>> a = q.reply()
-        >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
-        >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
-        >>> a.add_answer(*RR.fromZone('abc.com IN TXT %s' % ('x' * 255)))
+        >>> a.add_answer(*RR.from_zone('abc.com IN TXT %s' % ('x' * 255)))
+        >>> a.add_answer(*RR.from_zone('abc.com IN TXT %s' % ('x' * 255)))
+        >>> a.add_answer(*RR.from_zone('abc.com IN TXT %s' % ('x' * 255)))
         >>> len(a.pack())
         829
         >>> t = a.truncate()
@@ -531,31 +524,31 @@ class DNSRecord(object):
         sections.extend(s([repr(rr) for rr in self.ar]))
         return prefix + ("\n" + prefix).join(sections)
 
-    def toZone(self, prefix=""):
+    def to_zone(self, prefix=""):
         """
         Formatted 'DiG' (zone) style output
         (with optional prefix)
         """
-        z = self.header.toZone().split("\n")
+        z = self.header.to_zone().split("\n")
         if self.questions:
             z.append(";; QUESTION SECTION:")
-            [z.extend(q.toZone().split("\n")) for q in self.questions]
+            [z.extend(q.to_zone().split("\n")) for q in self.questions]
         if self.rr:
             z.append(";; ANSWER SECTION:")
-            [z.extend(rr.toZone().split("\n")) for rr in self.rr]
+            [z.extend(rr.to_zone().split("\n")) for rr in self.rr]
         if self.auth:
             z.append(";; AUTHORITY SECTION:")
-            [z.extend(rr.toZone().split("\n")) for rr in self.auth]
+            [z.extend(rr.to_zone().split("\n")) for rr in self.auth]
         if self.ar:
             z.append(";; ADDITIONAL SECTION:")
-            [z.extend(rr.toZone().split("\n")) for rr in self.ar]
+            [z.extend(rr.to_zone().split("\n")) for rr in self.ar]
         return prefix + ("\n" + prefix).join(z)
 
     def short(self):
         """
         Just return RDATA
         """
-        return "\n".join([rr.rdata.toZone() for rr in self.rr])
+        return "\n".join([rr.rdata.to_zone() for rr in self.rr])
 
     def __eq__(self, other):
         """
@@ -598,7 +591,7 @@ class DNSRecord(object):
         return self.format()
 
     def __str__(self):
-        return self.toZone()
+        return self.to_zone()
 
 
 class DNSHeader(object):
@@ -801,7 +794,7 @@ class DNSHeader(object):
             )
         )
 
-    def toZone(self):
+    def to_zone(self):
         f = [
             self.qr and "qr",
             self.aa and "aa",
@@ -827,7 +820,7 @@ class DNSHeader(object):
         return z1 + "\n" + z2
 
     def __str__(self):
-        return self.toZone()
+        return self.to_zone()
 
     def __ne__(self, other):
         return not (self.__eq__(other))
@@ -882,7 +875,7 @@ class DNSQuestion(object):
         buffer.encode_name(self.qname)
         buffer.pack("!HH", self.qtype, self.qclass)
 
-    def toZone(self):
+    def to_zone(self):
         return ";%-30s %-7s %s" % (
             self.qname,
             CLASS.get(self.qclass),
@@ -897,7 +890,7 @@ class DNSQuestion(object):
         )
 
     def __str__(self):
-        return self.toZone()
+        return self.to_zone()
 
     def __ne__(self, other):
         return not (self.__eq__(other))
@@ -950,14 +943,14 @@ class EDNSOption(object):
             binascii.hexlify(self.data).decode(),
         )
 
-    def toZone(self):
+    def to_zone(self):
         return "; EDNS: code: %s; data: %s" % (
             self.code,
             binascii.hexlify(self.data).decode(),
         )
 
     def __str__(self):
-        return self.toZone()
+        return self.to_zone()
 
     def __ne__(self, other):
         return not (self.__eq__(other))
@@ -1015,7 +1008,7 @@ class RR(object):
             )
 
     @classmethod
-    def fromZone(cls, zone, origin="", ttl=0):
+    def from_zone(cls, zone, origin="", ttl=0):
         """
         Parse RR data from zone file and return list of RRs
         """
@@ -1091,7 +1084,7 @@ class RR(object):
                 self.rdata,
             )
 
-    def toZone(self):
+    def to_zone(self):
         if self.rtype == QTYPE.OPT:
             edns = [
                 ";; OPT PSEUDOSECTION",
@@ -1110,11 +1103,11 @@ class RR(object):
                 self.ttl,
                 CLASS.get(self.rclass),
                 QTYPE[self.rtype],
-                self.rdata.toZone(),
+                self.rdata.to_zone(),
             )
 
     def __str__(self):
-        return self.toZone()
+        return self.to_zone()
 
     def __ne__(self, other):
         return not (self.__eq__(other))
@@ -1159,7 +1152,7 @@ class EDNS0(RR):
     ;; OPT PSEUDOSECTION
     ; EDNS: version: 1, flags: do; udp: 2048
     ; EDNS: code: 1; data: 61626364
-    >>> r = DNSRecord.question("abc.com").replyZone("abc.com A 1.2.3.4")
+    >>> r = DNSRecord.question("abc.com").reply_zone("abc.com A 1.2.3.4")
     >>> r.add_ar(opt)
     >>> print(r)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
@@ -1229,7 +1222,7 @@ class RD(object):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         """
         Create new record from zone format data
         RD is a list of strings parsed from DiG output
@@ -1261,7 +1254,7 @@ class RD(object):
         else:
             return "\\# 0"
 
-    def toZone(self):
+    def to_zone(self):
         return repr(self)
 
     # Comparison operations - in most cases only need to override 'attrs'
@@ -1321,8 +1314,8 @@ class TXT(RD):
     >>> TXT(['txtvers=1','swver=2.5'])
     "txtvers=1","swver=2.5"
     >>> a = DNSRecord()
-    >>> a.add_answer(*RR.fromZone('example.com 60 IN TXT "txtvers=1"'))
-    >>> a.add_answer(*RR.fromZone('example.com 120 IN TXT "txtvers=1" "swver=2.3"'))
+    >>> a.add_answer(*RR.from_zone('example.com 60 IN TXT "txtvers=1"'))
+    >>> a.add_answer(*RR.from_zone('example.com 120 IN TXT "txtvers=1" "swver=2.3"'))
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: rd; QUERY: 0, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
@@ -1355,7 +1348,7 @@ class TXT(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(list(map(lambda x: x.encode(), rd)))
 
     def __init__(self, data):
@@ -1373,7 +1366,7 @@ class TXT(RD):
             buffer.pack("!B", len(ditem))
             buffer.append(ditem)
 
-    def toZone(self):
+    def to_zone(self):
         return " ".join([_bytes_to_printable(x) for x in self.data])
 
     def __repr__(self):
@@ -1394,7 +1387,7 @@ class A(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(rd[0])
 
     def __init__(self, data):
@@ -1487,7 +1480,7 @@ class AAAA(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(rd[0])
 
     def __init__(self, data):
@@ -1518,7 +1511,7 @@ class MX(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(label(rd[1], origin), int(rd[0]))
 
     def __init__(self, label=None, preference=10):
@@ -1558,7 +1551,7 @@ class CNAME(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(label(rd[0], origin))
 
     def __init__(self, label=None):
@@ -1612,7 +1605,7 @@ class SOA(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(
             label(rd[0], origin), label(rd[1], origin), [parse_time(t) for t in rd[2:]]
         )
@@ -1676,7 +1669,7 @@ class SRV(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(int(rd[0]), int(rd[1]), int(rd[2]), rd[3])
 
     def __init__(self, priority=0, weight=0, port=0, target=None):
@@ -1728,7 +1721,7 @@ class NAPTR(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         encode = lambda s: s.encode()
         _label = lambda s: label(s, origin)
         m = (int, int, encode, encode, encode, _label)
@@ -1798,7 +1791,7 @@ class DS(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(
             int(rd[0]),
             int(rd[1]),
@@ -1844,7 +1837,7 @@ class DNSKEY(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(
             int(rd[0]),
             int(rd[1]),
@@ -1914,7 +1907,7 @@ class RRSIG(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(
             getattr(QTYPE, rd[0]),
             int(rd[1]),
@@ -2060,7 +2053,7 @@ class NSEC(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(rd.pop(0), rd)
 
     def __init__(self, label, rrlist):
@@ -2095,7 +2088,7 @@ class CAA(RD):
     >>> CAA(0, 'issue', 'letsencrypt.org')
     0 issue \"letsencrypt.org\"
     >>> a = DNSRecord()
-    >>> a.add_answer(*RR.fromZone('example.com 60 IN CAA 0 issue "letsencrypt.org"'))
+    >>> a.add_answer(*RR.from_zone('example.com 60 IN CAA 0 issue "letsencrypt.org"'))
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: ...
     ;; flags: rd; QUERY: 0, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
@@ -2116,7 +2109,7 @@ class CAA(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         if len(rd) == 1:
             try:
                 hex_parsed = bytes.fromhex(rd[0])
@@ -2143,7 +2136,7 @@ class CAA(RD):
         buffer.append(self.tag.encode())
         buffer.append(self.value.encode())
 
-    def toZone(self):
+    def to_zone(self):
         return '%d %s "%s"' % (self.flags, self.tag, self.value)
 
     def __repr__(self):
@@ -2154,23 +2147,23 @@ class HTTPS(RD):
     """
     HTTPS record.
 
-    >>> HTTPS.fromZone(["1", "cloudflare.com."])
+    >>> HTTPS.from_zone(["1", "cloudflare.com."])
     1 cloudflare.com.
-    >>> HTTPS.fromZone(["1", ".", "mandatory=key65444,echconfig"])
+    >>> HTTPS.from_zone(["1", ".", "mandatory=key65444,echconfig"])
     1 . mandatory=key65444,echconfig
-    >>> HTTPS.fromZone(["1", ".", "alpn=h3,h3-29,h2"])
+    >>> HTTPS.from_zone(["1", ".", "alpn=h3,h3-29,h2"])
     1 . alpn=h3,h3-29,h2
-    >>> HTTPS.fromZone(["1", ".", "no-default-alpn"])
+    >>> HTTPS.from_zone(["1", ".", "no-default-alpn"])
     1 . no-default-alpn
-    >>> HTTPS.fromZone(["1", ".", "port=443"])
+    >>> HTTPS.from_zone(["1", ".", "port=443"])
     1 . port=443
-    >>> HTTPS.fromZone(["1", ".", "ipv4hint=104.16.132.229,104.16.133.229"])
+    >>> HTTPS.from_zone(["1", ".", "ipv4hint=104.16.132.229,104.16.133.229"])
     1 . ipv4hint=104.16.132.229,104.16.133.229
-    >>> HTTPS.fromZone(["1", ".", "echconfig=Z2FyYmFnZQ=="])
+    >>> HTTPS.from_zone(["1", ".", "echconfig=Z2FyYmFnZQ=="])
     1 . echconfig=Z2FyYmFnZQ==
-    >>> HTTPS.fromZone(["1", ".", "ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5"])
+    >>> HTTPS.from_zone(["1", ".", "ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5"])
     1 . ipv6hint=2606:4700::6810:84e5,2606:4700::6810:85e5
-    >>> HTTPS.fromZone(["1", ".", "key9999=X"])
+    >>> HTTPS.from_zone(["1", ".", "key9999=X"])
     1 . key9999=X
     >>> pcap = binascii.unhexlify(b"0001000001000c0268330568332d323902683200040008681084e5681085e500060020260647000000000000000000681084e5260647000000000000000000681085e5")
     >>> obj = HTTPS.parse(Buffer(pcap), len(pcap))
@@ -2401,7 +2394,7 @@ class HTTPS(RD):
         return (i, b.data)
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         pri = int(rd[0])
         targ = [] if rd[1] == "." else cls.zf_tobytes(rd[1]).split(b".")[:-1]
         params = []
@@ -2523,7 +2516,7 @@ class SSHFP(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(
             int(rd[0]),
             int(rd[1]),
@@ -2571,7 +2564,7 @@ class TLSA(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(
             int(rd[0]),
             int(rd[1]),
@@ -2609,9 +2602,9 @@ class LOC(RD):
     >>> LOC(37.236693, -115.804069, 1381.0, 3000.0, 1.0, 1.0)
     37 14 12.094 N 115 48 14.649 W 1381.00m 3000.00m 1.00m 1.00m
     >>> a = DNSRecord(DNSHeader(id=1456))
-    >>> a.add_answer(*RR.fromZone('area51.local. 60 IN LOC 37 14 12.094 N 115 48 14.649 W 1381.00m'))
-    >>> a.add_answer(*RR.fromZone('area51.local. 60 IN LOC 37 N 115 48 W 1381.00m'))
-    >>> a.add_answer(*RR.fromZone('area51.local. 60 IN LOC 37 14 12.094 N 115 48 14.649 W 1381.00m 1m 10000m 10m'))
+    >>> a.add_answer(*RR.from_zone('area51.local. 60 IN LOC 37 14 12.094 N 115 48 14.649 W 1381.00m'))
+    >>> a.add_answer(*RR.from_zone('area51.local. 60 IN LOC 37 N 115 48 W 1381.00m'))
+    >>> a.add_answer(*RR.from_zone('area51.local. 60 IN LOC 37 14 12.094 N 115 48 14.649 W 1381.00m 1m 10000m 10m'))
     >>> print(a)
     ;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1456
     ;; flags: rd; QUERY: 0, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
@@ -2640,7 +2633,7 @@ class LOC(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         args = []
 
         # We still support Python 2.7 so use nonlocal workaround
@@ -2784,7 +2777,7 @@ class RP(RD):
             )
 
     @classmethod
-    def fromZone(cls, rd, origin=None):
+    def from_zone(cls, rd, origin=None):
         return cls(label(rd[0], origin), label(rd[1], origin))
 
     def __init__(self, mbox=None, txt=None):
@@ -2921,7 +2914,7 @@ class ZoneParser:
             ttl=ttl,
             rclass=getattr(CLASS, rclass),
             rtype=getattr(QTYPE, rtype),
-            rdata=rd.fromZone(rdata, self.origin),
+            rdata=rd.from_zone(rdata, self.origin),
         )
 
     def __iter__(self):

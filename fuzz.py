@@ -106,10 +106,10 @@ if __name__ == "__main__":
 
     if question:
         p("Question:")
-        p(question.toZone(prefix="  | "))
+        p(question.to_zone(prefix="  | "))
 
     p("Original:")
-    p(original.toZone(prefix="  | "))
+    p(original.to_zone(prefix="  | "))
 
     for f in (fuzz_delete, fuzz_add, fuzz_change):
         for i in range(args.number):

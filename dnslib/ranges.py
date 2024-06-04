@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-"""
+__doc__ = """
     Wrapper around property builtin to restrict attribute to defined
     integer value range (throws ValueError).
 
@@ -50,15 +48,8 @@
 
 """
 
-import sys
 
-
-if sys.version < "3":
-    int_types = (int, long)
-    byte_types = (str, bytearray)
-else:
-    int_types = (int,)
-    byte_types = (bytes, bytearray)
+BYTE_TYPES = (bytes, bytearray)
 
 
 def check_instance(name, val, types):
@@ -69,7 +60,7 @@ def check_instance(name, val, types):
 
 
 def check_bytes(name, val):
-    return check_instance(name, val, byte_types)
+    return check_instance(name, val, BYTE_TYPES)
 
 
 def instance_property(attr, types):
@@ -88,11 +79,11 @@ def instance_property(attr, types):
 
 
 def BYTES(attr):
-    return instance_property(attr, byte_types)
+    return instance_property(attr, BYTE_TYPES)
 
 
 def check_range(name, val, min, max):
-    if not (isinstance(val, int_types) and min <= val <= max):
+    if not (isinstance(val, int) and min <= val <= max):
         raise ValueError(
             "Attribute '%s' must be between %d-%d [%s]" % (name, min, max, val),
         )
@@ -103,7 +94,7 @@ def range_property(attr, min, max):
         return getattr(obj, "_%s" % attr)
 
     def setter(obj, val):
-        if isinstance(val, int_types) and min <= val <= max:
+        if isinstance(val, int) and min <= val <= max:
             setattr(obj, "_%s" % attr, val)
         else:
             raise ValueError(
@@ -135,7 +126,7 @@ def I(attr):
 
 
 def ntuple_range(attr, n, min, max):
-    f = lambda x: isinstance(x, int_types) and min <= x <= max
+    f = lambda x: isinstance(x, int) and min <= x <= max
 
     def getter(obj):
         return getattr(obj, "_%s" % attr)

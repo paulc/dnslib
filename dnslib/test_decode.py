@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
     Test dnslib packet encoding/decoding
 
@@ -53,23 +52,13 @@ import argparse
 import binascii
 import code
 import glob
-import os
 import os.path
 import unittest
 
 from dnslib.digparser import DigParser
 from dnslib.dns import EDNS0, DNSRecord
 
-
-try:
-    from subprocess import getoutput
-except ImportError:
-    from commands import getoutput
-
-try:
-    input = raw_input
-except NameError:
-    pass
+from subprocess import getoutput
 
 
 class TestContainer(unittest.TestCase):
