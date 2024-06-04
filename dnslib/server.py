@@ -101,54 +101,62 @@
 """
 from __future__ import print_function
 
-import binascii,socket,struct,threading,time
+import binascii
+import socket
+import struct
+import threading
+import time
+
 
 try:
     import socketserver
 except ImportError:
     import SocketServer as socketserver
 
-from dnslib import DNSRecord,DNSError,QTYPE,RCODE,RR
+from dnslib import QTYPE, RCODE, DNSError, DNSRecord
+
 
 class BaseResolver(object):
     """
-        Base resolver implementation. Provides 'resolve' method which is
-        called by DNSHandler with the decode request (DNSRecord instance)
-        and returns a DNSRecord instance as reply.
+    Base resolver implementation. Provides 'resolve' method which is
+    called by DNSHandler with the decode request (DNSRecord instance)
+    and returns a DNSRecord instance as reply.
 
-        In most cases you should be able to create a custom resolver by
-        just replacing the resolve method with appropriate resolver code for
-        application (see fixedresolver/zoneresolver/shellresolver for
-        examples)
+    In most cases you should be able to create a custom resolver by
+    just replacing the resolve method with appropriate resolver code for
+    application (see fixedresolver/zoneresolver/shellresolver for
+    examples)
 
-        Note that a single instance is used by all DNSHandler instances so
-        need to consider blocking & thread safety.
+    Note that a single instance is used by all DNSHandler instances so
+    need to consider blocking & thread safety.
     """
-    def resolve(self,request,handler):
+
+    def resolve(self, request, handler):
         """
-            Example resolver - respond to all requests with NXDOMAIN
+        Example resolver - respond to all requests with NXDOMAIN
         """
         reply = request.reply()
-        reply.header.rcode = getattr(RCODE,'NXDOMAIN')
+        reply.header.rcode = getattr(RCODE, "NXDOMAIN")
         return reply
+
 
 class DNSHandler(socketserver.BaseRequestHandler):
     """
-        Handler for socketserver. Transparently handles both TCP/UDP requests
-        (TCP requests have length prepended) and hands off lookup to resolver
-        instance specified in <SocketServer>.resolver
+    Handler for socketserver. Transparently handles both TCP/UDP requests
+    (TCP requests have length prepended) and hands off lookup to resolver
+    instance specified in <SocketServer>.resolver
     """
 
-    udplen = 0                  # Max udp packet length (0 = ignore)
+    udplen = 0  # Max udp packet length (0 = ignore)
 
     def handle(self):
         if self.server.socket_type == socket.SOCK_STREAM:
-            self.protocol = 'tcp'
+            self.protocol = "tcp"
             data = self.request.recv(8192)
             if len(data) < 2:
-                self.server.logger.log_error(self,"Request Truncated")
+                self.server.logger.log_error(self, "Request Truncated")
                 return
-            length = struct.unpack("!H",bytes(data[:2]))[0]
+            length = struct.unpack("!H", bytes(data[:2]))[0]
             while len(data) - 2 < length:
                 new_data = self.request.recv(8192)
                 if not new_data:
@@ -156,228 +164,272 @@ class DNSHandler(socketserver.BaseRequestHandler):
                 data += new_data
             data = data[2:]
         else:
-            self.protocol = 'udp'
-            data,connection = self.request
+            self.protocol = "udp"
+            data, connection = self.request
 
-        self.server.logger.log_recv(self,data)
+        self.server.logger.log_recv(self, data)
 
         try:
             rdata = self.get_reply(data)
-            self.server.logger.log_send(self,rdata)
+            self.server.logger.log_send(self, rdata)
 
-            if self.protocol == 'tcp':
-                rdata = struct.pack("!H",len(rdata)) + rdata
+            if self.protocol == "tcp":
+                rdata = struct.pack("!H", len(rdata)) + rdata
                 self.request.sendall(rdata)
             else:
-                connection.sendto(rdata,self.client_address)
+                connection.sendto(rdata, self.client_address)
 
         except DNSError as e:
-            self.server.logger.log_error(self,e)
+            self.server.logger.log_error(self, e)
 
-    def get_reply(self,data):
+    def get_reply(self, data):
         request = DNSRecord.parse(data)
-        self.server.logger.log_request(self,request)
+        self.server.logger.log_request(self, request)
 
         resolver = self.server.resolver
-        reply = resolver.resolve(request,self)
-        self.server.logger.log_reply(self,reply)
+        reply = resolver.resolve(request, self)
+        self.server.logger.log_reply(self, reply)
 
-        if self.protocol == 'udp':
+        if self.protocol == "udp":
             rdata = reply.pack()
             if self.udplen and len(rdata) > self.udplen:
                 truncated_reply = reply.truncate()
                 rdata = truncated_reply.pack()
-                self.server.logger.log_truncated(self,truncated_reply)
+                self.server.logger.log_truncated(self, truncated_reply)
         else:
             rdata = reply.pack()
 
         return rdata
 
+
 class DNSLogger:
 
     """
-        The class provides a default set of logging functions for the various
-        stages of the request handled by a DNSServer instance which are
-        enabled/disabled by flags in the 'log' class variable.
+    The class provides a default set of logging functions for the various
+    stages of the request handled by a DNSServer instance which are
+    enabled/disabled by flags in the 'log' class variable.
 
-        To customise logging create an object which implements the DNSLogger
-        interface and pass instance to DNSServer.
+    To customise logging create an object which implements the DNSLogger
+    interface and pass instance to DNSServer.
 
-        The methods which the logger instance must implement are:
+    The methods which the logger instance must implement are:
 
-            log_recv          - Raw packet received
-            log_send          - Raw packet sent
-            log_request       - DNS Request
-            log_reply         - DNS Response
-            log_truncated     - Truncated
-            log_error         - Decoding error
-            log_data          - Dump full request/response
+        log_recv          - Raw packet received
+        log_send          - Raw packet sent
+        log_request       - DNS Request
+        log_reply         - DNS Response
+        log_truncated     - Truncated
+        log_error         - Decoding error
+        log_data          - Dump full request/response
 
-        A custom logging function can be passed to the constructor via the
-        `logf` parameter (defaults to print)
+    A custom logging function can be passed to the constructor via the
+    `logf` parameter (defaults to print)
     """
 
-    def __init__(self,log="",prefix=True,logf=None):
+    def __init__(self, log="", prefix=True, logf=None):
         """
-            Selectively enable log hooks depending on log argument
-            (comma separated list of hooks to enable/disable)
+        Selectively enable log hooks depending on log argument
+        (comma separated list of hooks to enable/disable)
 
-            - If empty enable default log hooks
-            - If entry starts with '+' (eg. +send,+recv) enable hook
-            - If entry starts with '-' (eg. -data) disable hook
-            - If entry doesn't start with +/- replace defaults
+        - If empty enable default log hooks
+        - If entry starts with '+' (eg. +send,+recv) enable hook
+        - If entry starts with '-' (eg. -data) disable hook
+        - If entry doesn't start with +/- replace defaults
 
-            Prefix argument enables/disables log prefix
+        Prefix argument enables/disables log prefix
 
-            Logf argument sets log print function (defaults to print)
+        Logf argument sets log print function (defaults to print)
         """
-        default = ["request","reply","truncated","error"]
+        default = ["request", "reply", "truncated", "error"]
         log = log.split(",") if log else []
-        enabled = set([ s for s in log if s[0] not in '+-'] or default)
-        [ enabled.add(l[1:]) for l in log if l.startswith('+') ]
-        [ enabled.discard(l[1:]) for l in log if l.startswith('-') ]
-        for l in ['log_recv','log_send','log_request','log_reply',
-                  'log_truncated','log_error','log_data']:
+        enabled = set([s for s in log if s[0] not in "+-"] or default)
+        [enabled.add(l[1:]) for l in log if l.startswith("+")]
+        [enabled.discard(l[1:]) for l in log if l.startswith("-")]
+        for l in [
+            "log_recv",
+            "log_send",
+            "log_request",
+            "log_reply",
+            "log_truncated",
+            "log_error",
+            "log_data",
+        ]:
             if l[4:] not in enabled:
-                setattr(self,l,self.log_pass)
+                setattr(self, l, self.log_pass)
         self.prefix = prefix
         self.logf = logf or print
 
-    def log_pass(self,*args):
+    def log_pass(self, *args):
         pass
 
-    def log_prefix(self,handler):
+    def log_prefix(self, handler):
         if self.prefix:
-            return "%s [%s:%s] " % (time.strftime("%Y-%m-%d %X"),
-                               handler.__class__.__name__,
-                               handler.server.resolver.__class__.__name__)
+            return "%s [%s:%s] " % (
+                time.strftime("%Y-%m-%d %X"),
+                handler.__class__.__name__,
+                handler.server.resolver.__class__.__name__,
+            )
         else:
             return ""
 
-    def log_recv(self,handler,data):
-        self.logf("%sReceived: [%s:%d] (%s) <%d> : %s" % (
-                    self.log_prefix(handler),
-                    handler.client_address[0],
-                    handler.client_address[1],
-                    handler.protocol,
-                    len(data),
-                    binascii.hexlify(data)))
+    def log_recv(self, handler, data):
+        self.logf(
+            "%sReceived: [%s:%d] (%s) <%d> : %s"
+            % (
+                self.log_prefix(handler),
+                handler.client_address[0],
+                handler.client_address[1],
+                handler.protocol,
+                len(data),
+                binascii.hexlify(data),
+            ),
+        )
 
-    def log_send(self,handler,data):
-        self.logf("%sSent: [%s:%d] (%s) <%d> : %s" % (
-                    self.log_prefix(handler),
-                    handler.client_address[0],
-                    handler.client_address[1],
-                    handler.protocol,
-                    len(data),
-                    binascii.hexlify(data)))
+    def log_send(self, handler, data):
+        self.logf(
+            "%sSent: [%s:%d] (%s) <%d> : %s"
+            % (
+                self.log_prefix(handler),
+                handler.client_address[0],
+                handler.client_address[1],
+                handler.protocol,
+                len(data),
+                binascii.hexlify(data),
+            ),
+        )
 
-    def log_request(self,handler,request):
-        self.logf("%sRequest: [%s:%d] (%s) / '%s' (%s)" % (
-                    self.log_prefix(handler),
-                    handler.client_address[0],
-                    handler.client_address[1],
-                    handler.protocol,
-                    request.q.qname,
-                    QTYPE[request.q.qtype]))
+    def log_request(self, handler, request):
+        self.logf(
+            "%sRequest: [%s:%d] (%s) / '%s' (%s)"
+            % (
+                self.log_prefix(handler),
+                handler.client_address[0],
+                handler.client_address[1],
+                handler.protocol,
+                request.q.qname,
+                QTYPE[request.q.qtype],
+            ),
+        )
         self.log_data(request)
 
-    def log_reply(self,handler,reply):
+    def log_reply(self, handler, reply):
         if reply.header.rcode == RCODE.NOERROR:
-            self.logf("%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
+            self.logf(
+                "%sReply: [%s:%d] (%s) / '%s' (%s) / RRs: %s"
+                % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
                     handler.protocol,
                     reply.q.qname,
                     QTYPE[reply.q.qtype],
-                    ",".join([QTYPE[a.rtype] for a in reply.rr])))
+                    ",".join([QTYPE[a.rtype] for a in reply.rr]),
+                ),
+            )
         else:
-            self.logf("%sReply: [%s:%d] (%s) / '%s' (%s) / %s" % (
+            self.logf(
+                "%sReply: [%s:%d] (%s) / '%s' (%s) / %s"
+                % (
                     self.log_prefix(handler),
                     handler.client_address[0],
                     handler.client_address[1],
                     handler.protocol,
                     reply.q.qname,
                     QTYPE[reply.q.qtype],
-                    RCODE[reply.header.rcode]))
+                    RCODE[reply.header.rcode],
+                ),
+            )
         self.log_data(reply)
 
-    def log_truncated(self,handler,reply):
-        self.logf("%sTruncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s" % (
-                    self.log_prefix(handler),
-                    handler.client_address[0],
-                    handler.client_address[1],
-                    handler.protocol,
-                    reply.q.qname,
-                    QTYPE[reply.q.qtype],
-                    ",".join([QTYPE[a.rtype] for a in reply.rr])))
+    def log_truncated(self, handler, reply):
+        self.logf(
+            "%sTruncated Reply: [%s:%d] (%s) / '%s' (%s) / RRs: %s"
+            % (
+                self.log_prefix(handler),
+                handler.client_address[0],
+                handler.client_address[1],
+                handler.protocol,
+                reply.q.qname,
+                QTYPE[reply.q.qtype],
+                ",".join([QTYPE[a.rtype] for a in reply.rr]),
+            ),
+        )
         self.log_data(reply)
 
-    def log_error(self,handler,e):
-        self.logf("%sInvalid Request: [%s:%d] (%s) :: %s" % (
-                    self.log_prefix(handler),
-                    handler.client_address[0],
-                    handler.client_address[1],
-                    handler.protocol,
-                    e))
+    def log_error(self, handler, e):
+        self.logf(
+            "%sInvalid Request: [%s:%d] (%s) :: %s"
+            % (
+                self.log_prefix(handler),
+                handler.client_address[0],
+                handler.client_address[1],
+                handler.protocol,
+                e,
+            ),
+        )
 
-    def log_data(self,dnsobj):
+    def log_data(self, dnsobj):
         self.logf("\n%s\n" % (dnsobj.toZone("    ")))
 
 
-class UDPServer(socketserver.ThreadingMixIn,socketserver.UDPServer,object):
+class UDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer, object):
     def __init__(self, server_address, handler):
         self.allow_reuse_address = True
         self.daemon_threads = True
-        if server_address[0] != '' and ':' in server_address[0]:
+        if server_address[0] != "" and ":" in server_address[0]:
             self.address_family = socket.AF_INET6
-        super(UDPServer,self).__init__(server_address, handler)
+        super(UDPServer, self).__init__(server_address, handler)
 
-class TCPServer(socketserver.ThreadingMixIn,socketserver.TCPServer,object):
+
+class TCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer, object):
     def __init__(self, server_address, handler):
         self.allow_reuse_address = True
         self.daemon_threads = True
-        if server_address[0] != '' and ':' in server_address[0]:
+        if server_address[0] != "" and ":" in server_address[0]:
             self.address_family = socket.AF_INET6
-        super(TCPServer,self).__init__(server_address, handler)
+        super(TCPServer, self).__init__(server_address, handler)
+
 
 class DNSServer(object):
 
     """
-        Convenience wrapper for socketserver instance allowing
-        either UDP/TCP server to be started in blocking more
-        or as a background thread.
+    Convenience wrapper for socketserver instance allowing
+    either UDP/TCP server to be started in blocking more
+    or as a background thread.
 
-        Processing is delegated to custom resolver (instance) and
-        optionally custom logger (instance), handler (class), and
-        server (class)
+    Processing is delegated to custom resolver (instance) and
+    optionally custom logger (instance), handler (class), and
+    server (class)
 
-        In most cases only a custom resolver instance is required
-        (and possibly logger)
+    In most cases only a custom resolver instance is required
+    (and possibly logger)
     """
-    def __init__(self,resolver,
-                      address="",
-                      port=53,
-                      tcp=False,
-                      logger=None,
-                      handler=DNSHandler,
-                      server=None):
+
+    def __init__(
+        self,
+        resolver,
+        address="",
+        port=53,
+        tcp=False,
+        logger=None,
+        handler=DNSHandler,
+        server=None,
+    ):
         """
-            resolver:   resolver instance
-            address:    listen address (default: "")
-            port:       listen port (default: 53)
-            tcp:        UDP (false) / TCP (true) (default: False)
-            logger:     logger instance (default: DNSLogger)
-            handler:    handler class (default: DNSHandler)
-            server:     socketserver class (default: UDPServer/TCPServer)
+        resolver:   resolver instance
+        address:    listen address (default: "")
+        port:       listen port (default: 53)
+        tcp:        UDP (false) / TCP (true) (default: False)
+        logger:     logger instance (default: DNSLogger)
+        handler:    handler class (default: DNSHandler)
+        server:     socketserver class (default: UDPServer/TCPServer)
         """
         if not server:
             if tcp:
                 server = TCPServer
             else:
                 server = UDPServer
-        self.server = server((address,port),handler)
+        self.server = server((address, port), handler)
         self.server.resolver = resolver
         self.server.logger = logger or DNSLogger()
 
@@ -395,6 +447,9 @@ class DNSServer(object):
     def isAlive(self):
         return self.thread.is_alive()
 
+
 if __name__ == "__main__":
-    import doctest,sys
+    import doctest
+    import sys
+
     sys.exit(0 if doctest.testmod(optionflags=doctest.ELLIPSIS).failed == 0 else 1)
