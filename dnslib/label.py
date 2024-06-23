@@ -294,7 +294,7 @@ class DNSBuffer(Buffer):
     def encode_name_nocompress(self,name):
         """
             Encode and store label with no compression
-            (needed for RRSIG)
+            (needed for RRSIG, SRV, NSEC)
         """
         if not isinstance(name,DNSLabel):
             name = DNSLabel(name)

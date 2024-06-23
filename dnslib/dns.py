@@ -1454,7 +1454,7 @@ class SRV(RD):
 
     def pack(self,buffer):
         buffer.pack("!HHH",self.priority,self.weight,self.port)
-        buffer.encode_name(self.target)
+        buffer.encode_name_nocompress(self.target)
 
     def __repr__(self):
         return "%d %d %d %s" % (self.priority,self.weight,self.port,self.target)
