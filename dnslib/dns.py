@@ -828,7 +828,7 @@ class RR(object):
                     rdata = RDMAP.get(QTYPE.get(rtype),RD).parse(
                                             buffer,rdlength)
                 else:
-                    rdata = ''
+                    raise DNSError("Error: Empty RR")
             return cls(rname,rtype,rclass,ttl,rdata)
         except (BufferError,BimapError) as e:
             raise DNSError("Error unpacking RR [offset=%d]: %s" % (
@@ -846,6 +846,12 @@ class RR(object):
         self.rtype = rtype
         self.rclass = rclass
         self.ttl = ttl
+        # Check rdata is valid
+        if self.rtype == QTYPE.OPT:
+            if not isinstance(rdata,list) or any([not isinstance(rd,EDNSOption) for rd in rdata]):
+                raise DNSError("Error: OPT Record expects list of EDNSOption objects")
+        elif not isinstance(rdata,RD):
+            raise DNSError("Error: RDATA must be RD instance [%s]" % type(rdata).__name__)
         self.rdata = rdata
         # TODO Add property getters/setters (done for DO flag)
         if self.rtype == QTYPE.OPT:
