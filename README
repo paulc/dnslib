@@ -2,7 +2,9 @@
 
 #### From Version 0.9.12 the master repository for _dnslib_ has been moved to GitHub (https://github.com/paulc/dnslib). Please update any links to the original BitBucket repository as this will no longer be maintained.
 
-#### Release 0.9.24 (2024-01-02) will be the last release supporting Python 2.7 and Python <3.7. Supporting old Python versions is increasingly painful and holds back adoption of new features so it's probably time to move on. 
+#### ~~Release 0.9.24 (2024-01-02) will be the last release supporting Python 2.7 and Python <3.7. Supporting old Python versions is increasingly painful and holds back adoption of new features so it's probably time to move on.~~
+
+#### Given the scale of the changes (and API changes) add typing support/modernise the codebase I've decided to leave dnslib as is in maintenance mode for users who are relying on the old API (and Python2 support). I'll try to fix any minor bugs but there isnt going to be any more active development (which is more or less the status quo anyway). 
 
 
 dnslib
@@ -396,7 +398,10 @@ Changelog:
                                   (thanks to @SpencerIsGiddy)
                             #54 - Support for RP records (thanks to @ryan-gang)
                             #57 - Support for LOC records (thanks to @valentinesd)
-                         (Note that this will be the last release supporting Python 2.7 and Python <3.7)
+ *   0.9.25  2024-07-08  Minor fixes:
+                            #60 - SyntaxWarning with Python 3.12 (@kitterma)
+                            #63 - Records with empty rdata causes pack() to fail (@peteralm80)
+                            #66 - DNS SRV "target" names are compressed (@bobstanden)
 ```
 
 License:
