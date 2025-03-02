@@ -404,6 +404,9 @@ Changelog:
                             #60 - SyntaxWarning with Python 3.12 (@kitterma)
                             #63 - Records with empty rdata causes pack() to fail (@peteralm80)
                             #66 - DNS SRV "target" names are compressed (@bobstanden)
+ *   0.9.26  2025-03-02  Minor fixes:
+                            #72 - Implement matchWildcard (DNSLabel.matchGlob doesn't match expected wildcard DNS record syntax)
+                         (Thanks to @gsnedders)
 ```
 
 License:
@@ -427,7 +430,7 @@ Master Repository/Issues:
 
 from dnslib.dns import *
 
-version = "0.9.25"
+version = "0.9.26"
 
 if __name__ == '__main__':
     import doctest,sys,textwrap
