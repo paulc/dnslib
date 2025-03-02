@@ -58,6 +58,18 @@ class DNSLabel(object):
     True
     >>> l3.matchGlob("*.[abc]xx.bbb.ccc")
     False
+    >>> l1.matchWildcard("*.bbb.ccc")
+    True
+    >>> l1.matchWildcard("*.CCC")
+    True
+    >>> l1.matchWildcard("*.xxx.bbb.ccc")
+    False
+    >>> l1.matchWildcard("aaa.bbb.ccc")
+    True
+    >>> l1.matchWildcard("bbb.ccc")
+    False
+    >>> l1.matchWildcard("xxx.aaa.bbb.ccc")
+    False
 
     # Too hard to get unicode doctests to work on Python 3.2
     # (works on 3.3)
@@ -109,6 +121,26 @@ class DNSLabel(object):
         if type(pattern) != DNSLabel:
             pattern = DNSLabel(pattern)
         return fnmatch.fnmatch(str(self).lower(),str(pattern).lower())
+
+    def matchWildcard(self,pattern):
+        """
+            Wildcard match according to https://datatracker.ietf.org/doc/html/rfc1034#section-4.3.3   
+            (This only allows a single '*' prefix wildcard which matches one or more labels)
+
+            Note that the spec is defined at the zone level (if there is a more
+            specific overlapping match within the zone) some soem additional
+            logic is required in the resolved to implement this.
+
+        """
+        if type(pattern) != DNSLabel:
+            pattern = DNSLabel(pattern)
+        if pattern.label[0] != b'*' and len(self.label) != len(pattern.label):
+            # No wildcard - number of labels must match
+            return False
+        for (a,b) in zip(reversed(self.label),reversed(pattern.label)):
+            if b != b'*' and a.lower() != b.lower():
+                return False
+        return True
 
     def matchSuffix(self,suffix):
         """
