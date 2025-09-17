@@ -71,6 +71,9 @@ RCODE =  Bimap('RCODE',
 OPCODE = Bimap('OPCODE',{0:'QUERY', 1:'IQUERY', 2:'STATUS', 4:'NOTIFY', 5:'UPDATE'},
                 DNSError)
 
+EDNS0OPT = Bimap('EDNS0OPT',{8:'ECS'},
+                DNSError)
+
 def label(label,origin=None):
     if label.endswith("."):
         return DNSLabel(label)
@@ -798,6 +801,32 @@ class EDNSOption(object):
             attrs = ('code','data')
             return all([getattr(self,x) == getattr(other,x) for x in attrs])
 
+class ECSOption(EDNSOption):
+
+    family = H('family')
+    src_prefix_len = B('src_prefix_len')
+    scope_prefix_len = B('scope_prefix_len')
+
+    def __init__(self,code,data):
+        super(ECSOption,self).__init__(code,data)
+        self.family,self.src_prefix_len,self.scope_prefix_len = struct.unpack("!HBB",data[:4])
+        self.addr_bytes = data[4:]
+        self.total_bytes = (self.src_prefix_len + 7) // 8 
+        self.address = self.addr_bytes[:self.total_bytes] + b"\x00" * (4**self.family - self.total_bytes)
+
+    def pack(self,buffer):
+        addr_bytes = self.addr_bytes[:self.total_bytes]
+        option_data = struct.pack("!HBB", self.family,
+                              self.src_prefix_len,
+                              self.scope_prefix_len) + addr_bytes
+
+        buffer.pack("!HH", self.code, len(option_data))
+        buffer.append(option_data)
+
+    def toZone(self):
+        return "; EDNS: code %s, - family: %i; prefix length: %i; scope length: %i; address: %s" % (
+                    self.code,self.family,self.src_prefix_len,self.scope_prefix_len,self.address)
+
 class RR(object):
 
     """
@@ -821,7 +850,10 @@ class RR(object):
                 while option_buffer.remaining() > 4:
                     code,length = option_buffer.unpack("!HH")
                     data = option_buffer.get(length)
-                    options.append(EDNSOption(code,data))
+                    if(code == EDNS0OPT.ECS):
+                        options.append(ECSOption(code,data))
+                    else:
+                        options.append(EDNSOption(code,data))
                 rdata = options
             else:
                 if rdlength:
