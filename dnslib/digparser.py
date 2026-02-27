@@ -207,7 +207,7 @@ class DigParser:
                     rr = []
         except StopIteration:
             if rr:
-                self.section.append(rr)
+                section.append(rr)
             if dns:
                 self.parseQuestions(q,dns)
                 self.parseAnswers(a,auth,ar,dns)
