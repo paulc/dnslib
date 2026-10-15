@@ -49,10 +49,10 @@
 
 from __future__ import print_function
 
-from dnslib.dns import DNSRecord,EDNS0
+from dnslib.dns import DNSRecord,DNSBuffer,DNSError,EDNS0,RR,RD,A
 from dnslib.digparser import DigParser
 
-import argparse,binascii,code,glob,os,os.path,sys,unittest
+import argparse,binascii,code,glob,os,os.path,struct,sys,unittest
 
 try:
     from subprocess import getoutput
@@ -66,6 +66,105 @@ except NameError:
 
 class TestContainer(unittest.TestCase):
     pass
+
+class TestUpdate(unittest.TestCase):
+
+    def packet(self,section="auth",rclass=255,rtype=1,ttl=0,opcode=5,
+               rdata=b""):
+        # RFC 2136: question = zone, answer = prerequisite, authority = update.
+        header = struct.pack("!HHHHHH",1,opcode << 11,1,
+                             int(section == "rr"),int(section == "auth"),
+                             int(section == "ar"))
+        zone = b"\x07example\x03com\x00\x00\x06\x00\x01"
+        rr = b"\x03foo\xc0\x0c" + struct.pack("!HHIH",rtype,rclass,ttl,
+                                               len(rdata)) + rdata
+        return header + zone + rr
+
+    def check_empty(self,packet,section,rtype,rclass):
+        record = DNSRecord.parse(packet)
+        rr = getattr(record,section)[0]
+        self.assertEqual((rr.rtype,rr.rclass,rr.ttl),(rtype,rclass,0))
+        self.assertEqual(type(rr.rdata),RD)
+        self.assertEqual(rr.rdata.data,b"")
+        self.assertEqual(rr.rdata.toZone(),"\\# 0")
+        self.assertIn("\\# 0",str(record))
+        self.assertIn("\\# 0",repr(record))
+        self.assertEqual(record.pack(),packet)
+        self.assertEqual(DNSRecord.parse(record.pack()),record)
+
+    def test_delete_rrset(self):
+        # Captured from BIND nsupdate: update delete foo.example.com. A
+        packet = binascii.unhexlify(
+            b"ab1b28000001000000010000076578616d706c6503636f6d0000060001"
+            b"03666f6fc00c000100ff000000000000")
+        self.check_empty(packet,"auth",1,255)
+
+    def test_delete_name(self):
+        # Captured from BIND nsupdate: update delete foo.example.com.
+        packet = binascii.unhexlify(
+            b"c93228000001000000010000076578616d706c6503636f6d0000060001"
+            b"03666f6fc00c00ff00ff000000000000")
+        self.check_empty(packet,"auth",255,255)
+
+    def test_empty_prerequisites(self):
+        # RRset/name exists (ANY) and does not exist (NONE).
+        for rclass in (254,255):
+            for rtype in (1,255):
+                packet = self.packet(section="rr",rclass=rclass,rtype=rtype)
+                self.check_empty(packet,"rr",rtype,rclass)
+
+    def test_empty_records_rejected_outside_update(self):
+        for opcode in (0,4):
+            for section in ("rr","auth","ar"):
+                for rclass in (1,254,255):
+                    with self.assertRaises(DNSError):
+                        DNSRecord.parse(self.packet(section=section,
+                                            rclass=rclass,opcode=opcode))
+
+    def test_invalid_empty_update_records(self):
+        for section,rclass,ttl in (("rr",1,0),("auth",1,0),
+                                  ("rr",3,0),("auth",3,0),("ar",1,0),
+                                  ("auth",254,0),("ar",255,0),
+                                  ("ar",254,0),("rr",255,1),
+                                  ("rr",254,1),("auth",255,1)):
+            with self.assertRaises(DNSError):
+                DNSRecord.parse(self.packet(section=section,
+                                            rclass=rclass,ttl=ttl))
+
+    def test_standalone_rr_rejects_empty_data(self):
+        # Without message context RR.parse must retain its default behavior.
+        buffer = DNSBuffer(b"\x00" + struct.pack("!HHIH",1,255,0,0))
+        with self.assertRaises(DNSError):
+            RR.parse(buffer)
+
+    def test_nonempty_update_records(self):
+        # Addition, deletion of one RR, and value-dependent prerequisite.
+        for section,rclass,ttl in (("auth",1,60),("auth",254,0),("rr",1,0)):
+            packet = self.packet(section=section,rclass=rclass,ttl=ttl,
+                                 rdata=b"\x7f\x00\x00\x01")
+            record = DNSRecord.parse(packet)
+            self.assertEqual(getattr(record,section)[0].rdata,A("127.0.0.1"))
+            self.assertEqual(record.pack(),packet)
+
+    def test_mixed_update_records(self):
+        # Empty markers must not consume following RRs or affect EDNS parsing.
+        record = DNSRecord.parse(self.packet(section="rr",rclass=254))
+        record.add_auth(RR("foo.example.com",rtype=28,rclass=255,rdata=RD()),
+                        RR("foo.example.com",rdata=A("127.0.0.1"),ttl=60))
+        record.add_ar(EDNS0(udp_len=1232))
+        packet = record.pack()
+        parsed = DNSRecord.parse(packet)
+        self.assertEqual(parsed,record)
+        self.assertEqual(parsed.auth[1].rdata,A("127.0.0.1"))
+        self.assertEqual(parsed.ar[0].rdata,[])
+        self.assertEqual(parsed.pack(),packet)
+
+    def test_truncated_update_records(self):
+        for section in ("rr","auth"):
+            packet = self.packet(section=section)
+            for length in range(len(packet)):
+                with self.assertRaises(DNSError):
+                    DNSRecord.parse(packet[:length])
 
 def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False,dnssec=False):
     tcp = False
