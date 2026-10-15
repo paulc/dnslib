@@ -109,6 +109,8 @@ class DNSRecord(object):
         """
             Parse DNS packet data and return DNSRecord instance
             Recursively parses sections (calling appropriate parse method)
+            Empty RFC 2136 UPDATE markers are represented by RD objects
+            with empty data.
         """
         buffer = DNSBuffer(packet)
         try:
@@ -117,12 +119,16 @@ class DNSRecord(object):
             rr = []
             auth = []
             ar = []
+            is_update = header.opcode == OPCODE.UPDATE
             for i in range(header.q):
                 questions.append(DNSQuestion.parse(buffer))
+            # RFC 2136: empty prerequisites use NONE/ANY; deletes use ANY.
             for i in range(header.a):
-                rr.append(RR.parse(buffer))
+                rr.append(RR.parse(buffer,
+                          empty_rdata_classes=(254,255) if is_update else ()))
             for i in range(header.auth):
-                auth.append(RR.parse(buffer))
+                auth.append(RR.parse(buffer,
+                            empty_rdata_classes=(255,) if is_update else ()))
             for i in range(header.ar):
                 ar.append(RR.parse(buffer))
             return cls(header,questions,rr,auth=auth,ar=ar)
@@ -811,7 +817,12 @@ class RR(object):
     rdlength = H('rdlength')
 
     @classmethod
-    def parse(cls,buffer):
+    def parse(cls,buffer,empty_rdata_classes=()):
+        """
+            Parse an RR, allowing empty RDATA for the specified UPDATE
+            metaclasses only when TTL is zero. Without message context,
+            empty non-OPT records remain invalid.
+        """
         try:
             rname = buffer.decode_name()
             rtype,rclass,ttl,rdlength = buffer.unpack("!HHIH")
@@ -827,6 +838,8 @@ class RR(object):
                 if rdlength:
                     rdata = RDMAP.get(QTYPE.get(rtype),RD).parse(
                                             buffer,rdlength)
+                elif ttl == 0 and rclass in empty_rdata_classes:
+                    rdata = RD()
                 else:
                     raise DNSError("Error: Empty RR")
             return cls(rname,rtype,rclass,ttl,rdata)
