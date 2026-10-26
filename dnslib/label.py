@@ -258,10 +258,11 @@ class DNSBuffer(Buffer):
         super(DNSBuffer,self).__init__(data)
         self.names = {}
 
-    def decode_name(self,last=-1):
+    def decode_name(self,last=-1,_remaining=255):
         """
             Decode label at current offset in buffer (following pointers
-            to cached elements where necessary)
+            to cached elements where necessary). _remaining is the maximum
+            expanded wire length, including the terminating root label.
         """
         label = []
         done = False
@@ -281,11 +282,15 @@ class DNSBuffer(Buffer):
                     # Pointer can't point forwards
                     raise BufferError("Invalid pointer in DNSLabel [offset=%d,pointer=%d,length=%d]" %
                             (self.offset,pointer,len(self.data)))
-                label.extend(self.decode_name(save).label)
+                label.extend(self.decode_name(save,_remaining).label)
                 self.offset = save
                 done = True
             else:
                 if length > 0:
+                    _remaining -= length + 1
+                    if _remaining < 1:
+                        raise BufferError("Domain name too long [offset=%d]" %
+                                self.offset)
                     l = self.get(length)
                     try:
                         l.decode()
