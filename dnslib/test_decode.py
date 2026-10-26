@@ -67,6 +67,78 @@ except NameError:
 class TestContainer(unittest.TestCase):
     pass
 
+
+class TestNameLength(unittest.TestCase):
+    def test_root_name(self):
+        from dnslib.label import DNSBuffer
+        buffer = DNSBuffer(b'\x00')
+        self.assertEqual(buffer.decode_name().label, ())
+        self.assertEqual(buffer.offset, 1)
+
+    def _uncompressed_name(self, last_length):
+        labels = [b'a' * 63] * 3 + [b'b' * last_length]
+        wire = b''.join(bytes(bytearray([len(label)])) + label
+                        for label in labels) + b'\x00'
+        return labels, wire
+
+    def test_uncompressed_name_at_wire_limit(self):
+        from dnslib.label import DNSBuffer
+        labels, wire = self._uncompressed_name(61)
+        self.assertEqual(len(wire), 255)
+        buffer = DNSBuffer(wire)
+        self.assertEqual(buffer.decode_name().label, tuple(labels))
+        self.assertEqual(buffer.offset, 255)
+
+    def test_uncompressed_name_over_wire_limit(self):
+        from dnslib.label import DNSBuffer
+        from dnslib.buffer import BufferError
+        _, wire = self._uncompressed_name(62)
+        self.assertRaises(BufferError, DNSBuffer(wire).decode_name)
+
+    def test_packet_rejects_overlong_question_name(self):
+        from dnslib.dns import DNSError
+        _, wire = self._uncompressed_name(62)
+        # One question, followed by QTYPE=A and QCLASS=IN.
+        packet = b'\x00' * 4 + b'\x00\x01' + b'\x00' * 6
+        packet += wire + b'\x00\x01\x00\x01'
+        self.assertRaises(DNSError, DNSRecord.parse, packet)
+
+    def _compressed_name(self, prefix_length):
+        from dnslib.label import DNSBuffer
+        suffix = (b'\x3f' + b'a' * 63) * 3 + b'\x00'
+        prefix = bytes(bytearray([prefix_length])) + b'b' * prefix_length
+        buffer = DNSBuffer(suffix + prefix + b'\xc0\x00')
+        buffer.offset = len(suffix)
+        return buffer
+
+    def test_compressed_name_at_wire_limit(self):
+        buffer = self._compressed_name(61)
+        self.assertEqual(buffer.decode_name().label,
+                         (b'b' * 61,) + (b'a' * 63,) * 3)
+        self.assertEqual(buffer.offset, len(buffer.data))
+
+    def test_compressed_name_over_wire_limit(self):
+        from dnslib.buffer import BufferError
+        buffer = self._compressed_name(62)
+        self.assertRaises(BufferError, buffer.decode_name)
+
+    def test_pointer_chain_is_bounded_by_expanded_name_length(self):
+        import struct
+        from dnslib.label import DNSBuffer
+        from dnslib.buffer import BufferError
+        wire = b'\x00'
+        previous = 0
+        for _ in range(803):
+            offset = len(wire)
+            wire += b'\x01a' + struct.pack('!H', 0xc000 | previous)
+            previous = offset
+        buffer = DNSBuffer(wire)
+        # 127 one-octet labels plus their lengths and root are 255 octets.
+        buffer.offset = 1 + 126 * 4
+        self.assertEqual(len(buffer.decode_name().label), 127)
+        buffer.offset = previous
+        self.assertRaises(BufferError, buffer.decode_name)
+
 def new_test(domain,qtype,address="8.8.8.8",port=53,nodig=False,dnssec=False):
     tcp = False
     q = DNSRecord.question(domain,qtype)
