@@ -219,6 +219,80 @@ def test_generator(f):
         self.assertEqual(check_decode(f),[])
     return test
 
+class TestTCPResponse(unittest.TestCase):
+
+    def setUp(self):
+        import dnslib.dns
+        self.dns_module = dnslib.dns
+        self.original_socket = self.dns_module.socket.socket
+        self.dns_module.socket.socket = lambda *args: self
+        self.chunks = []
+        self.closed = False
+        self.empty_reads = 0
+        self.addCleanup(self.restore)
+
+    def restore(self):
+        self.dns_module.socket.socket = self.original_socket
+
+    def settimeout(self, timeout):
+        pass
+
+    def connect(self, address):
+        pass
+
+    def sendall(self, data):
+        self.sent = data
+
+    def close(self):
+        self.closed = True
+
+    def recv(self, size):
+        if not self.chunks:
+            self.empty_reads += 1
+            if self.empty_reads > 2:
+                self.fail("client keeps reading after EOF")
+            return b""
+        chunk = self.chunks.pop(0)
+        if isinstance(chunk, Exception):
+            raise chunk
+        if len(chunk) > size:
+            self.chunks.insert(0, chunk[size:])
+            chunk = chunk[:size]
+        return chunk
+
+    def test_split_length_prefix(self):
+        self.chunks = [b"\x00", b"\x03abc"]
+        self.assertEqual(DNSRecord.question("example.com").send("localhost", tcp=True), b"abc")
+        self.assertTrue(self.closed)
+
+    def test_truncated_length_prefix(self):
+        self.chunks = [b"\x00"]
+        self.assertRaises(self.dns_module.DNSError,
+                          DNSRecord.question("example.com").send, "localhost", tcp=True)
+        self.assertTrue(self.closed)
+
+    def test_truncated_body(self):
+        self.chunks = [b"\x00\x03a", b"b"]
+        self.assertRaises(self.dns_module.DNSError,
+                          DNSRecord.question("example.com").send, "localhost", tcp=True)
+        self.assertTrue(self.closed)
+
+    def test_next_frame_is_not_consumed(self):
+        self.chunks = [b"\x00\x03abc\x00\x03def"]
+        self.assertEqual(DNSRecord.question("example.com").send("localhost", tcp=True), b"abc")
+        self.assertEqual(self.chunks, [b"\x00\x03def"])
+
+    def test_fragmented_body(self):
+        self.chunks = [b"\x00\x03", b"a", b"b", b"c"]
+        self.assertEqual(DNSRecord.question("example.com").send("localhost", tcp=True), b"abc")
+        self.assertTrue(self.closed)
+
+    def test_timeout_still_closes_socket(self):
+        self.chunks = [self.dns_module.socket.timeout("timed out")]
+        self.assertRaises(self.dns_module.socket.timeout,
+                          DNSRecord.question("example.com").send, "localhost", tcp=True, timeout=1)
+        self.assertTrue(self.closed)
+
 if __name__ == '__main__':
 
     testdir = os.path.join(os.path.dirname(__file__),"test")
